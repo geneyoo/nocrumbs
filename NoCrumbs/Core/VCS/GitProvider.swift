@@ -27,6 +27,12 @@ struct GitProvider: VCSProvider {
         try await run("git", args: ["diff", "HEAD"], at: path)
     }
 
+    func diffForFiles(_ filePaths: [String], at path: String) async throws -> String {
+        var args = ["diff", "HEAD", "--"]
+        args.append(contentsOf: filePaths)
+        return try await run("git", args: args, at: path)
+    }
+
     private func run(_ command: String, args: [String], at directory: String) async throws -> String {
         try await withCheckedThrowingContinuation { continuation in
             let process = Process()

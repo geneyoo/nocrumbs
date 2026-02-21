@@ -22,6 +22,12 @@
 		E5439CA1FB677D97447268AE /* VCSDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37CE3F16F07E020EEDE309B8 /* VCSDetector.swift */; };
 		F1A2B3C4D5E6F7089AB0C1D2 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5C /* SettingsView.swift */; };
 		FB0B46458B8730FFCAE8EF9E /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A77379228A89D5FF2E9A7E4C /* AppDelegate.swift */; };
+		11AA22BB33CC44DD55EE66FF /* FileDiff.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF66 /* FileDiff.swift */; };
+		22BB33CC44DD55EE66FF1122 /* DiffParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB22CC33DD44EE55FF661122 /* DiffParser.swift */; };
+		33CC44DD55EE66FF112233AA /* DiffViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC33DD44EE55FF66112233AA /* DiffViewModel.swift */; };
+		44DD55EE66FF112233AABB44 /* DiffDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD44EE55FF6611223344AABB /* DiffDetailView.swift */; };
+		55EE66FF1122AABB33CC4455 /* DiffTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE55FF66112233AABB44CC55 /* DiffTextView.swift */; };
+		66FF112233AABB44CC5566DD /* DiffScrollSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF6611223344AABB55CC66DD /* DiffScrollSync.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -51,6 +57,12 @@
 		DC3CB357C8C961DD7C7C7228 /* NoCrumbsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NoCrumbsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1B2C3D4E5F60718293A4B5C /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		DECE7D7EE0B37901DADC5F11 /* Database.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Database.swift; sourceTree = "<group>"; };
+		AA11BB22CC33DD44EE55FF66 /* FileDiff.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileDiff.swift; sourceTree = "<group>"; };
+		BB22CC33DD44EE55FF661122 /* DiffParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffParser.swift; sourceTree = "<group>"; };
+		CC33DD44EE55FF66112233AA /* DiffViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffViewModel.swift; sourceTree = "<group>"; };
+		DD44EE55FF6611223344AABB /* DiffDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffDetailView.swift; sourceTree = "<group>"; };
+		EE55FF66112233AABB44CC55 /* DiffTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffTextView.swift; sourceTree = "<group>"; };
+		FF6611223344AABB55CC66DD /* DiffScrollSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffScrollSync.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -125,6 +137,7 @@
 		BFB3E336FDA7967BA26F21BC /* VCS */ = {
 			isa = PBXGroup;
 			children = (
+				BB22CC33DD44EE55FF661122 /* DiffParser.swift */,
 				3D069F5ACA9BB864C8B7AFA6 /* GitProvider.swift */,
 				37CE3F16F07E020EEDE309B8 /* VCSDetector.swift */,
 				98CDF552C67056A28C4819EA /* VCSProvider.swift */,
@@ -144,6 +157,7 @@
 			isa = PBXGroup;
 			children = (
 				A10564EE9AF457416465F62D /* FileChange.swift */,
+				AA11BB22CC33DD44EE55FF66 /* FileDiff.swift */,
 				851939F6461B1C59CF8F1823 /* PromptEvent.swift */,
 				127A4015EC6E11386657358E /* Session.swift */,
 				BD9D8050C0B03F827872CC72 /* VCSType.swift */,
@@ -166,10 +180,22 @@
 		EB41E4B38DD9092AAFBF25DF /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				AABB112233445566CCDD7788 /* DiffViewer */,
 				E2F3A4B5C6D7E8F90A1B2C3D /* Settings */,
 			);
 			name = Features;
 			path = NoCrumbs/Features;
+			sourceTree = "<group>";
+		};
+		AABB112233445566CCDD7788 /* DiffViewer */ = {
+			isa = PBXGroup;
+			children = (
+				DD44EE55FF6611223344AABB /* DiffDetailView.swift */,
+				FF6611223344AABB55CC66DD /* DiffScrollSync.swift */,
+				EE55FF66112233AABB44CC55 /* DiffTextView.swift */,
+				CC33DD44EE55FF66112233AA /* DiffViewModel.swift */,
+			);
+			path = DiffViewer;
 			sourceTree = "<group>";
 		};
 		E2F3A4B5C6D7E8F90A1B2C3D /* Settings */ = {
@@ -276,7 +302,13 @@
 				FB0B46458B8730FFCAE8EF9E /* AppDelegate.swift in Sources */,
 				47A3ECC051305542063B06E0 /* ContentView.swift in Sources */,
 				64467DA5AC2640FFF9D48C31 /* Database.swift in Sources */,
+				44DD55EE66FF112233AABB44 /* DiffDetailView.swift in Sources */,
+				22BB33CC44DD55EE66FF1122 /* DiffParser.swift in Sources */,
+				66FF112233AABB44CC5566DD /* DiffScrollSync.swift in Sources */,
+				55EE66FF1122AABB33CC4455 /* DiffTextView.swift in Sources */,
+				33CC44DD55EE66FF112233AA /* DiffViewModel.swift in Sources */,
 				28E0137ED7D0A9DDC51A27A6 /* FileChange.swift in Sources */,
+				11AA22BB33CC44DD55EE66FF /* FileDiff.swift in Sources */,
 				C307CB874E94C03E8F8E63FD /* GitProvider.swift in Sources */,
 				D80D064DB9F6C9C9DF635713 /* NoCrumbsApp.swift in Sources */,
 				8A911B5B50873530D8061506 /* PromptEvent.swift in Sources */,

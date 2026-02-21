@@ -175,7 +175,7 @@ struct ContentView: View {
     private var detail: some View {
         if let sel = state.selection,
            let event = database.recentEvents.first(where: { $0.id == sel }) {
-            EventDetailView(event: event, database: database)
+            DiffDetailView(event: event)
         } else if let sel = state.selection,
                   let session = database.sessions.first(where: { UUID(uuidString: $0.id) == sel }) {
             SessionDetailView(session: session, database: database)

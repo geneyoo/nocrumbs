@@ -421,21 +421,22 @@ Cursor shows you diffs inline and they vanish when you accept. NoCrumbs is the p
 
 ---
 
-### M3 — Diff Viewer
+### M3 — Diff Viewer ✅
 Core product. This is NoCrumbs.
 
-- [ ] Unified diff parser → `DiffFile` / `DiffHunk` / `DiffLine` structs
-- [ ] `STTextView` integrated via `NSViewRepresentable`
-- [ ] Neon TreeSitter syntax highlighting plugin wired up
-- [ ] Line background colors: green additions, red removals
-- [ ] Line number gutter
-- [ ] Two-pane layout with `HSplitView`
-- [ ] Synchronized scrolling via `NSScrollView` delegate
-- [ ] Prompt header above panes (prompt text, files, timestamp)
-- [ ] File list sidebar
-- [ ] Collapsible commit/prompt timeline with `DisclosureGroup`
-- [ ] Click prompt event → load its diff in panes
-- [ ] Live update: new prompt events appear instantly as Claude works (via @Observable)
+- [x] Unified diff parser → `FileDiff` / `DiffHunk` / `DiffLine` structs
+- [x] `NSTextView` (TextKit 1) integrated via `NSViewRepresentable`
+- [ ] Neon TreeSitter syntax highlighting plugin wired up (P1 backlog)
+- [x] Line background colors: green additions, red removals
+- [x] Line number gutter
+- [x] Two-pane layout with `HSplitView`
+- [x] Synchronized scrolling via `NSScrollView` boundsDidChange
+- [x] Prompt header above panes (prompt text, files, timestamp)
+- [x] File list sidebar with status icons (added/modified/deleted)
+- [x] Click prompt event → load its diff in panes
+- [x] Live update: new prompt events appear instantly as Claude works (via @Observable)
+- [x] Empty states: "File did not exist" / "File was deleted" for new/deleted files
+- [ ] Subagent per-prompt attribution via file snapshots (P1 backlog)
 
 **Exit criteria:** Have NoCrumbs open alongside terminal. Type a prompt in Claude Code. See the diff appear in NoCrumbs within seconds, organized under that prompt.
 
