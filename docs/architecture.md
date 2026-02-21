@@ -16,9 +16,13 @@ nocrumbs capture-prompt    nocrumbs capture-change
                ↓
     Database.shared (raw SQLite3 C API, WAL mode)
                ↓ @Observable properties (in-memory cache)
-    SwiftUI Views (sidebar session tree, event detail, file changes)
+    SwiftUI Views (sidebar session tree, diff detail view)
                ↓ on-demand
-    git/hg CLI via Process (derive diffs, never store them)
+    git CLI via Process (derive diffs, never store them)
+               ↓
+    DiffParser → [FileDiff] → side-by-side line pairs
+               ↓
+    DiffTextView (NSTextView via NSViewRepresentable)
 
 Commit annotation (M2):
     git prepare-commit-msg hook
@@ -49,16 +53,23 @@ NoCrumbs/
 │   │   └── SocketServer.swift  # POSIX socket actor: accept loop, parse JSON, dispatch to Database
 │   │                           #   Handles: "prompt", "change", "query-prompts" (request/response)
 │   ├── Models/
+│   │   ├── FileDiff.swift      # FileDiff, DiffHunk, DiffLine — diff parsing output models
 │   │   ├── FileChange.swift    # id, eventID, filePath, toolName, timestamp
 │   │   ├── PromptEvent.swift   # id, sessionID, projectPath, promptText?, timestamp, vcs?
 │   │   ├── Session.swift       # id, projectPath, startedAt, lastActivityAt
 │   │   └── VCSType.swift       # enum: .git, .mercurial
 │   └── VCS/
+│       ├── DiffParser.swift    # Parses unified git diff output → [FileDiff]
 │       ├── GitProvider.swift   # VCSProvider impl — shells out to /usr/bin/git via Process
 │       ├── VCSDetector.swift   # Static: walk up directory tree checking for .git/.hg
-│       └── VCSProvider.swift   # Protocol: currentBranch, isValidCommit, diff, uncommittedDiff
+│       └── VCSProvider.swift   # Protocol: currentBranch, isValidCommit, diff, uncommittedDiff, diffForFiles
 │
 ├── Features/
+│   ├── DiffViewer/
+│   │   ├── DiffDetailView.swift   # Main diff layout: header + HSplitView (file list + side-by-side panes)
+│   │   ├── DiffViewModel.swift    # @Observable: loads diffs, builds side-by-side line pairs
+│   │   ├── DiffTextView.swift     # NSViewRepresentable wrapping NSTextView (TextKit 1)
+│   │   └── DiffScrollSync.swift   # Syncs scroll position between left + right panes
 │   └── Settings/
 │       └── SettingsView.swift  # @AppStorage toggle for commit annotation (annotationEnabled)
 │
@@ -281,19 +292,131 @@ protocol VCSProvider: Sendable {
     func isValidCommit(_ hash: String, at path: String) async throws -> Bool
     func diff(for hash: String, at path: String) async throws -> String
     func uncommittedDiff(at path: String) async throws -> String
+    func diffForFiles(_ filePaths: [String], at path: String) async throws -> String
 }
 ```
 
 **Implementations:**
 - `GitProvider` — shells out to `/usr/bin/git` via `Process` with async wrapper
+  - `diffForFiles` → `git diff HEAD -- <files>` (scoped to specific paths)
+  - `untrackedFiles` → `git ls-files --others --exclude-standard -- <files>`
+  - `cleanFiles` → `git status --porcelain -- <files>` (identifies committed files)
 - `MercurialProvider` — not yet implemented
 
 **Detection:** `VCSDetector.detect(at:)` walks up from a path checking for `.git` or `.hg` directories.
 `VCSDetector.repoRoot(at:for:)` returns the root directory of the detected VCS repo.
 
-## Diff Parsing
+## Diff Viewer (M3)
 
-<!-- Not yet implemented -->
+Side-by-side diff viewer. Clicking a prompt event shows the diffs it produced, Phabricator-style.
+
+### Architecture
+
+```
+Click PromptEvent in sidebar
+    → DiffDetailView.reload()
+    → DiffViewModel.load(event, fileChanges)
+        → Convert absolute paths to relative (FileChange stores absolute)
+        → GitProvider.diffForFiles(relativePaths, at: projectPath)
+        → DiffParser.parse(rawDiff) → [FileDiff]
+        → For untracked files: synthetic all-additions diff from file content
+        → For committed files: omitted (no diff to show)
+    → buildLinePairs() → [(left: DiffLine?, right: DiffLine?)]
+    → DiffDetailView renders:
+        ┌──────────────────────────────────────────┐
+        │ Prompt: "fix sidebar selection bugs"      │
+        │ 3:51 PM · 7 files                         │
+        ├────────┬──────────────┬───────────────────┤
+        │ file1  │  Before      │  After             │
+        │ file2  │  (NSTextView)│  (NSTextView)      │
+        │ file3  │  line nums   │  line nums         │
+        │        │  red bg      │  green bg          │
+        └────────┴──────────────┴───────────────────┘
+```
+
+### Data Models
+
+```swift
+struct FileDiff: Identifiable, Equatable {
+    let id: UUID
+    let oldPath: String?    // nil = new file
+    let newPath: String?    // nil = deleted file
+    let hunks: [DiffHunk]
+    var status: FileStatus  // .added, .deleted, .modified
+    var displayPath: String { newPath ?? oldPath ?? "(unknown)" }
+}
+
+struct DiffHunk: Identifiable, Equatable {
+    let id: UUID
+    let oldStart: Int, oldCount: Int
+    let newStart: Int, newCount: Int
+    let lines: [DiffLine]
+}
+
+struct DiffLine: Identifiable, Equatable {
+    let id: UUID
+    let type: LineType      // .context, .addition, .deletion
+    let text: String
+    let oldLineNumber: Int? // nil for additions
+    let newLineNumber: Int? // nil for deletions
+}
+```
+
+### Diff Parser
+
+`DiffParser.parse(_ raw: String) -> [FileDiff]` — ~150 lines, parses unified `git diff` output:
+- Guards against empty input (returns `[]`)
+- Splits on `diff --git` boundaries
+- Validates each chunk starts with `diff --git` header
+- Parses `---`/`+++` for file paths (`/dev/null` → new/deleted)
+- Parses `@@` hunk headers for line ranges
+- Prefix-based line classification: ` ` context, `+` addition, `-` deletion
+- Assigns line numbers (old/new independently)
+
+### Line Pairing
+
+`DiffViewModel.buildLinePairs()` creates side-by-side alignment:
+- **Context lines**: appear on both sides `(left: line, right: line)`
+- **Deletions followed by additions**: paired together (matched modification)
+- **Lone deletions**: `(left: line, right: nil)` — empty placeholder on right
+- **Lone additions**: `(left: nil, right: line)` — empty placeholder on left
+
+### DiffTextView (NSViewRepresentable)
+
+Wraps `NSTextView` (TextKit 1) via `NSViewRepresentable`:
+- Read-only, monospaced font (SF Mono 12pt)
+- Attributed string per-line: green bg for additions (0.12 alpha), red bg for deletions, clear for context
+- Null lines (placeholder) get separator background
+- Custom `DiffNSTextView` subclass draws line number gutter via `draw(_:)` override
+- Line numbers: left pane shows `oldLineNumber`, right pane shows `newLineNumber`
+- `lineFragmentPadding = 44` reserves gutter space
+
+### Scroll Sync
+
+`DiffScrollSync` synchronizes vertical scroll between left and right panes:
+- `register(scrollView:side:)` — each DiffTextView registers its NSScrollView
+- Auto-attaches when both sides are registered
+- Observes `NSView.boundsDidChangeNotification` on each clip view
+- Re-entrancy guard (`isSyncing` flag) prevents infinite loop
+- `detach()` removes observers, called on reload
+
+### View Layout
+
+```
+DiffDetailView
+├── header (prompt text, timestamp, file count)
+├── HSplitView
+│   ├── fileList (List, 140-240pt, sidebar style)
+│   │   └── ForEach(fileDiffs) → status icon + filename
+│   └── diffPanes
+│       ├── column headers ("Before" | "After")
+│       └── diffPanesContent (HStack, maxHeight: .infinity)
+│           ├── leftPane (DiffTextView or "File did not exist")
+│           ├── Divider
+│           └── rightPane (DiffTextView or "File was deleted")
+```
+
+**Key layout fix:** `maxHeight: .infinity` on `diffPanesContent` and each pane — required because `NSScrollView` has no intrinsic content size in SwiftUI, so without this the HStack collapses to zero height.
 
 ## Menu Bar Behavior
 
@@ -322,7 +445,9 @@ protocol VCSProvider: Sendable {
 | Key monitoring | `NSEvent.addLocalMonitorForEvents` | Intercepts Option+Arrow before NSOutlineView |
 | Menu bar | `MenuBarExtra` | Native Mac menu bar pattern |
 | Settings | SwiftUI `Settings` scene | Native Cmd+, integration |
-| Diff panes | STTextView (`NSViewRepresentable`) | TextKit 2, line numbers, TreeSitter (planned) |
+| Diff panes | `NSTextView` (`NSViewRepresentable`) | TextKit 1 — battle-tested, no TextKit 2 scrolling bugs |
+| Scroll sync | `DiffScrollSync` (NSView bounds observation) | Syncs left/right panes via boundsDidChangeNotification |
+| Line numbers | Custom `DiffNSTextView.draw()` override | Draws gutter numbers in TextKit 1 coordinate space |
 | Subprocesses | `Process` (Foundation) | Shell out to git/hg |
 
 ## App Lifecycle
@@ -363,8 +488,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 **Planned (not yet added):**
 | Package | Purpose |
 |---------|---------|
-| STTextView | TextKit 2 diff panes |
-| Neon | TreeSitter syntax highlighting |
+| Neon | TreeSitter syntax highlighting in diff panes |
 
 ## Debugging
 
