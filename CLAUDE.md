@@ -86,20 +86,17 @@ NavigationStack      // Use NavigationSplitView
 ## Build
 
 ```bash
-# Mac App — syntax check
-xcodebuild -project NoCrumbs.xcodeproj -scheme NoCrumbs -configuration Debug -sdk macosx clean build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
+# Mac App — build (output to local build/ directory)
+xcodebuild -project NoCrumbs.xcodeproj -scheme NoCrumbs -configuration Debug -sdk macosx -derivedDataPath build build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
 
-# Mac App — signed
-xcodebuild -project NoCrumbs.xcodeproj -scheme NoCrumbs -configuration Debug -sdk macosx clean build CODE_SIGN_IDENTITY="Apple Development" DEVELOPMENT_TEAM=H32EKFDL92
+# Mac App — run
+open build/Build/Products/Debug/NoCrumbs.app
 
 # CLI
 swift build -c release --package-path CLI/
-
-# Run (no simulator needed)
-open ~/Library/Developer/Xcode/DerivedData/NoCrumbs-*/Build/Products/Debug/NoCrumbs.app
 ```
 
-Always verify builds before confirming fixes.
+Use `/run` skill to build + launch in one step. Always verify builds before confirming fixes.
 
 ## Key Design Decisions
 
