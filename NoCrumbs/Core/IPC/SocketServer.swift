@@ -83,10 +83,11 @@ actor SocketServer {
             }
 
             let data = readAll(fd: clientFD)
-            close(clientFD)
 
             if !data.isEmpty {
-                await handleMessage(data)
+                await handleMessage(data, clientFD: clientFD)
+            } else {
+                close(clientFD)
             }
         }
     }
@@ -102,10 +103,11 @@ actor SocketServer {
         return data
     }
 
-    private func handleMessage(_ data: Data) async {
+    private func handleMessage(_ data: Data, clientFD: Int32) async {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
               let type = json["type"] as? String else {
             logger.warning("[NC:Socket] Invalid message")
+            close(clientFD)
             return
         }
 
@@ -115,12 +117,56 @@ actor SocketServer {
 
         switch type {
         case "prompt":
+            close(clientFD)
             await handlePrompt(json, db: db)
         case "change":
+            close(clientFD)
             await handleChange(json, db: db)
+        case "query-prompts":
+            await handleQueryPrompts(json, db: db, clientFD: clientFD)
         default:
             logger.warning("[NC:Socket] Unknown type: \(type)")
+            close(clientFD)
         }
+    }
+
+    private func handleQueryPrompts(_ json: [String: Any], db: Database, clientFD: Int32) async {
+        guard let cwd = json["cwd"] as? String else {
+            close(clientFD)
+            return
+        }
+
+        let response: [String: Any] = await MainActor.run {
+            do {
+                let since = Date().addingTimeInterval(-3600) // last hour
+                let events = try db.recentEvents(forProject: cwd, since: since)
+                let totalFiles = try db.totalFileCount(forProject: cwd, since: since)
+                let sessionID = events.first?.sessionID ?? ""
+
+                let prompts: [[String: Any]] = events.compactMap { event in
+                    guard let text = event.promptText else { return nil }
+                    let fileCount = (try? db.fileChangeCount(forEventID: event.id)) ?? 0
+                    return ["text": text, "file_count": fileCount]
+                }
+
+                return [
+                    "prompts": prompts,
+                    "session_id": sessionID,
+                    "total_files": totalFiles,
+                    "annotation_enabled": UserDefaults.standard.bool(forKey: "annotationEnabled"),
+                ]
+            } catch {
+                logger.error("[NC:Socket] Query failed: \(error.localizedDescription)")
+                return ["prompts": [] as [Any], "session_id": "", "total_files": 0]
+            }
+        }
+
+        if let responseData = try? JSONSerialization.data(withJSONObject: response) {
+            _ = responseData.withUnsafeBytes { buf in
+                write(clientFD, buf.baseAddress!, buf.count)
+            }
+        }
+        close(clientFD)
     }
 
     private func handlePrompt(_ json: [String: Any], db: Database) async {

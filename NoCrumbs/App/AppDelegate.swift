@@ -1,12 +1,18 @@
 import AppKit
 import OSLog
+import ServiceManagement
 
 private let logger = Logger(subsystem: "com.geneyoo.nocrumbs", category: "App")
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let socketServer = SocketServer()
+    private var globalMonitor: Any?
+    private var localMonitor: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        UserDefaults.standard.register(defaults: ["annotationEnabled": true])
+
+        // Database
         do {
             try Database.shared.open()
             logger.info("[NC:App] Database opened")
@@ -14,21 +20,105 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             logger.error("[NC:App] Database failed: \(error.localizedDescription)")
         }
 
+        // Socket server with retry
         Task {
             do {
                 try await socketServer.start()
                 logger.info("[NC:App] Socket server started")
             } catch {
-                logger.error("[NC:App] Socket server failed: \(error.localizedDescription)")
+                logger.warning("[NC:App] Socket start failed, retrying in 1s: \(error.localizedDescription)")
+                // Legitimate hard timeout: socket bind can fail if stale file wasn't cleaned up
+                try? await Task.sleep(nanoseconds: 1_000_000_000)
+                do {
+                    try await socketServer.start()
+                    logger.info("[NC:App] Socket server started (retry)")
+                } catch {
+                    logger.error("[NC:App] Socket server failed after retry: \(error.localizedDescription)")
+                }
+            }
+        }
+
+        // Launch at login
+        do {
+            try SMAppService.mainApp.register()
+            logger.info("[NC:App] Registered launch at login")
+        } catch {
+            logger.warning("[NC:App] Launch at login failed: \(error.localizedDescription)")
+        }
+
+        // Global hotkey: Cmd+Shift+N
+        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            self?.handleHotkey(event)
+        }
+        localMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            if self?.handleHotkey(event) == true { return nil }
+            return event
+        }
+
+        // Start as accessory (menu bar only)
+        NSApp.setActivationPolicy(.accessory)
+
+        // Track window visibility for activation policy
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(windowDidBecomeMain),
+            name: NSWindow.didBecomeMainNotification, object: nil
+        )
+        NotificationCenter.default.addObserver(
+            self, selector: #selector(windowWillClose),
+            name: NSWindow.willCloseNotification, object: nil
+        )
+    }
+
+    @objc private func windowDidBecomeMain(_ notification: Notification) {
+        NSApp.setActivationPolicy(.regular)
+    }
+
+    @objc private func windowWillClose(_ notification: Notification) {
+        // Only go accessory if no other windows remain visible
+        DispatchQueue.main.async {
+            let hasVisibleWindow = NSApp.windows.contains { $0.isVisible && !$0.className.contains("StatusBar") }
+            if !hasVisibleWindow {
+                NSApp.setActivationPolicy(.accessory)
             }
         }
     }
 
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        // Cmd+Q closes window and hides to menu bar instead of quitting
+        // Real quit only via menu bar "Quit" button
+        let hasVisibleWindow = NSApp.windows.contains { $0.isVisible && $0.identifier?.rawValue == "main" }
+        if hasVisibleWindow {
+            NSApp.windows.filter { $0.identifier?.rawValue == "main" }.forEach { $0.close() }
+            NSApp.setActivationPolicy(.accessory)
+            return .terminateCancel
+        }
+        return .terminateNow
+    }
+
     func applicationWillTerminate(_ notification: Notification) {
+        if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }
+        if let localMonitor { NSEvent.removeMonitor(localMonitor) }
         Task {
             await socketServer.stop()
         }
         Database.shared.close()
         logger.info("[NC:App] Shutdown complete")
+    }
+
+    @discardableResult
+    private func handleHotkey(_ event: NSEvent) -> Bool {
+        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        guard flags == [.command, .shift],
+              event.charactersIgnoringModifiers == "n" else { return false }
+
+        showMainWindow()
+        return true
+    }
+
+    private func showMainWindow() {
+        NSApp.activate(ignoringOtherApps: true)
+        if let window = NSApp.windows.first(where: { $0.identifier?.rawValue == "main" }) {
+            window.makeKeyAndOrderFront(nil)
+        }
     }
 }

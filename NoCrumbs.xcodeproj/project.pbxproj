@@ -20,6 +20,7 @@
 		C6790B0751E4DA40828B609D /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = 127A4015EC6E11386657358E /* Session.swift */; };
 		D80D064DB9F6C9C9DF635713 /* NoCrumbsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 776872DA80B73BA9E09C28A3 /* NoCrumbsApp.swift */; };
 		E5439CA1FB677D97447268AE /* VCSDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37CE3F16F07E020EEDE309B8 /* VCSDetector.swift */; };
+		F1A2B3C4D5E6F7089AB0C1D2 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5C /* SettingsView.swift */; };
 		FB0B46458B8730FFCAE8EF9E /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A77379228A89D5FF2E9A7E4C /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
@@ -48,6 +49,7 @@
 		A77379228A89D5FF2E9A7E4C /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
 		BD9D8050C0B03F827872CC72 /* VCSType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VCSType.swift; sourceTree = "<group>"; };
 		DC3CB357C8C961DD7C7C7228 /* NoCrumbsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NoCrumbsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1B2C3D4E5F60718293A4B5C /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
 		DECE7D7EE0B37901DADC5F11 /* Database.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Database.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -164,9 +166,18 @@
 		EB41E4B38DD9092AAFBF25DF /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				E2F3A4B5C6D7E8F90A1B2C3D /* Settings */,
 			);
 			name = Features;
 			path = NoCrumbs/Features;
+			sourceTree = "<group>";
+		};
+		E2F3A4B5C6D7E8F90A1B2C3D /* Settings */ = {
+			isa = PBXGroup;
+			children = (
+				A1B2C3D4E5F60718293A4B5C /* SettingsView.swift */,
+			);
+			path = Settings;
 			sourceTree = "<group>";
 		};
 		FCBEDC9D97CFEF4FEA1FD7AD /* Tests */ = {
@@ -271,6 +282,7 @@
 				8A911B5B50873530D8061506 /* PromptEvent.swift in Sources */,
 				C6790B0751E4DA40828B609D /* Session.swift in Sources */,
 				60E0FC9B82EAE9F21A3CD2CD /* SocketClient.swift in Sources */,
+				F1A2B3C4D5E6F7089AB0C1D2 /* SettingsView.swift in Sources */,
 				3251E77D9085383118BFAF1E /* SocketServer.swift in Sources */,
 				E5439CA1FB677D97447268AE /* VCSDetector.swift in Sources */,
 				70E7223E6442AAB1656BE297 /* VCSProvider.swift in Sources */,

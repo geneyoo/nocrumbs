@@ -402,20 +402,20 @@ Cursor shows you diffs inline and they vanish when you accept. NoCrumbs is the p
 
 ---
 
-### M2 — Menu Bar Shell + Commit Annotation
-- [ ] `LSUIElement = YES` already in Info.plist ✅
-- [ ] `MenuBarExtra` with placeholder icon ✅ (already exists)
-- [ ] Menu items: Show NoCrumbs / Quit ✅ (already exists)
-- [ ] Launch at login via `SMAppService`
-- [ ] Socket server starts on launch, restarts on failure
-- [ ] Basic window: table of recent sessions (project + timestamp)
-- [ ] Dynamic activation policy (`⌘Tab` behavior)
-- [ ] Global hotkey (`⌘⇧N`) to show/hide
-- [ ] Commit annotation: `prepare-commit-msg` git hook / hg equivalent
-- [ ] Query DB for uncommitted prompt events in current session
-- [ ] Append `---` + prompt summary block to commit message
-- [ ] Cap at 3 prompts shown, collapse rest (`+ N more`)
-- [ ] Setting to disable annotation
+### M2 — Menu Bar Shell + Commit Annotation ✅
+- [x] `LSUIElement = YES` already in Info.plist
+- [x] `MenuBarExtra` with placeholder icon
+- [x] Menu items: Show NoCrumbs / Quit
+- [x] Launch at login via `SMAppService`
+- [x] Socket server starts on launch, restarts on failure
+- [x] Basic window: table of recent sessions (project + timestamp)
+- [x] Dynamic activation policy (`⌘Tab` behavior)
+- [x] Global hotkey (`⌘⇧N`) to show/hide
+- [x] Commit annotation: `prepare-commit-msg` git hook / hg equivalent
+- [x] Query DB for uncommitted prompt events in current session
+- [x] Append `---` + prompt summary block to commit message
+- [x] Cap at 3 prompts shown, collapse rest (`+ N more`)
+- [x] Setting to disable annotation
 
 **Exit criteria:** App lives in menu bar, starts at login, shows captured sessions. Commits automatically include prompt history.
 

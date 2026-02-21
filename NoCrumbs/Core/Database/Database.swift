@@ -11,6 +11,7 @@ final class Database {
 
     private(set) var sessions: [Session] = []
     private(set) var recentEvents: [PromptEvent] = []
+    private(set) var fileChangesCache: [UUID: [FileChange]] = [:]
 
     private var db: OpaquePointer?
     private let dbPath: String
@@ -143,6 +144,7 @@ final class Database {
             .text(change.toolName),
             .double(change.timestamp.timeIntervalSince1970),
         ])
+        fileChangesCache[change.eventID, default: []].append(change)
         logger.info("✅ [DB] Inserted file change \(change.filePath)")
     }
 
@@ -167,6 +169,56 @@ final class Database {
         }
     }
 
+    func eventsForSession(id: String) -> [PromptEvent] {
+        recentEvents.filter { $0.sessionID == id }
+    }
+
+    func recentEvents(forProject projectPath: String, since: Date) throws -> [PromptEvent] {
+        let sql = """
+            SELECT id, sessionID, projectPath, promptText, timestamp, vcs
+            FROM promptEvents
+            WHERE projectPath = ? AND timestamp >= ? AND promptText IS NOT NULL
+            ORDER BY timestamp DESC
+            """
+        return try query(sql, bindings: [
+            .text(projectPath),
+            .double(since.timeIntervalSince1970),
+        ]) { stmt in
+            let vcsRaw = sqlite3_column_text(stmt, 5).map { String(cString: $0) }
+            return PromptEvent(
+                id: UUID(uuidString: columnText(stmt, 0))!,
+                sessionID: columnText(stmt, 1),
+                projectPath: columnText(stmt, 2),
+                promptText: sqlite3_column_text(stmt, 3).map { String(cString: $0) },
+                timestamp: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 4)),
+                vcs: vcsRaw.flatMap { VCSType(rawValue: $0) }
+            )
+        }
+    }
+
+    func fileChangeCount(forEventID eventID: UUID) throws -> Int {
+        let sql = "SELECT COUNT(*) FROM fileChanges WHERE eventID = ?"
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return 0 }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, eventID.uuidString, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        return sqlite3_step(stmt) == SQLITE_ROW ? Int(sqlite3_column_int(stmt, 0)) : 0
+    }
+
+    func totalFileCount(forProject projectPath: String, since: Date) throws -> Int {
+        let sql = """
+            SELECT COUNT(*) FROM fileChanges fc
+            JOIN promptEvents pe ON fc.eventID = pe.id
+            WHERE pe.projectPath = ? AND pe.timestamp >= ?
+            """
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return 0 }
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_bind_text(stmt, 1, projectPath, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+        sqlite3_bind_double(stmt, 2, since.timeIntervalSince1970)
+        return sqlite3_step(stmt) == SQLITE_ROW ? Int(sqlite3_column_int(stmt, 0)) : 0
+    }
+
     func deleteSession(id: String) throws {
         try execute("DELETE FROM sessions WHERE id = ?", bindings: [.text(id)])
         try loadSessions()
@@ -179,6 +231,7 @@ final class Database {
     private func loadCache() throws {
         try loadSessions()
         try loadRecentEvents()
+        try loadFileChanges()
     }
 
     private func loadSessions() throws {
@@ -208,6 +261,18 @@ final class Database {
                 vcs: vcsRaw.flatMap { VCSType(rawValue: $0) }
             )
         }
+    }
+
+    private func loadFileChanges() throws {
+        let eventIDs = recentEvents.map { $0.id }
+        var cache: [UUID: [FileChange]] = [:]
+        for eventID in eventIDs {
+            let changes = try fileChanges(forEventID: eventID)
+            if !changes.isEmpty {
+                cache[eventID] = changes
+            }
+        }
+        fileChangesCache = cache
     }
 
     // MARK: - SQLite Helpers
