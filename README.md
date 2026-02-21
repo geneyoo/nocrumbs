@@ -60,7 +60,29 @@ Clean side-by-side diff with syntax highlighting. Before on left, after on right
 ### 5. Git + Mercurial support
 Detects VCS automatically (`.git` vs `.hg`). Same unified diff format, just different commands. ~1 day of extra work.
 
-### 6. Fully local, no cloud
+### 6. Commit message annotation
+Automatically appends prompt history to commit messages — below a `---` separator so it never interferes with existing templates (Phabricator, Conventional Commits, Jira prefixes, etc).
+
+```
+refactor: convert auth to async/await
+
+Summary: Converted auth module from completion handlers to async/await.
+Test Plan: Run AuthTests
+
+---
+🍞 2 prompts · 4 files · session abc123
+› refactor auth to async/await
+› add error handling to the new async methods
+```
+
+- Appends to the end, after whatever template the user/team already has
+- `---` horizontal rule is a universal separator — Phabricator, GitHub, hg all ignore it
+- `git log --oneline` / `hg log -T '{desc|firstline}'` never sees it
+- First 3 prompts shown, rest collapsed (`+ 9 more`)
+- Session ID is the lookup key back into NoCrumbs
+- Can be disabled via settings
+
+### 7. Fully local, no cloud
 All data stays on device. No API keys, no accounts, no telemetry. NoCrumbs never makes network calls. Uses the user's own Claude Code subscription for any AI features.
 
 ---
@@ -380,7 +402,7 @@ Cursor shows you diffs inline and they vanish when you accept. NoCrumbs is the p
 
 ---
 
-### M2 — Menu Bar Shell
+### M2 — Menu Bar Shell + Commit Annotation
 - [ ] `LSUIElement = YES` already in Info.plist ✅
 - [ ] `MenuBarExtra` with placeholder icon ✅ (already exists)
 - [ ] Menu items: Show NoCrumbs / Quit ✅ (already exists)
@@ -389,8 +411,13 @@ Cursor shows you diffs inline and they vanish when you accept. NoCrumbs is the p
 - [ ] Basic window: table of recent sessions (project + timestamp)
 - [ ] Dynamic activation policy (`⌘Tab` behavior)
 - [ ] Global hotkey (`⌘⇧N`) to show/hide
+- [ ] Commit annotation: `prepare-commit-msg` git hook / hg equivalent
+- [ ] Query DB for uncommitted prompt events in current session
+- [ ] Append `---` + prompt summary block to commit message
+- [ ] Cap at 3 prompts shown, collapse rest (`+ N more`)
+- [ ] Setting to disable annotation
 
-**Exit criteria:** App lives in menu bar, starts at login, shows captured sessions.
+**Exit criteria:** App lives in menu bar, starts at login, shows captured sessions. Commits automatically include prompt history.
 
 ---
 
