@@ -2,9 +2,13 @@ import SwiftUI
 
 @main
 struct NoCrumbsApp: App {
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @State private var database = Database.shared
+
     var body: some Scene {
         Window("NoCrumbs", id: "main") {
             ContentView()
+                .environment(database)
         }
         .defaultSize(width: 1000, height: 700)
 

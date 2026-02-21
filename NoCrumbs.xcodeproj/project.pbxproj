@@ -7,10 +7,20 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		184663C5EAA33A42CA66BBBB /* VCSType.swift in Sources */ = {isa = PBXBuildFile; fileRef = BD9D8050C0B03F827872CC72 /* VCSType.swift */; };
+		28E0137ED7D0A9DDC51A27A6 /* FileChange.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10564EE9AF457416465F62D /* FileChange.swift */; };
+		3251E77D9085383118BFAF1E /* SocketServer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5E0978BBFBDC197AD349E9F5 /* SocketServer.swift */; };
 		47A3ECC051305542063B06E0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7728FC471410616E9FED7A2D /* ContentView.swift */; };
-		82F7D1192E2BC5D116E1155F /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = A26529D0079C0149161AE076 /* GRDB */; };
-		8F36467F923498EF4277BE31 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = E7DF57F61F6B0D86D735C19F /* Sparkle */; };
+		60E0FC9B82EAE9F21A3CD2CD /* SocketClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3E97C4331A6A2B294BFCA1E6 /* SocketClient.swift */; };
+		64467DA5AC2640FFF9D48C31 /* Database.swift in Sources */ = {isa = PBXBuildFile; fileRef = DECE7D7EE0B37901DADC5F11 /* Database.swift */; };
+		70E7223E6442AAB1656BE297 /* VCSProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 98CDF552C67056A28C4819EA /* VCSProvider.swift */; };
+		82F7D1192E2BC5D116E1155F /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = E7DF57F61F6B0D86D735C19F /* Sparkle */; };
+		8A911B5B50873530D8061506 /* PromptEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 851939F6461B1C59CF8F1823 /* PromptEvent.swift */; };
+		C307CB874E94C03E8F8E63FD /* GitProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D069F5ACA9BB864C8B7AFA6 /* GitProvider.swift */; };
+		C6790B0751E4DA40828B609D /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = 127A4015EC6E11386657358E /* Session.swift */; };
 		D80D064DB9F6C9C9DF635713 /* NoCrumbsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 776872DA80B73BA9E09C28A3 /* NoCrumbsApp.swift */; };
+		E5439CA1FB677D97447268AE /* VCSDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37CE3F16F07E020EEDE309B8 /* VCSDetector.swift */; };
+		FB0B46458B8730FFCAE8EF9E /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A77379228A89D5FF2E9A7E4C /* AppDelegate.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -24,10 +34,21 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		127A4015EC6E11386657358E /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
+		37CE3F16F07E020EEDE309B8 /* VCSDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VCSDetector.swift; sourceTree = "<group>"; };
+		3D069F5ACA9BB864C8B7AFA6 /* GitProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitProvider.swift; sourceTree = "<group>"; };
+		3E97C4331A6A2B294BFCA1E6 /* SocketClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocketClient.swift; sourceTree = "<group>"; };
+		5E0978BBFBDC197AD349E9F5 /* SocketServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocketServer.swift; sourceTree = "<group>"; };
 		5F6657501DB0A6738B4E5D13 /* NoCrumbs.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NoCrumbs.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		7728FC471410616E9FED7A2D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		776872DA80B73BA9E09C28A3 /* NoCrumbsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoCrumbsApp.swift; sourceTree = "<group>"; };
+		851939F6461B1C59CF8F1823 /* PromptEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptEvent.swift; sourceTree = "<group>"; };
+		98CDF552C67056A28C4819EA /* VCSProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VCSProvider.swift; sourceTree = "<group>"; };
+		A10564EE9AF457416465F62D /* FileChange.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileChange.swift; sourceTree = "<group>"; };
+		A77379228A89D5FF2E9A7E4C /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
+		BD9D8050C0B03F827872CC72 /* VCSType.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VCSType.swift; sourceTree = "<group>"; };
 		DC3CB357C8C961DD7C7C7228 /* NoCrumbsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NoCrumbsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		DECE7D7EE0B37901DADC5F11 /* Database.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Database.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -35,8 +56,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				82F7D1192E2BC5D116E1155F /* GRDB in Frameworks */,
-				8F36467F923498EF4277BE31 /* Sparkle in Frameworks */,
+				82F7D1192E2BC5D116E1155F /* Sparkle in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -46,6 +66,7 @@
 		3A4FCF443AAE6D074C7D5DC0 /* Database */ = {
 			isa = PBXGroup;
 			children = (
+				DECE7D7EE0B37901DADC5F11 /* Database.swift */,
 			);
 			path = Database;
 			sourceTree = "<group>";
@@ -62,6 +83,7 @@
 		6211C7DCFC6FBBEE9801D178 /* App */ = {
 			isa = PBXGroup;
 			children = (
+				A77379228A89D5FF2E9A7E4C /* AppDelegate.swift */,
 				7728FC471410616E9FED7A2D /* ContentView.swift */,
 				776872DA80B73BA9E09C28A3 /* NoCrumbsApp.swift */,
 			);
@@ -69,13 +91,43 @@
 			path = NoCrumbs/App;
 			sourceTree = "<group>";
 		};
+		95E391327C4C135C6B6E40E2 /* IPC */ = {
+			isa = PBXGroup;
+			children = (
+				3E97C4331A6A2B294BFCA1E6 /* SocketClient.swift */,
+				5E0978BBFBDC197AD349E9F5 /* SocketServer.swift */,
+			);
+			path = IPC;
+			sourceTree = "<group>";
+		};
+		AA98B77E378D2004301C9CB7 /* Utilities */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Utilities;
+			sourceTree = "<group>";
+		};
 		B2EAFE23A7C76371D648260F /* Core */ = {
 			isa = PBXGroup;
 			children = (
 				3A4FCF443AAE6D074C7D5DC0 /* Database */,
+				95E391327C4C135C6B6E40E2 /* IPC */,
+				CB242500DFFB780C2EEBD47A /* Models */,
+				AA98B77E378D2004301C9CB7 /* Utilities */,
+				BFB3E336FDA7967BA26F21BC /* VCS */,
 			);
 			name = Core;
 			path = NoCrumbs/Core;
+			sourceTree = "<group>";
+		};
+		BFB3E336FDA7967BA26F21BC /* VCS */ = {
+			isa = PBXGroup;
+			children = (
+				3D069F5ACA9BB864C8B7AFA6 /* GitProvider.swift */,
+				37CE3F16F07E020EEDE309B8 /* VCSDetector.swift */,
+				98CDF552C67056A28C4819EA /* VCSProvider.swift */,
+			);
+			path = VCS;
 			sourceTree = "<group>";
 		};
 		C260A28EAF9A2AA97C588171 /* UI */ = {
@@ -84,6 +136,17 @@
 			);
 			name = UI;
 			path = NoCrumbs/UI;
+			sourceTree = "<group>";
+		};
+		CB242500DFFB780C2EEBD47A /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A10564EE9AF457416465F62D /* FileChange.swift */,
+				851939F6461B1C59CF8F1823 /* PromptEvent.swift */,
+				127A4015EC6E11386657358E /* Session.swift */,
+				BD9D8050C0B03F827872CC72 /* VCSType.swift */,
+			);
+			path = Models;
 			sourceTree = "<group>";
 		};
 		D7C15A1A809FDE90F81802F3 = {
@@ -148,7 +211,6 @@
 			);
 			name = NoCrumbs;
 			packageProductDependencies = (
-				A26529D0079C0149161AE076 /* GRDB */,
 				E7DF57F61F6B0D86D735C19F /* Sparkle */,
 			);
 			productName = NoCrumbs;
@@ -183,7 +245,6 @@
 			mainGroup = D7C15A1A809FDE90F81802F3;
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
-				6571A95D945154A1D17C73DD /* XCRemoteSwiftPackageReference "GRDB.swift" */,
 				6CE68F545477925B1DC24092 /* XCRemoteSwiftPackageReference "Sparkle" */,
 			);
 			preferredProjectObjectVersion = 77;
@@ -201,8 +262,19 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				FB0B46458B8730FFCAE8EF9E /* AppDelegate.swift in Sources */,
 				47A3ECC051305542063B06E0 /* ContentView.swift in Sources */,
+				64467DA5AC2640FFF9D48C31 /* Database.swift in Sources */,
+				28E0137ED7D0A9DDC51A27A6 /* FileChange.swift in Sources */,
+				C307CB874E94C03E8F8E63FD /* GitProvider.swift in Sources */,
 				D80D064DB9F6C9C9DF635713 /* NoCrumbsApp.swift in Sources */,
+				8A911B5B50873530D8061506 /* PromptEvent.swift in Sources */,
+				C6790B0751E4DA40828B609D /* Session.swift in Sources */,
+				60E0FC9B82EAE9F21A3CD2CD /* SocketClient.swift in Sources */,
+				3251E77D9085383118BFAF1E /* SocketServer.swift in Sources */,
+				E5439CA1FB677D97447268AE /* VCSDetector.swift in Sources */,
+				70E7223E6442AAB1656BE297 /* VCSProvider.swift in Sources */,
+				184663C5EAA33A42CA66BBBB /* VCSType.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -252,6 +324,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				OTHER_LDFLAGS = "-lsqlite3";
 				PRODUCT_BUNDLE_IDENTIFIER = com.geneyoo.nocrumbs;
 				PRODUCT_NAME = NoCrumbs;
 				SDKROOT = macosx;
@@ -334,6 +407,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				OTHER_LDFLAGS = "-lsqlite3";
 				PRODUCT_BUNDLE_IDENTIFIER = com.geneyoo.nocrumbs;
 				PRODUCT_NAME = NoCrumbs;
 				SDKROOT = macosx;
@@ -446,14 +520,6 @@
 /* End XCConfigurationList section */
 
 /* Begin XCRemoteSwiftPackageReference section */
-		6571A95D945154A1D17C73DD /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
-			isa = XCRemoteSwiftPackageReference;
-			repositoryURL = "https://github.com/groue/GRDB.swift.git";
-			requirement = {
-				kind = upToNextMajorVersion;
-				minimumVersion = 7.0.0;
-			};
-		};
 		6CE68F545477925B1DC24092 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
 			isa = XCRemoteSwiftPackageReference;
 			repositoryURL = "https://github.com/sparkle-project/Sparkle.git";
@@ -465,11 +531,6 @@
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
-		A26529D0079C0149161AE076 /* GRDB */ = {
-			isa = XCSwiftPackageProductDependency;
-			package = 6571A95D945154A1D17C73DD /* XCRemoteSwiftPackageReference "GRDB.swift" */;
-			productName = GRDB;
-		};
 		E7DF57F61F6B0D86D735C19F /* Sparkle */ = {
 			isa = XCSwiftPackageProductDependency;
 			package = 6CE68F545477925B1DC24092 /* XCRemoteSwiftPackageReference "Sparkle" */;

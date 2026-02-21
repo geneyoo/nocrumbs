@@ -12,9 +12,6 @@ settings:
     MACOSX_DEPLOYMENT_TARGET: "14.0"
 
 packages:
-  GRDB:
-    url: https://github.com/groue/GRDB.swift.git
-    from: "7.0.0"
   Sparkle:
     url: https://github.com/sparkle-project/Sparkle.git
     from: "2.0.0"
@@ -37,7 +34,6 @@ targets:
     resources:
       - path: NoCrumbs/Resources
     dependencies:
-      - package: GRDB
       - package: Sparkle
     settings:
       base:
@@ -48,6 +44,7 @@ targets:
         COMBINE_HIDPI_IMAGES: true
         CODE_SIGN_IDENTITY: "Apple Development"
         ENABLE_HARDENED_RUNTIME: false
+        OTHER_LDFLAGS: "-lsqlite3"
 
   NoCrumbsTests:
     type: bundle.unit-test
