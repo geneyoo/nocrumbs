@@ -16,6 +16,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         do {
             try Database.shared.open()
             logger.info("[NC:App] Database opened")
+            Task { await Database.shared.backfillBaseCommitHashes() }
         } catch {
             logger.error("[NC:App] Database failed: \(error.localizedDescription)")
         }

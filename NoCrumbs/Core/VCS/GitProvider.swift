@@ -44,6 +44,13 @@ struct GitProvider: VCSProvider {
         return try await run("git", args: args, at: path)
     }
 
+    /// Find the HEAD commit at or before a given timestamp.
+    func headBefore(_ date: Date, at path: String) async throws -> String? {
+        let iso = ISO8601DateFormatter().string(from: date)
+        let result = try await run("git", args: ["log", "-1", "--format=%H", "--before=\(iso)"], at: path)
+        return result.isEmpty ? nil : result
+    }
+
     /// Returns set of file paths that are untracked (new files not yet staged).
     func untrackedFiles(_ filePaths: [String], at path: String) async throws -> Set<String> {
         var args = ["ls-files", "--others", "--exclude-standard", "--"]

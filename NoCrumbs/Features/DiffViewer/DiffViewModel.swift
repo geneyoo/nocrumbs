@@ -55,34 +55,23 @@ final class DiffViewModel {
                 let provider = GitProvider()
                 var allDiffs: [FileDiff] = []
 
-                // 1. Diff against baseCommitHash (captures all changes since prompt, even if committed)
-                //    Fallback to HEAD if no baseCommitHash (legacy events)
-                let raw: String
+                // Diff working tree against baseCommitHash (shows all changes since prompt, committed or not)
                 if let baseHash {
-                    raw = try await provider.diffFromBase(baseHash, filePaths: relativePaths, at: projectPath)
-                } else {
-                    raw = try await provider.diffForFiles(relativePaths, at: projectPath)
+                    let raw = try await provider.diffFromBase(baseHash, filePaths: relativePaths, at: projectPath)
+                    allDiffs.append(contentsOf: DiffParser.parse(raw))
                 }
-                let parsedDiffs = DiffParser.parse(raw)
-                allDiffs.append(contentsOf: parsedDiffs)
 
-                // 2. Find files not in the diff output (untracked or no changes)
-                let diffedPaths = Set(parsedDiffs.compactMap { $0.newPath ?? $0.oldPath })
+                // Files not in the diff output — check if untracked (new files)
+                let diffedPaths = Set(allDiffs.compactMap { $0.newPath ?? $0.oldPath })
                 let missingRelPaths = relativePaths.filter { !diffedPaths.contains($0) }
 
                 if !missingRelPaths.isEmpty {
-                    // Check which missing files are untracked (new, not yet staged)
                     let untracked = try await provider.untrackedFiles(missingRelPaths, at: projectPath)
-
-                    for relPath in missingRelPaths {
+                    for relPath in missingRelPaths where untracked.contains(relPath) {
                         let absPath = projectPath + "/" + relPath
-                        if untracked.contains(relPath) {
-                            // New file — read content and create synthetic diff
-                            if let synthetic = Self.syntheticDiff(for: relPath, absolutePath: absPath, status: .added) {
-                                allDiffs.append(synthetic)
-                            }
+                        if let synthetic = Self.syntheticDiff(for: relPath, absolutePath: absPath, status: .added) {
+                            allDiffs.append(synthetic)
                         }
-                        // else: no diff available (file unchanged from base, or already in diff)
                     }
                 }
 

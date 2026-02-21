@@ -227,6 +227,53 @@ final class Database {
         return sqlite3_step(stmt) == SQLITE_ROW ? Int(sqlite3_column_int(stmt, 0)) : 0
     }
 
+    func updateBaseCommitHash(_ hash: String, forEventID eventID: UUID) throws {
+        try execute(
+            "UPDATE promptEvents SET baseCommitHash = ? WHERE id = ?",
+            bindings: [.text(hash), .text(eventID.uuidString)]
+        )
+    }
+
+    /// Backfill baseCommitHash for legacy events that have NULL.
+    /// Uses `git log --before=<timestamp>` to find what HEAD was at prompt time.
+    func backfillBaseCommitHashes() async {
+        let events: [PromptEvent] = await MainActor.run {
+            recentEvents.filter { $0.baseCommitHash == nil && $0.vcs == .git }
+        }
+        guard !events.isEmpty else { return }
+        logger.info("🔄 [DB] Backfilling baseCommitHash for \(events.count) events")
+
+        let provider = GitProvider()
+        // Cache per project to avoid redundant git calls for same timestamp range
+        var cache: [String: String] = [:]  // "projectPath|timestamp" → hash
+
+        for event in events {
+            let cacheKey = "\(event.projectPath)|\(Int(event.timestamp.timeIntervalSince1970))"
+            let hash: String?
+            if let cached = cache[cacheKey] {
+                hash = cached
+            } else {
+                hash = try? await provider.headBefore(event.timestamp, at: event.projectPath)
+                if let hash { cache[cacheKey] = hash }
+            }
+
+            guard let hash else { continue }
+            await MainActor.run {
+                do {
+                    try updateBaseCommitHash(hash, forEventID: event.id)
+                } catch {
+                    logger.warning("🔄 [DB] Backfill failed for \(event.id): \(error.localizedDescription)")
+                }
+            }
+        }
+
+        // Reload cache to pick up backfilled values
+        await MainActor.run {
+            try? loadRecentEvents()
+            logger.info("🔄 [DB] Backfill complete")
+        }
+    }
+
     func deleteSession(id: String) throws {
         try execute("DELETE FROM sessions WHERE id = ?", bindings: [.text(id)])
         try loadSessions()
