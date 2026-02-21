@@ -18,9 +18,10 @@ struct DiffTextView: NSViewRepresentable {
         let textView = DiffNSTextView()
         textView.isEditable = false
         textView.isSelectable = true
-        textView.isRichText = false
+        textView.isRichText = true
         textView.usesFindPanel = true
-        textView.drawsBackground = false
+        textView.drawsBackground = true
+        textView.backgroundColor = .textBackgroundColor
         textView.textContainerInset = NSSize(width: 4, height: 4)
         textView.isVerticallyResizable = true
         textView.isHorizontallyResizable = false

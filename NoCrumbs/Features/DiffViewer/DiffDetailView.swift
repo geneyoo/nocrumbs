@@ -111,15 +111,14 @@ struct DiffDetailView: View {
 
     @ViewBuilder
     private func diffPanesContent(for file: FileDiff) -> some View {
-        GeometryReader { geo in
-            HStack(spacing: 0) {
-                leftPane(for: file)
-                    .frame(width: (geo.size.width - 1) / 2)
-                Divider()
-                rightPane(for: file)
-                    .frame(width: (geo.size.width - 1) / 2)
-            }
+        HStack(spacing: 0) {
+            leftPane(for: file)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+            Divider()
+            rightPane(for: file)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
         }
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
     }
 
     @ViewBuilder

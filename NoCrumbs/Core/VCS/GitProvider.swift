@@ -33,6 +33,28 @@ struct GitProvider: VCSProvider {
         return try await run("git", args: args, at: path)
     }
 
+    /// Returns set of file paths that are untracked (new files not yet staged).
+    func untrackedFiles(_ filePaths: [String], at path: String) async throws -> Set<String> {
+        var args = ["ls-files", "--others", "--exclude-standard", "--"]
+        args.append(contentsOf: filePaths)
+        let output = try await run("git", args: args, at: path)
+        guard !output.isEmpty else { return [] }
+        return Set(output.split(separator: "\n").map(String.init))
+    }
+
+    /// Returns set of file paths that have no uncommitted changes (clean/committed).
+    func cleanFiles(_ filePaths: [String], at path: String) async throws -> Set<String> {
+        var args = ["status", "--porcelain", "--"]
+        args.append(contentsOf: filePaths)
+        let output = try await run("git", args: args, at: path)
+        // Files NOT in porcelain output are clean
+        let dirtyPaths = Set(output.split(separator: "\n").compactMap { line -> String? in
+            guard line.count > 3 else { return nil }
+            return String(line.dropFirst(3))
+        })
+        return Set(filePaths.filter { !dirtyPaths.contains($0) })
+    }
+
     private func run(_ command: String, args: [String], at directory: String) async throws -> String {
         try await withCheckedThrowingContinuation { continuation in
             let process = Process()

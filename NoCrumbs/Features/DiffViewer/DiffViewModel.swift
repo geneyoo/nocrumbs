@@ -1,7 +1,4 @@
 import Foundation
-import OSLog
-
-private let logger = Logger(subsystem: "com.geneyoo.nocrumbs", category: "DiffViewer")
 
 @Observable @MainActor
 final class DiffViewModel {
@@ -27,29 +24,69 @@ final class DiffViewModel {
             return
         }
 
+        guard !fileChanges.isEmpty else {
+            fileDiffs = []
+            linePairs = []
+            isLoading = false
+            return
+        }
+
         currentEventID = event.id
         isLoading = true
         error = nil
 
-        let paths = fileChanges.map(\.filePath)
+        let absolutePaths = fileChanges.map(\.filePath)
         let projectPath = event.projectPath
+
+        // Convert to relative paths for git commands
+        let relativePaths = absolutePaths.map { path -> String in
+            if path.hasPrefix(projectPath + "/") {
+                return String(path.dropFirst(projectPath.count + 1))
+            }
+            return path
+        }
+
         let eventID = event.id
 
         Task { [weak self] in
             do {
                 let provider = GitProvider()
-                let raw = try await provider.diffForFiles(paths, at: projectPath)
+                var allDiffs: [FileDiff] = []
+
+                // 1. Get git diff HEAD for tracked modified files
+                let raw = try await provider.diffForFiles(relativePaths, at: projectPath)
+                let parsedDiffs = DiffParser.parse(raw)
+                allDiffs.append(contentsOf: parsedDiffs)
+
+                // 2. Find files not in the git diff output (untracked or committed)
+                let diffedPaths = Set(parsedDiffs.compactMap { $0.newPath ?? $0.oldPath })
+                let missingRelPaths = relativePaths.filter { !diffedPaths.contains($0) }
+
+                if !missingRelPaths.isEmpty {
+                    // Check which missing files are untracked (new)
+                    let untracked = try await provider.untrackedFiles(missingRelPaths, at: projectPath)
+
+                    for relPath in missingRelPaths {
+                        let absPath = projectPath + "/" + relPath
+                        if untracked.contains(relPath) {
+                            // New file — read content and create synthetic diff
+                            if let synthetic = Self.syntheticDiff(for: relPath, absolutePath: absPath, status: .added) {
+                                allDiffs.append(synthetic)
+                            }
+                        }
+                        // else: committed file — omit (no diff to show)
+                    }
+                }
+
                 guard let self, self.currentEventID == eventID else { return }
-                let diffs = DiffParser.parse(raw)
-                self.fileDiffs = diffs
-                if self.selectedFileID == nil || !diffs.contains(where: { $0.id == self.selectedFileID }) {
-                    self.selectedFileID = diffs.first?.id
+                self.fileDiffs = allDiffs
+                if self.selectedFileID == nil || !allDiffs.contains(where: { $0.id == self.selectedFileID }) {
+                    self.selectedFileID = allDiffs.first?.id
                 }
                 self.buildLinePairs()
                 self.isLoading = false
             } catch {
                 guard let self, self.currentEventID == eventID else { return }
-                logger.error("Failed to load diff: \(error.localizedDescription)")
                 self.error = error.localizedDescription
                 self.isLoading = false
             }
@@ -60,6 +97,42 @@ final class DiffViewModel {
         selectedFileID = id
         buildLinePairs()
     }
+
+    // MARK: - Synthetic Diff
+
+    private static func syntheticDiff(for relativePath: String, absolutePath: String, status: FileDiff.FileStatus) -> FileDiff? {
+        guard let content = try? String(contentsOfFile: absolutePath, encoding: .utf8) else { return nil }
+        let fileLines = content.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
+
+        let diffLines: [DiffLine] = fileLines.enumerated().map { index, text in
+            DiffLine(
+                id: UUID(),
+                type: .addition,
+                text: text,
+                oldLineNumber: nil,
+                newLineNumber: index + 1
+            )
+        }
+
+        let hunk = DiffHunk(
+            id: UUID(),
+            oldStart: 0,
+            oldCount: 0,
+            newStart: 1,
+            newCount: fileLines.count,
+            lines: diffLines
+        )
+
+        return FileDiff(
+            id: UUID(),
+            oldPath: nil,
+            newPath: relativePath,
+            hunks: [hunk],
+            status: status
+        )
+    }
+
+    // MARK: - Line Pairing
 
     private func buildLinePairs() {
         guard let file = selectedFile else {
@@ -80,7 +153,6 @@ final class DiffViewModel {
                     i += 1
 
                 case .deletion:
-                    // Collect consecutive deletions and additions to pair them
                     var deletions: [DiffLine] = []
                     while i < lines.count, lines[i].type == .deletion {
                         deletions.append(lines[i])

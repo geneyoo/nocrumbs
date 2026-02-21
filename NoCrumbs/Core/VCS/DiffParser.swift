@@ -3,6 +3,7 @@ import Foundation
 enum DiffParser {
 
     static func parse(_ raw: String) -> [FileDiff] {
+        guard !raw.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else { return [] }
         let fileChunks = splitFileChunks(raw)
         return fileChunks.compactMap { parseFileDiff($0) }
     }
@@ -28,7 +29,7 @@ enum DiffParser {
 
     private static func parseFileDiff(_ chunk: String) -> FileDiff? {
         let lines = chunk.split(separator: "\n", omittingEmptySubsequences: false).map(String.init)
-        guard !lines.isEmpty else { return nil }
+        guard !lines.isEmpty, lines[0].hasPrefix("diff --git ") else { return nil }
 
         var oldPath: String?
         var newPath: String?
