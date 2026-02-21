@@ -9,6 +9,8 @@ A native Mac menu bar app that gives engineers a beautiful, always-on view of ev
 
 **Core insight:** When AI writes code, the "author" is a prompt. Traditional diff tools show *what* changed. NoCrumbs shows *what* changed and *why* — linking every file change back to the prompt that caused it.
 
+**Core experience:** A live companion window alongside your terminal. You type a prompt, Claude makes changes across 10+ files, and NoCrumbs instantly shows you what changed — organized by the prompt you just typed, not buried in a `git diff` wall. Like Kaleidoscope meets git blame, organized by AI prompts instead of commits.
+
 ---
 
 ## Problem Statement
@@ -19,13 +21,13 @@ Claude Code with subagents, plan mode, todos, and parallel agents generates mass
 - Navigate a session's history prompt by prompt
 - Draft PR descriptions from session context
 
-Cursor and VS Code have inline ephemeral diffs — gone when the session closes, IDE-bound, no persistent history. NoCrumbs is the persistent, IDE-independent audit trail.
+Cursor and VS Code have inline ephemeral diffs — gone when the session closes, IDE-bound, no persistent history. NoCrumbs is the real-time companion that's always there — updating live as Claude works, persistent across sessions, and organized by intent.
 
 ---
 
 ## What NoCrumbs Is Not
 
-- Not a real-time inline diff (that's Cursor's job)
+- Not an inline editor diff (that's Cursor's job — diffs injected into your source files)
 - Not a code review bot
 - Not another thing that needs an API key
 - Not a cloud service
@@ -340,17 +342,16 @@ Global hotkey (e.g. `⌘⇧N`) to show/hide from anywhere. Menu bar icon shows s
 
 | Feature | Cursor | VS Code + Claude Code ext | NoCrumbs |
 |---|---|---|---|
-| Inline diff while coding | ✅ | ✅ | ❌ (not the goal) |
-| Persistent diff history | ❌ | ❌ | ✅ |
-| Prompt → diff linkage | ❌ | ❌ | ✅ |
+| Real-time diff as AI works | ✅ (inline) | ✅ (inline) | ✅ (companion window) |
+| Prompt-organized diffs | ❌ | ❌ | ✅ |
+| Persistent diff history | ❌ (vanishes on accept) | ❌ | ✅ |
 | IDE-less / terminal workflow | ❌ | ❌ | ✅ |
 | Commit/stack timeline | ❌ | ❌ | ✅ |
 | Mercurial support | ❌ | ❌ | ✅ |
 | PR description from session | ❌ | ❌ | ✅ |
 | Native Mac UX | ❌ | ❌ | ✅ |
-| Persistent across sessions | ❌ | ❌ | ✅ |
 
-Cursor owns in-IDE ephemeral diffs. NoCrumbs owns the persistent, IDE-independent audit trail for engineers who've left the IDE entirely.
+Cursor shows you diffs inline and they vanish when you accept. NoCrumbs is the persistent, prompt-organized companion — live while you work, accumulated across sessions, IDE-independent.
 
 ---
 
@@ -403,20 +404,20 @@ Core product. This is NoCrumbs.
 - [ ] Line number gutter
 - [ ] Two-pane layout with `HSplitView`
 - [ ] Synchronized scrolling via `NSScrollView` delegate
-- [ ] Prompt header above panes (prompt text, summary, files, timestamp)
+- [ ] Prompt header above panes (prompt text, files, timestamp)
 - [ ] File list sidebar
 - [ ] Collapsible commit/prompt timeline with `DisclosureGroup`
 - [ ] Click prompt event → load its diff in panes
+- [ ] Live update: new prompt events appear instantly as Claude works (via @Observable)
 
-**Exit criteria:** Open NoCrumbs, see timeline, click any prompt, see clean two-pane diff with prompt header.
+**Exit criteria:** Have NoCrumbs open alongside terminal. Type a prompt in Claude Code. See the diff appear in NoCrumbs within seconds, organized under that prompt.
 
 ---
 
 ### M4 — Polish
 What separates a tool engineers love from one they tolerate.
 
-- [ ] Smooth panel animation when new diff arrives
-- [ ] Real-time update as Claude Code makes changes
+- [ ] Smooth animation when new prompt/diff arrives
 - [ ] `⌘[` / `⌘]` keyboard navigation between prompt events
 - [ ] Dark mode verified
 - [ ] Empty state with setup instructions
@@ -482,10 +483,10 @@ v2 workflow layer.
 ---
 
 ## One-liner
-*"A native Mac diff viewer built for IDE-less AI coding. Claude Code logs every change it makes with the prompt that triggered it. Review decisions, not just diffs."*
+*"A live companion for IDE-less AI coding. See every change Claude Code makes, organized by the prompt that caused it — as it happens."*
 
 ## Elevator pitch
-*"Git blame for the AI era. NoCrumbs links every file change Claude Code makes back to the prompt that caused it. Always running in your menu bar, zero changes to your workflow, fully local."*
+*"Git blame for the AI era. NoCrumbs sits alongside your terminal and shows you what Claude Code changed and why — in real time, organized by prompt, persistent across sessions. Kaleidoscope meets git blame, built for engineers who've left the IDE."*
 
 ---
 
