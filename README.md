@@ -155,8 +155,8 @@ nocrumbs capture-prompt         nocrumbs capture-change
 | Mac App | SwiftUI + AppKit hybrid | SwiftUI for chrome, AppKit where SwiftUI can't do it |
 | App Lifecycle | `NSApplicationDelegateAdaptor` | Owns SocketServer + Database lifecycle |
 | Menu Bar | `MenuBarExtra` | Native Mac pattern |
-| Diff View | `STTextView` (TextKit 2) | Performant, line numbers built in, SwiftUI wrapper (planned) |
-| Syntax Highlighting | STTextView Neon plugin (TreeSitter) | Best-in-class, same as serious editors (planned) |
+| Diff View | `NSTextView` (TextKit 1) via `NSViewRepresentable` | Battle-tested, no TextKit 2 scrolling bugs |
+| Syntax Highlighting | Regex-based token highlighter (18 languages) | Lightweight, Kaleidoscope-style, no TreeSitter dependency |
 | Timeline | SwiftUI `List` + `DisclosureGroup` | Native, lazy, performant |
 | Gutter/connector | SwiftUI `Canvas` | GPU-accelerated custom drawing |
 | Scroll sync | `NSScrollView` delegate bridged to SwiftUI | Only AppKit can do this reliably |
@@ -174,18 +174,8 @@ nocrumbs capture-prompt         nocrumbs capture-change
 - Scope ViewModels tightly, avoid large global environment objects
 - Parse and prepare diff data off main thread, publish to UI via `@MainActor`
 
-### STTextView for diff panes
-```swift
-import STTextViewSwiftUI
-
-TextView(
-    text: $diffContent,
-    selection: $selection,
-    options: [.wrapLines, .highlightSelectedLine],
-    plugins: [NeonPlugin(theme: currentTheme)]
-)
-```
-Layer diff line background colors (green/red) as paragraph-level `AttributedString` attributes on top. Syntax highlighting renders above. The two layers compose cleanly.
+### NSTextView for diff panes
+Custom `NSViewRepresentable` wrapping `NSTextView` (TextKit 1). Line background colors (green/red) applied as `NSAttributedString` attributes. Regex-based syntax highlighting overlays foreground colors on top — comments, strings, keywords, types, numbers. Supports 18 languages (Swift, Python, JS/TS, Go, Rust, C/C++, Java, Ruby, JSON, YAML, SQL, HTML, CSS, Shell, Markdown, TOML). Custom line number gutter drawn via `NSTextView.draw(_:)` override.
 
 ---
 
@@ -218,6 +208,7 @@ struct PromptEvent: Identifiable, Codable, Equatable, Sendable {
     let promptText: String?     // nil for orphaned file changes
     let timestamp: Date
     let vcs: VCSType?
+    let baseCommitHash: String? // HEAD at prompt time — diff baseline
 }
 
 struct FileChange: Identifiable, Codable, Equatable, Sendable {
@@ -426,16 +417,19 @@ Core product. This is NoCrumbs.
 
 - [x] Unified diff parser → `FileDiff` / `DiffHunk` / `DiffLine` structs
 - [x] `NSTextView` (TextKit 1) integrated via `NSViewRepresentable`
-- [ ] Neon TreeSitter syntax highlighting plugin wired up (P1 backlog)
+- [x] Regex-based syntax highlighting (18 languages, Kaleidoscope-style)
 - [x] Line background colors: green additions, red removals
 - [x] Line number gutter
-- [x] Two-pane layout with `HSplitView`
+- [x] Two-pane layout with collapsible file list
 - [x] Synchronized scrolling via `NSScrollView` boundsDidChange
 - [x] Prompt header above panes (prompt text, files, timestamp)
 - [x] File list sidebar with status icons (added/modified/deleted)
 - [x] Click prompt event → load its diff in panes
 - [x] Live update: new prompt events appear instantly as Claude works (via @Observable)
 - [x] Empty states: "File did not exist" / "File was deleted" for new/deleted files
+- [x] `baseCommitHash` captured at prompt time for reliable diffing
+- [x] Async backfill of baseline hashes for legacy events
+- [x] Filter sidebar to only show events with file changes
 - [ ] Subagent per-prompt attribution via file snapshots (P1 backlog)
 
 **Exit criteria:** Have NoCrumbs open alongside terminal. Type a prompt in Claude Code. See the diff appear in NoCrumbs within seconds, organized under that prompt.

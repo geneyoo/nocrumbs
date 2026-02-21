@@ -26,6 +26,7 @@ private struct SidebarItem: Identifiable {
 private final class SidebarState {
     var selection: UUID?
     var expandedSessions: Set<String> = []
+    var hideEmptyEvents = false
     var keyMonitor: Any?
 }
 
@@ -33,12 +34,28 @@ struct ContentView: View {
     @Environment(Database.self) private var database
     @State private var state = SidebarState()
 
+    private func filteredEvents(for sessionID: String) -> [PromptEvent] {
+        let allEvents = database.eventsForSession(id: sessionID)
+        guard state.hideEmptyEvents else { return allEvents }
+        let latestID = allEvents.first?.id // most recent = "live", never filtered
+        return allEvents.filter { event in
+            event.id == latestID || !(database.fileChangesCache[event.id] ?? []).isEmpty
+        }
+    }
+
+    private func isLiveEvent(_ event: PromptEvent) -> Bool {
+        let allEvents = database.eventsForSession(id: event.sessionID)
+        guard allEvents.first?.id == event.id else { return false }
+        return (database.fileChangesCache[event.id] ?? []).isEmpty
+    }
+
     private var flatItems: [SidebarItem] {
         var items: [SidebarItem] = []
         for session in database.sessions {
+            let events = filteredEvents(for: session.id)
+            guard !events.isEmpty else { continue }
             items.append(.session(session))
             if state.expandedSessions.contains(session.id) {
-                let events = database.eventsForSession(id: session.id)
                 items.append(contentsOf: events.map { .event($0) })
             }
         }
@@ -100,6 +117,16 @@ struct ContentView: View {
                 }
             }
             .listStyle(.sidebar)
+            .toolbar {
+                ToolbarItem(placement: .automatic) {
+                    Button {
+                        state.hideEmptyEvents.toggle()
+                    } label: {
+                        Image(systemName: state.hideEmptyEvents ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
+                    }
+                    .help(state.hideEmptyEvents ? "Showing only prompts with file changes" : "Showing all prompts")
+                }
+            }
         }
     }
 
@@ -108,7 +135,7 @@ struct ContentView: View {
     private func row(for item: SidebarItem) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             if item.kind == .session, let session = item.session {
-                let events = database.eventsForSession(id: session.id)
+                let events = filteredEvents(for: session.id)
                 let eventCount = events.count
                 let firstPrompt = events.first?.promptText
                 let expanded = state.expandedSessions.contains(session.id)
@@ -152,13 +179,21 @@ struct ContentView: View {
                 }
             } else if let event = item.event {
                 let fileCount = database.fileChangesCache[event.id]?.count ?? 0
+                let live = isLiveEvent(event)
                 Text(event.promptText ?? "(no prompt)")
                     .lineLimit(2)
                     .font(.callout)
-                HStack(spacing: 8) {
-                    Text(event.timestamp, style: .time)
-                    if fileCount > 0 {
-                        Label("\(fileCount)", systemImage: "doc")
+                HStack(spacing: 6) {
+                    if live {
+                        LiveDot()
+                        Text("Live")
+                            .font(.caption2.weight(.medium))
+                            .foregroundStyle(.green)
+                    } else {
+                        Text(event.timestamp, style: .time)
+                        if fileCount > 0 {
+                            Label("\(fileCount)", systemImage: "doc")
+                        }
                     }
                 }
                 .font(.caption2)
@@ -345,5 +380,21 @@ private struct EventDetailView: View {
             return String(path.dropFirst(event.projectPath.count + 1))
         }
         return (path as NSString).lastPathComponent
+    }
+}
+
+// MARK: - Live Indicator
+
+private struct LiveDot: View {
+    @State private var pulse = false
+
+    var body: some View {
+        Circle()
+            .fill(.green)
+            .frame(width: 6, height: 6)
+            .scaleEffect(pulse ? 1.4 : 1.0)
+            .opacity(pulse ? 0.6 : 1.0)
+            .animation(.easeInOut(duration: 1.0).repeatForever(autoreverses: true), value: pulse)
+            .onAppear { pulse = true }
     }
 }
