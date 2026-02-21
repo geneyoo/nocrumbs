@@ -14,6 +14,10 @@ struct FileDiff: Identifiable, Equatable {
     var displayPath: String {
         newPath ?? oldPath ?? "(unknown)"
     }
+
+    var fileExtension: String {
+        (displayPath as NSString).pathExtension
+    }
 }
 
 struct DiffHunk: Identifiable, Equatable {

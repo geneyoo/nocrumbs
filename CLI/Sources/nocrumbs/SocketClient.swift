@@ -29,6 +29,7 @@ enum SocketClient {
         guard connectResult == 0 else { throw CLIError.socketFailed("connect: \(errno)") }
 
         let written = data.withUnsafeBytes { buf in
+            // swiftlint:disable:next force_unwrapping
             write(fd, buf.baseAddress!, buf.count)
         }
         guard written == data.count else { throw CLIError.socketFailed("write incomplete") }
@@ -58,6 +59,7 @@ enum SocketClient {
 
         // Write request
         let written = data.withUnsafeBytes { buf in
+            // swiftlint:disable:next force_unwrapping
             write(fd, buf.baseAddress!, buf.count)
         }
         guard written == data.count else { throw CLIError.socketFailed("write incomplete") }

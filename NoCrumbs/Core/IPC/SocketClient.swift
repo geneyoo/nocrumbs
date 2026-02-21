@@ -16,6 +16,7 @@ enum SocketClient {
         guard connectResult == 0 else { throw SocketError.connectFailed(errno) }
 
         let written = data.withUnsafeBytes { buf in
+            // swiftlint:disable:next force_unwrapping
             write(fd, buf.baseAddress!, buf.count)
         }
         guard written == data.count else { throw SocketError.sendFailed }

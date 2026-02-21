@@ -147,7 +147,8 @@ struct DiffDetailView: View {
             DiffTextView(
                 lines: viewModel.linePairs.map(\.left),
                 side: .left,
-                scrollSync: file.status == .modified ? scrollSync : nil
+                scrollSync: file.status == .modified ? scrollSync : nil,
+                fileExtension: file.fileExtension
             )
         }
     }
@@ -161,7 +162,8 @@ struct DiffDetailView: View {
             DiffTextView(
                 lines: viewModel.linePairs.map(\.right),
                 side: .right,
-                scrollSync: file.status == .modified ? scrollSync : nil
+                scrollSync: file.status == .modified ? scrollSync : nil,
+                fileExtension: file.fileExtension
             )
         }
     }

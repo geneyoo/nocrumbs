@@ -13,6 +13,7 @@ private struct SidebarItem: Identifiable {
     enum Kind { case session, event }
 
     static func session(_ s: Session) -> SidebarItem {
+        // swiftlint:disable:next force_unwrapping
         SidebarItem(id: UUID(uuidString: s.id)!, kind: .session, session: s, event: nil)
     }
 

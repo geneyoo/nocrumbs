@@ -9,6 +9,7 @@ actor SocketServer {
     private var listening = false
 
     static var defaultSocketPath: String {
+        // swiftlint:disable:next force_unwrapping
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         return appSupport.appendingPathComponent("NoCrumbs/nocrumbs.sock").path
     }
@@ -163,6 +164,7 @@ actor SocketServer {
 
         if let responseData = try? JSONSerialization.data(withJSONObject: response) {
             _ = responseData.withUnsafeBytes { buf in
+                // swiftlint:disable:next force_unwrapping
                 write(clientFD, buf.baseAddress!, buf.count)
             }
         }

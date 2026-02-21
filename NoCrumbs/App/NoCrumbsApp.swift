@@ -2,7 +2,7 @@ import SwiftUI
 
 @main
 struct NoCrumbsApp: App {
-    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
+    @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate // swiftlint:disable:this weak_delegate
     @State private var database = Database.shared
     @Environment(\.openWindow) private var openWindow
 

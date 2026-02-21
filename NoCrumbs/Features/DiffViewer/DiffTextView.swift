@@ -5,6 +5,7 @@ struct DiffTextView: NSViewRepresentable {
     let lines: [DiffLine?]
     let side: Side
     var scrollSync: DiffScrollSync?
+    var fileExtension: String = ""
 
     enum Side { case left, right }
 
@@ -48,6 +49,7 @@ struct DiffTextView: NSViewRepresentable {
         let font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
 
         let fullString = NSMutableAttributedString()
+        var lineRanges: [NSRange] = []
 
         for (index, line) in lines.enumerated() {
             let text: String
@@ -74,12 +76,20 @@ struct DiffTextView: NSViewRepresentable {
             }
 
             let lineStr = text + (index < lines.count - 1 ? "\n" : "")
+            let start = fullString.length
             let attrs: [NSAttributedString.Key: Any] = [
                 .font: font,
                 .foregroundColor: fgColor,
                 .backgroundColor: bgColor,
             ]
             fullString.append(NSAttributedString(string: lineStr, attributes: attrs))
+            // Track the text portion (exclude trailing newline) for syntax highlighting
+            lineRanges.append(NSRange(location: start, length: text.utf16.count))
+        }
+
+        // Overlay syntax highlighting colors
+        if !fileExtension.isEmpty {
+            SyntaxHighlighter.highlight(fullString, fileExtension: fileExtension, lineRanges: lineRanges)
         }
 
         textStorage.beginEditing()
@@ -123,7 +133,7 @@ final class DiffNSTextView: NSTextView {
             let y = lineRect.origin.y + inset.height
             let lineHeight = lineRect.height
 
-            if NSIntersectsRect(NSRect(x: 0, y: y, width: 40, height: lineHeight), dirtyRect) {
+            if NSRect(x: 0, y: y, width: 40, height: lineHeight).intersects(dirtyRect) {
                 if let line = lineData[lineIndex] {
                     let num: Int?
                     switch diffSide {

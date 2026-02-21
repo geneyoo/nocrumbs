@@ -38,7 +38,7 @@ final class DiffScrollSync {
     }
 
     func detach() {
-        NotificationCenter.default.removeObserver(self)
+        NotificationCenter.default.removeObserver(self) // swiftlint:disable:this notification_center_detachment
         leftScrollView = nil
         rightScrollView = nil
         isAttached = false

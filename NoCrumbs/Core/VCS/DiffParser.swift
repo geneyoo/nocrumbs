@@ -59,9 +59,9 @@ enum DiffParser {
         }
 
         let status: FileDiff.FileStatus
-        if oldPath == nil { status = .added }
-        else if newPath == nil { status = .deleted }
-        else { status = .modified }
+        if oldPath == nil { status = .added
+        } else if newPath == nil { status = .deleted
+        } else { status = .modified }
 
         let hunks = hunkLines.compactMap { parseHunk(header: $0.header, body: $0.body) }
 

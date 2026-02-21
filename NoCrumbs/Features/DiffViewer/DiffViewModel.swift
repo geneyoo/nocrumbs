@@ -80,20 +80,10 @@ final class DiffViewModel {
                 allDiffs.append(contentsOf: parsed)
 
                 // Files not in the diff output — check if untracked (new files)
-                let diffedPaths = Set(allDiffs.compactMap { $0.newPath ?? $0.oldPath })
-                let missingRelPaths = relativePaths.filter { !diffedPaths.contains($0) }
-
-                if !missingRelPaths.isEmpty {
-                    logger.info("\(missingRelPaths.count) files not in diff: \(missingRelPaths)")
-                    let untracked = try await provider.untrackedFiles(missingRelPaths, at: projectPath)
-                    logger.info("untracked: \(untracked)")
-                    for relPath in missingRelPaths where untracked.contains(relPath) {
-                        let absPath = projectPath + "/" + relPath
-                        if let synthetic = Self.syntheticDiff(for: relPath, absolutePath: absPath, status: .added) {
-                            allDiffs.append(synthetic)
-                        }
-                    }
-                }
+                try await Self.appendUntrackedDiffs(
+                    to: &allDiffs, relativePaths: relativePaths,
+                    projectPath: projectPath, provider: provider
+                )
 
                 logger.info("total diffs: \(allDiffs.count)")
                 guard let self, self.currentEventID == eventID else { return }
@@ -115,6 +105,27 @@ final class DiffViewModel {
     func selectFile(_ id: UUID) {
         selectedFileID = id
         buildLinePairs()
+    }
+
+    // MARK: - Untracked Files
+
+    private static func appendUntrackedDiffs(
+        to allDiffs: inout [FileDiff], relativePaths: [String],
+        projectPath: String, provider: GitProvider
+    ) async throws {
+        let diffedPaths = Set(allDiffs.compactMap { $0.newPath ?? $0.oldPath })
+        let missingRelPaths = relativePaths.filter { !diffedPaths.contains($0) }
+        guard !missingRelPaths.isEmpty else { return }
+
+        logger.info("\(missingRelPaths.count) files not in diff: \(missingRelPaths)")
+        let untracked = try await provider.untrackedFiles(missingRelPaths, at: projectPath)
+        logger.info("untracked: \(untracked)")
+        for relPath in missingRelPaths where untracked.contains(relPath) {
+            let absPath = projectPath + "/" + relPath
+            if let synthetic = syntheticDiff(for: relPath, absolutePath: absPath, status: .added) {
+                allDiffs.append(synthetic)
+            }
+        }
     }
 
     // MARK: - Synthetic Diff

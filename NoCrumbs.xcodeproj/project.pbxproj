@@ -25,6 +25,7 @@
 		11AA22BB33CC44DD55EE66FF /* FileDiff.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF66 /* FileDiff.swift */; };
 		22BB33CC44DD55EE66FF1122 /* DiffParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB22CC33DD44EE55FF661122 /* DiffParser.swift */; };
 		33CC44DD55EE66FF112233AA /* DiffViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC33DD44EE55FF66112233AA /* DiffViewModel.swift */; };
+		AC66087FA863BA2B63FCFB61 /* SyntaxHighlighter.swift in Sources */ = {isa = PBXBuildFile; fileRef = C23A6484EE0CAB5CE9B32C38 /* SyntaxHighlighter.swift */; };
 		44DD55EE66FF112233AABB44 /* DiffDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD44EE55FF6611223344AABB /* DiffDetailView.swift */; };
 		55EE66FF1122AABB33CC4455 /* DiffTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE55FF66112233AABB44CC55 /* DiffTextView.swift */; };
 		66FF112233AABB44CC5566DD /* DiffScrollSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF6611223344AABB55CC66DD /* DiffScrollSync.swift */; };
@@ -60,6 +61,7 @@
 		AA11BB22CC33DD44EE55FF66 /* FileDiff.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileDiff.swift; sourceTree = "<group>"; };
 		BB22CC33DD44EE55FF661122 /* DiffParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffParser.swift; sourceTree = "<group>"; };
 		CC33DD44EE55FF66112233AA /* DiffViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffViewModel.swift; sourceTree = "<group>"; };
+		C23A6484EE0CAB5CE9B32C38 /* SyntaxHighlighter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SyntaxHighlighter.swift; sourceTree = "<group>"; };
 		DD44EE55FF6611223344AABB /* DiffDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffDetailView.swift; sourceTree = "<group>"; };
 		EE55FF66112233AABB44CC55 /* DiffTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffTextView.swift; sourceTree = "<group>"; };
 		FF6611223344AABB55CC66DD /* DiffScrollSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffScrollSync.swift; sourceTree = "<group>"; };
@@ -194,6 +196,7 @@
 				FF6611223344AABB55CC66DD /* DiffScrollSync.swift */,
 				EE55FF66112233AABB44CC55 /* DiffTextView.swift */,
 				CC33DD44EE55FF66112233AA /* DiffViewModel.swift */,
+				C23A6484EE0CAB5CE9B32C38 /* SyntaxHighlighter.swift */,
 			);
 			path = DiffViewer;
 			sourceTree = "<group>";
@@ -307,6 +310,7 @@
 				66FF112233AABB44CC5566DD /* DiffScrollSync.swift in Sources */,
 				55EE66FF1122AABB33CC4455 /* DiffTextView.swift in Sources */,
 				33CC44DD55EE66FF112233AA /* DiffViewModel.swift in Sources */,
+				AC66087FA863BA2B63FCFB61 /* SyntaxHighlighter.swift in Sources */,
 				28E0137ED7D0A9DDC51A27A6 /* FileChange.swift in Sources */,
 				11AA22BB33CC44DD55EE66FF /* FileDiff.swift in Sources */,
 				C307CB874E94C03E8F8E63FD /* GitProvider.swift in Sources */,

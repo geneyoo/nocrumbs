@@ -17,6 +17,7 @@ final class Database {
     private let dbPath: String
 
     private init() {
+        // swiftlint:disable:next force_unwrapping
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!
         let dir = appSupport.appendingPathComponent("NoCrumbs", isDirectory: true)
         try? FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
@@ -165,6 +166,7 @@ final class Database {
 
     func fileChanges(forEventID eventID: UUID) throws -> [FileChange] {
         let sql = "SELECT id, eventID, filePath, toolName, timestamp FROM fileChanges WHERE eventID = ? ORDER BY timestamp"
+        // swiftlint:disable force_unwrapping
         return try query(sql, bindings: [.text(eventID.uuidString)]) { stmt in
             FileChange(
                 id: UUID(uuidString: columnText(stmt, 0))!,
@@ -174,6 +176,7 @@ final class Database {
                 timestamp: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 4))
             )
         }
+        // swiftlint:enable force_unwrapping
     }
 
     func eventsForSession(id: String) -> [PromptEvent] {
@@ -193,7 +196,7 @@ final class Database {
         ]) { stmt in
             let vcsRaw = sqlite3_column_text(stmt, 5).map { String(cString: $0) }
             return PromptEvent(
-                id: UUID(uuidString: columnText(stmt, 0))!,
+                id: UUID(uuidString: columnText(stmt, 0))!, // swiftlint:disable:this force_unwrapping
                 sessionID: columnText(stmt, 1),
                 projectPath: columnText(stmt, 2),
                 promptText: sqlite3_column_text(stmt, 3).map { String(cString: $0) },
@@ -310,7 +313,7 @@ final class Database {
         ) { stmt in
             let vcsRaw = sqlite3_column_text(stmt, 5).map { String(cString: $0) }
             return PromptEvent(
-                id: UUID(uuidString: columnText(stmt, 0))!,
+                id: UUID(uuidString: columnText(stmt, 0))!, // swiftlint:disable:this force_unwrapping
                 sessionID: columnText(stmt, 1),
                 projectPath: columnText(stmt, 2),
                 promptText: sqlite3_column_text(stmt, 3).map { String(cString: $0) },
@@ -386,7 +389,7 @@ final class Database {
 
         var results: [T] = []
         while sqlite3_step(stmt) == SQLITE_ROW {
-            results.append(map(stmt!))
+            results.append(map(stmt!)) // swiftlint:disable:this force_unwrapping
         }
         return results
     }
