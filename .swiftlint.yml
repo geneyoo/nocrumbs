@@ -1,0 +1,62 @@
+# SwiftLint Configuration for NoCrumbs
+
+included:
+  - NoCrumbs
+  - CLI/Sources
+
+excluded:
+  - build
+  - .build
+  - CLI/.build
+
+# Rules
+disabled_rules:
+  - trailing_comma         # We allow trailing commas for easier diffing
+
+opt_in_rules:
+  - empty_count
+  - closure_spacing
+  - force_unwrapping
+  - implicitly_unwrapped_optional
+  - overridden_super_call
+  - private_outlet
+  - redundant_nil_coalescing
+  - sorted_first_last
+
+# Rule configs
+identifier_name:
+  min_length:
+    warning: 1             # Allow short names (i, n, fd) in low-level code
+  excluded:
+    - id
+  allowed_symbols:
+    - _                    # CLI models use snake_case for JSON mapping
+
+line_length:
+  warning: 160
+  error: 200
+  ignores_comments: true
+  ignores_urls: true
+
+type_body_length:
+  warning: 300
+  error: 500
+
+file_length:
+  warning: 500
+  error: 1000
+
+function_body_length:
+  warning: 60
+  error: 100
+
+cyclomatic_complexity:
+  warning: 15
+  error: 25
+
+nesting:
+  type_level: 3
+  function_level: 3
+
+force_cast:
+  severity: warning        # Downgrade — some AppKit interop needs force casts
