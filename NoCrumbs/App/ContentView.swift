@@ -107,7 +107,9 @@ struct ContentView: View {
     private func row(for item: SidebarItem) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             if item.kind == .session, let session = item.session {
-                let eventCount = database.eventsForSession(id: session.id).count
+                let events = database.eventsForSession(id: session.id)
+                let eventCount = events.count
+                let firstPrompt = events.first?.promptText
                 let expanded = state.expandedSessions.contains(session.id)
                 HStack(spacing: 4) {
                     Image(systemName: "chevron.right")
@@ -130,9 +132,19 @@ struct ContentView: View {
                         .foregroundStyle(.secondary)
                         .frame(width: 16)
                     VStack(alignment: .leading, spacing: 2) {
-                        Text(session.id.prefix(8))
-                            .font(.caption.monospaced())
-                        Text("\(eventCount) prompt\(eventCount == 1 ? "" : "s")")
+                        HStack(spacing: 4) {
+                            Text((session.projectPath as NSString).lastPathComponent)
+                                .font(.callout.weight(.medium))
+                            if let firstPrompt {
+                                Text("·")
+                                    .foregroundStyle(.quaternary)
+                                Text(firstPrompt)
+                                    .lineLimit(1)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                        .font(.callout)
+                        Text("\(eventCount) prompt\(eventCount == 1 ? "" : "s") · \(session.startedAt, format: .relative(presentation: .named))")
                             .font(.caption2)
                             .foregroundStyle(.tertiary)
                     }
