@@ -36,10 +36,10 @@ Cursor and VS Code have inline ephemeral diffs — gone when the session closes,
 ## Core Features (v1)
 
 ### 1. Zero-friction capture
-Claude Code triggers NoCrumbs via a `PostToolUse` hook — deterministic, not CLAUDE.md (which gets ignored). No commands, no extra steps. Install once, works forever.
+Claude Code triggers NoCrumbs via dual hooks (`UserPromptSubmit` + `PostToolUse`) — deterministic, not CLAUDE.md (which gets ignored). No commands, no extra steps. Install once, works forever.
 
-### 2. Prompt → commit linkage
-Every diff is linked to the top-level prompt that caused it. Like git blame but for AI decisions. Subagent noise is filtered out — only top-level user prompts are captured.
+### 2. Prompt → file change linkage
+Every file change is linked to the prompt that caused it via session ID. Like git blame but for AI decisions. Subagent noise is filtered out — only top-level user prompts are captured.
 
 ### 3. Collapsible commit/prompt timeline
 ```
@@ -88,25 +88,35 @@ Instead of line-level diff, understand code structure. "Function moved, unchange
 
 ## Architecture
 
+> For full technical details (schema, code examples, data flow): see `docs/architecture.md`
+
 ```
-Claude Code
-    ↓ PostToolUse hook (deterministic, not CLAUDE.md)
-nocrumbs CLI          ← tiny binary, <50ms, fire-and-forget
-    ↓ Unix domain socket (non-blocking write, silent fail if app not running)
-NoCrumbs.app          ← menu bar app, always running
-    ↓
-SQLite (metadata)  +  git/hg CLI (diffs derived on demand, not stored)
-    ↓
-Timeline UI → Diff Viewer → PR Draft
+Claude Code hooks (dual-hook design)
+    ↓ UserPromptSubmit              ↓ PostToolUse (Write|Edit)
+nocrumbs capture-prompt         nocrumbs capture-change
+    ↓ stdin JSON → socket           ↓ stdin JSON → socket
+    └──────────┬────────────────────┘
+               ↓ Unix domain socket
+    NoCrumbs.app SocketServer (POSIX, actor)
+               ↓
+    SQLite (raw C API, WAL mode)  +  git/hg CLI (diffs on demand)
+               ↓
+    Timeline UI → Diff Viewer → PR Draft
 ```
 
 ### Key architectural decisions
 
-**CLI is fire-and-forget.** Writes JSON to socket, exits immediately. If app isn't running, drops payload silently. Claude Code never waits for NoCrumbs.
+**Dual-hook design.** `UserPromptSubmit` captures the prompt text + session ID. `PostToolUse` (matcher: Write|Edit) captures file changes + session ID. Session ID links them together.
 
-**Don't store diffs.** Git already stores them permanently. NoCrumbs stores only the prompt↔commit mapping. Derive diffs on demand via `git show {hash}` or `hg diff -c {rev}`. Entire DB stays under 1MB for years of use.
+**CLI is fire-and-forget.** Reads stdin JSON, writes to socket, exits immediately. If app isn't running, drops payload silently. Always exits 0 — never blocks Claude Code.
 
-**Capture at commit boundary, not subagent boundary.** Subagent activity, plan mode steps, todo checkboxes — all discarded at CLI level. Only top-level user prompts + resulting commits are stored.
+**Don't store diffs.** Git already stores them permanently. NoCrumbs stores only the prompt↔file change mapping. Derive diffs on demand via `git diff`. Entire DB stays under 1MB for years of use.
+
+**Separate fileChanges table.** A single prompt can touch 100+ files. Storing file paths in a normalized table (not a JSON array) enables indexed queries like "all prompts that touched this file."
+
+**Raw SQLite over ORMs.** Bulk insert 100 file paths in a single transaction: ~1ms. No GRDB/SwiftData overhead. System library, zero dependencies.
+
+**Capture at prompt boundary, not subagent boundary.** Subagent activity, plan mode steps, todo checkboxes — all discarded. Only top-level user prompts + resulting file changes are stored.
 
 **No TTL needed.** Git has no TTL on local commits. Normal commits on a branch live forever locally. NoCrumbs just stores the metadata sidecar.
 
@@ -119,17 +129,19 @@ Timeline UI → Diff Viewer → PR Draft
 | Layer | Technology | Why |
 |---|---|---|
 | Mac App | SwiftUI + AppKit hybrid | SwiftUI for chrome, AppKit where SwiftUI can't do it |
-| Menu Bar | `NSStatusItem` + `MenuBarExtra` | Native Mac pattern |
-| Diff View | `STTextView` (TextKit 2) | Performant, line numbers built in, SwiftUI wrapper |
-| Syntax Highlighting | STTextView Neon plugin (TreeSitter) | Best-in-class, same as serious editors |
+| App Lifecycle | `NSApplicationDelegateAdaptor` | Owns SocketServer + Database lifecycle |
+| Menu Bar | `MenuBarExtra` | Native Mac pattern |
+| Diff View | `STTextView` (TextKit 2) | Performant, line numbers built in, SwiftUI wrapper (planned) |
+| Syntax Highlighting | STTextView Neon plugin (TreeSitter) | Best-in-class, same as serious editors (planned) |
 | Timeline | SwiftUI `List` + `DisclosureGroup` | Native, lazy, performant |
 | Gutter/connector | SwiftUI `Canvas` | GPU-accelerated custom drawing |
 | Scroll sync | `NSScrollView` delegate bridged to SwiftUI | Only AppKit can do this reliably |
-| Local DB | SQLite via GRDB.swift | Fast, queryable, tiny footprint |
-| IPC | Unix domain socket | Sub-millisecond, no overhead |
-| CLI | Swift Package Manager standalone binary | Fast startup, no dependencies |
-| VCS | `git`/`hg` CLI subprocess | Don't reinvent, just call them |
+| Local DB | Raw SQLite3 C API (WAL mode) | Bulk performance, zero dependencies, system library |
+| IPC | Unix domain socket (POSIX) | Sub-millisecond, no overhead |
+| CLI | Swift Package Manager standalone binary | Fast startup, zero dependencies |
+| VCS | `git`/`hg` CLI subprocess via `Process` | Don't reinvent, just call them |
 | Updates | Sparkle framework | Standard for non-App Store Mac apps |
+| Observation | `@Observable` (Swift 5.9+) | Modern pattern, not ObservableObject |
 
 ### SwiftUI performance rules
 - Make `DiffLine` and `DiffHunk` models `Equatable` to skip unnecessary redraws
@@ -168,33 +180,45 @@ No need to implement diff algorithms in Swift — just parse the unified diff ou
 ## Data Model
 
 ```swift
-// Only what git doesn't already store
-
-struct PromptEvent: Codable, Identifiable, Equatable {
-    let id: UUID
-    let commitHash: String?      // nil if uncommitted at capture time
+struct Session: Identifiable, Codable, Equatable, Sendable {
+    let id: String              // Claude Code session_id
     let projectPath: String
-    let promptText: String       // what the engineer typed
-    let summary: String?         // auto-generated one-liner (via claude CLI)
-    let filesChanged: [String]
-    let timestamp: Date
-    let vcs: VCSType             // .git or .mercurial
+    let startedAt: Date
+    var lastActivityAt: Date
 }
 
-enum VCSType: String, Codable {
+struct PromptEvent: Identifiable, Codable, Equatable, Sendable {
+    let id: UUID
+    let sessionID: String
+    let projectPath: String
+    let promptText: String?     // nil for orphaned file changes
+    let timestamp: Date
+    let vcs: VCSType?
+}
+
+struct FileChange: Identifiable, Codable, Equatable, Sendable {
+    let id: UUID
+    let eventID: UUID           // FK → PromptEvent
+    let filePath: String
+    let toolName: String        // "Write" or "Edit"
+    let timestamp: Date
+}
+
+enum VCSType: String, Codable, Sendable {
     case git
     case mercurial
 }
 
-// Diff is NOT stored — derived on demand:
-// git show {commitHash} -- {file}
-// hg diff -c {rev} {file}
+// Diffs NOT stored — derived on demand:
+// git diff {hash}~1 {hash}
+// hg diff -c {rev}
 ```
 
 ### Storage layout
 ```
 ~/Library/Application Support/NoCrumbs/
-└── nocrumbs.sqlite    ← prompt events, ~1MB for years of use
+├── nocrumbs.sqlite    ← sessions + prompt events + file changes
+└── nocrumbs.sock      ← Unix domain socket (while app running)
 ```
 
 No diff blobs, no file snapshots. Lean sidecar only.
@@ -203,26 +227,44 @@ No diff blobs, no file snapshots. Lean sidecar only.
 
 ## Claude Code Hook Setup
 
+Dual-hook design. Hooks receive data via **stdin as JSON** (not environment variables).
+
 ```json
-// ~/.claude/settings.json
+// ~/.claude/settings.json (installed by `nocrumbs install`)
 {
   "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [{
+          "type": "command",
+          "command": "nocrumbs capture-prompt"
+        }]
+      }
+    ],
     "PostToolUse": [
       {
-        "matcher": "Write|Edit|MultiEdit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "nocrumbs event --project \"$CLAUDE_PROJECT_DIR\" --files \"$CLAUDE_TOOL_RESPONSE\""
-          }
-        ]
+        "matcher": "Write|Edit",
+        "hooks": [{
+          "type": "command",
+          "command": "nocrumbs capture-change"
+        }]
       }
     ]
   }
 }
 ```
 
-`nocrumbs install` command sets this up automatically. Engineer runs one command, never thinks about it again.
+**Stdin formats:**
+
+```json
+// UserPromptSubmit → nocrumbs capture-prompt
+{"session_id": "abc123", "prompt": "refactor auth to async/await", "cwd": "/path/to/project"}
+
+// PostToolUse → nocrumbs capture-change
+{"session_id": "abc123", "tool_name": "Write", "tool_input": {"file_path": "/path/file.swift"}, "cwd": "/path/to/project"}
+```
+
+`nocrumbs install` command sets this up automatically, merging with existing settings. Engineer runs one command, never thinks about it again.
 
 ---
 
@@ -314,49 +356,33 @@ Cursor owns in-IDE ephemeral diffs. NoCrumbs owns the persistent, IDE-independen
 
 ## Milestones
 
-### M0 — Project Setup (Day 1)
-- [ ] Xcode project: Mac App target + CLI target in same workspace
-- [ ] Swift packages: GRDB.swift, Sparkle, STTextView
-- [ ] GitHub repo, main/dev branches
-- [ ] Code signing configured
-- [ ] Folder structure:
-  ```
-  NoCrumbs/
-  ├── App/        ← SwiftUI Mac app
-  ├── CLI/        ← nocrumbs binary  
-  ├── Core/       ← shared business logic
-  │   ├── Models/
-  │   ├── Database/
-  │   ├── IPC/
-  │   └── VCS/
-  └── Tests/
-  ```
-- [ ] Both targets build cleanly
-
-**Exit criteria:** App builds. CLI builds as standalone binary.
+### M0 — Project Setup ✅
+- [x] Xcode project via XcodeGen: Mac App target + CLI target (separate SPM package)
+- [x] Swift packages: Sparkle (GRDB removed — using raw SQLite)
+- [x] GitHub repo
+- [x] Code signing configured (H32EKFDL92)
+- [x] Folder structure with App/, Core/, Features/, UI/, Tests/
+- [x] Both targets build cleanly
 
 ---
 
-### M1 — Data Pipeline (Weekend 1)
-The most important milestone. Prove data flows end to end before building any UI.
-
-- [ ] `PromptEvent` and `Session` data models
-- [ ] SQLite schema via GRDB
-- [ ] Unix domain socket server (in app) + client (in CLI)
-- [ ] CLI binary: receives args, writes JSON to socket, exits <50ms
-- [ ] VCS detection: `.git` vs `.hg` directory check
-- [ ] Claude Code `PostToolUse` hook wired up
-- [ ] `nocrumbs install` command auto-registers hook
-- [ ] Debug logging to verify pipeline end to end
-
-**Exit criteria:** Make a file change in Claude Code → CLI fires → app receives event → stored in SQLite. Verified via debug log. No UI needed.
+### M1 — Data Pipeline ✅
+- [x] `PromptEvent`, `Session`, `FileChange`, `VCSType` data models
+- [x] SQLite schema via raw C API (WAL mode, foreign key cascade, indexed)
+- [x] `Database` singleton: `@Observable @MainActor`, in-memory cache, CRUD
+- [x] Unix domain socket server (POSIX actor) + client
+- [x] CLI: stdin JSON parsing, `capture-prompt` + `capture-change` subcommands
+- [x] VCS detection: `.git` vs `.hg` directory walk
+- [x] `nocrumbs install` command auto-registers dual hooks
+- [x] `AppDelegate` owns SocketServer + Database lifecycle
+- [x] End-to-end verified: CLI → socket → DB (tested with manual JSON piping)
 
 ---
 
-### M2 — Menu Bar Shell (Weekend 1–2)
-- [ ] `LSUIElement = YES` in Info.plist
-- [ ] `MenuBarExtra` with placeholder icon
-- [ ] Menu items: Show NoCrumbs / Quit
+### M2 — Menu Bar Shell
+- [ ] `LSUIElement = YES` already in Info.plist ✅
+- [ ] `MenuBarExtra` with placeholder icon ✅ (already exists)
+- [ ] Menu items: Show NoCrumbs / Quit ✅ (already exists)
 - [ ] Launch at login via `SMAppService`
 - [ ] Socket server starts on launch, restarts on failure
 - [ ] Basic window: table of recent sessions (project + timestamp)
@@ -367,7 +393,7 @@ The most important milestone. Prove data flows end to end before building any UI
 
 ---
 
-### M3 — Diff Viewer (Weekend 2–3)
+### M3 — Diff Viewer
 Core product. This is NoCrumbs.
 
 - [ ] Unified diff parser → `DiffFile` / `DiffHunk` / `DiffLine` structs
@@ -386,7 +412,7 @@ Core product. This is NoCrumbs.
 
 ---
 
-### M4 — Polish (Weekend 3)
+### M4 — Polish
 What separates a tool engineers love from one they tolerate.
 
 - [ ] Smooth panel animation when new diff arrives
@@ -402,7 +428,7 @@ What separates a tool engineers love from one they tolerate.
 
 ---
 
-### M5 — PR Description Draft (Weekend 4)
+### M5 — PR Description Draft
 v2 workflow layer.
 
 - [ ] "Draft PR" button in session view
@@ -418,7 +444,7 @@ v2 workflow layer.
 
 ---
 
-### M6 — Distribution Setup (Weekend 4–5)
+### M6 — Distribution Setup
 - [ ] Code sign + notarize
 - [ ] Build `.dmg` installer
 - [ ] Sparkle update feed at nocrumbs.app
@@ -439,13 +465,15 @@ v2 workflow layer.
 
 ## Design Principles
 
-**Fire and forget.** The hook must never slow Claude Code. CLI exits in <50ms. Silent failure if app isn't running.
+**Fire and forget.** The hook must never slow Claude Code. CLI exits in <50ms. Silent failure if app isn't running. Always exit 0.
 
 **Local first, always.** No network calls, no accounts, no telemetry. Ever. This is a trust advantage.
 
 **Capture intent, not noise.** Top-level prompts only. Subagents, plan steps, todos — all discarded. The commit message is the best condenser.
 
-**Derive, don't duplicate.** Git already stores diffs. Store only what git doesn't have: the prompt↔commit link.
+**Derive, don't duplicate.** Git already stores diffs. Store only what git doesn't have: the prompt↔file change link.
+
+**Scale for real workloads.** A single prompt can generate 100+ file changes. Normalized tables with indexes, not JSON arrays.
 
 **Ship M4 before M5.** The diff viewer with prompt annotation is the product. PR drafting is a bonus. Don't let scope creep delay launch.
 
