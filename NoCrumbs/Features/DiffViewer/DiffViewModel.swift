@@ -1,4 +1,7 @@
 import Foundation
+import OSLog
+
+private let logger = Logger(subsystem: "com.geneyoo.nocrumbs", category: "DiffVM")
 
 @Observable @MainActor
 final class DiffViewModel {
@@ -21,6 +24,7 @@ final class DiffViewModel {
             fileDiffs = []
             linePairs = []
             error = "No VCS detected for this event"
+            logger.warning("load: no VCS for event \(event.id)")
             return
         }
 
@@ -28,6 +32,7 @@ final class DiffViewModel {
             fileDiffs = []
             linePairs = []
             isLoading = false
+            logger.info("load: no fileChanges for event \(event.id)")
             return
         }
 
@@ -47,8 +52,12 @@ final class DiffViewModel {
         }
 
         let eventID = event.id
-
         let baseHash = event.baseCommitHash
+
+        logger.info("load: event=\(eventID) baseHash=\(baseHash ?? "nil") files=\(relativePaths.count) projectPath=\(projectPath)")
+        for (i, rp) in relativePaths.enumerated() {
+            logger.info("  file[\(i)]: \(rp) (abs: \(absolutePaths[i]))")
+        }
 
         Task { [weak self] in
             do {
@@ -56,17 +65,28 @@ final class DiffViewModel {
                 var allDiffs: [FileDiff] = []
 
                 // Diff working tree against baseCommitHash (shows all changes since prompt, committed or not)
-                if let baseHash {
-                    let raw = try await provider.diffFromBase(baseHash, filePaths: relativePaths, at: projectPath)
-                    allDiffs.append(contentsOf: DiffParser.parse(raw))
+                guard let baseHash else {
+                    guard let self, self.currentEventID == eventID else { return }
+                    self.error = "Waiting for baseline — try again in a moment"
+                    self.isLoading = false
+                    logger.warning("no baseHash — waiting for backfill")
+                    return
                 }
+
+                let raw = try await provider.diffFromBase(baseHash, filePaths: relativePaths, at: projectPath)
+                logger.info("git diff \(baseHash) returned \(raw.count) chars")
+                let parsed = DiffParser.parse(raw)
+                logger.info("parsed \(parsed.count) file diffs")
+                allDiffs.append(contentsOf: parsed)
 
                 // Files not in the diff output — check if untracked (new files)
                 let diffedPaths = Set(allDiffs.compactMap { $0.newPath ?? $0.oldPath })
                 let missingRelPaths = relativePaths.filter { !diffedPaths.contains($0) }
 
                 if !missingRelPaths.isEmpty {
+                    logger.info("\(missingRelPaths.count) files not in diff: \(missingRelPaths)")
                     let untracked = try await provider.untrackedFiles(missingRelPaths, at: projectPath)
+                    logger.info("untracked: \(untracked)")
                     for relPath in missingRelPaths where untracked.contains(relPath) {
                         let absPath = projectPath + "/" + relPath
                         if let synthetic = Self.syntheticDiff(for: relPath, absolutePath: absPath, status: .added) {
@@ -75,6 +95,7 @@ final class DiffViewModel {
                     }
                 }
 
+                logger.info("total diffs: \(allDiffs.count)")
                 guard let self, self.currentEventID == eventID else { return }
                 self.fileDiffs = allDiffs
                 if self.selectedFileID == nil || !allDiffs.contains(where: { $0.id == self.selectedFileID }) {
@@ -83,6 +104,7 @@ final class DiffViewModel {
                 self.buildLinePairs()
                 self.isLoading = false
             } catch {
+                logger.error("load failed: \(error.localizedDescription)")
                 guard let self, self.currentEventID == eventID else { return }
                 self.error = error.localizedDescription
                 self.isLoading = false

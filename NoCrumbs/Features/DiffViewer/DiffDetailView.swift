@@ -26,7 +26,7 @@ struct DiffDetailView: View {
             }
         }
         .frame(minWidth: 600)
-        .onChange(of: event.id) { _, _ in reload() }
+        .onChange(of: event) { _, _ in reload() }
         .onChange(of: fileChanges) { _, _ in reload() }
         .onAppear { reload() }
     }

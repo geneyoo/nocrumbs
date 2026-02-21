@@ -257,6 +257,8 @@ final class Database {
                 if let hash { cache[cacheKey] = hash }
             }
 
+            logger.info("🔄 [DB] Backfill event \(event.id): timestamp=\(event.timestamp) hash=\(hash ?? "nil") project=\(event.projectPath)")
+
             guard let hash else { continue }
             await MainActor.run {
                 do {
