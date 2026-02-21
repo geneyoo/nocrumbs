@@ -1,0 +1,481 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		47A3ECC051305542063B06E0 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7728FC471410616E9FED7A2D /* ContentView.swift */; };
+		82F7D1192E2BC5D116E1155F /* GRDB in Frameworks */ = {isa = PBXBuildFile; productRef = A26529D0079C0149161AE076 /* GRDB */; };
+		8F36467F923498EF4277BE31 /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = E7DF57F61F6B0D86D735C19F /* Sparkle */; };
+		D80D064DB9F6C9C9DF635713 /* NoCrumbsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 776872DA80B73BA9E09C28A3 /* NoCrumbsApp.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		8945BE2EF26B580DAAE0E2C1 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 766A6945A5C1A796CA8E519A /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 3AF2711A96A508BE702107D2;
+			remoteInfo = NoCrumbs;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		5F6657501DB0A6738B4E5D13 /* NoCrumbs.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NoCrumbs.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7728FC471410616E9FED7A2D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		776872DA80B73BA9E09C28A3 /* NoCrumbsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoCrumbsApp.swift; sourceTree = "<group>"; };
+		DC3CB357C8C961DD7C7C7228 /* NoCrumbsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = NoCrumbsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		7153A4A91F4F918DF3A002BB /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				82F7D1192E2BC5D116E1155F /* GRDB in Frameworks */,
+				8F36467F923498EF4277BE31 /* Sparkle in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		3A4FCF443AAE6D074C7D5DC0 /* Database */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			path = Database;
+			sourceTree = "<group>";
+		};
+		4565555D11DA1EFCC3C578F5 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				5F6657501DB0A6738B4E5D13 /* NoCrumbs.app */,
+				DC3CB357C8C961DD7C7C7228 /* NoCrumbsTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		6211C7DCFC6FBBEE9801D178 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				7728FC471410616E9FED7A2D /* ContentView.swift */,
+				776872DA80B73BA9E09C28A3 /* NoCrumbsApp.swift */,
+			);
+			name = App;
+			path = NoCrumbs/App;
+			sourceTree = "<group>";
+		};
+		B2EAFE23A7C76371D648260F /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				3A4FCF443AAE6D074C7D5DC0 /* Database */,
+			);
+			name = Core;
+			path = NoCrumbs/Core;
+			sourceTree = "<group>";
+		};
+		C260A28EAF9A2AA97C588171 /* UI */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = UI;
+			path = NoCrumbs/UI;
+			sourceTree = "<group>";
+		};
+		D7C15A1A809FDE90F81802F3 = {
+			isa = PBXGroup;
+			children = (
+				6211C7DCFC6FBBEE9801D178 /* App */,
+				B2EAFE23A7C76371D648260F /* Core */,
+				EB41E4B38DD9092AAFBF25DF /* Features */,
+				FCBEDC9D97CFEF4FEA1FD7AD /* Tests */,
+				C260A28EAF9A2AA97C588171 /* UI */,
+				4565555D11DA1EFCC3C578F5 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		EB41E4B38DD9092AAFBF25DF /* Features */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Features;
+			path = NoCrumbs/Features;
+			sourceTree = "<group>";
+		};
+		FCBEDC9D97CFEF4FEA1FD7AD /* Tests */ = {
+			isa = PBXGroup;
+			children = (
+			);
+			name = Tests;
+			path = NoCrumbs/Tests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		0CB073A9BADF900FF5BC34B9 /* NoCrumbsTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = A755C4C6298B428718905C42 /* Build configuration list for PBXNativeTarget "NoCrumbsTests" */;
+			buildPhases = (
+				39DB1C349AA47E01F3AE7896 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				F88A58B94262BBAE2213D8DC /* PBXTargetDependency */,
+			);
+			name = NoCrumbsTests;
+			packageProductDependencies = (
+			);
+			productName = NoCrumbsTests;
+			productReference = DC3CB357C8C961DD7C7C7228 /* NoCrumbsTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		3AF2711A96A508BE702107D2 /* NoCrumbs */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0BC5101C04FBD76FC34C1CAD /* Build configuration list for PBXNativeTarget "NoCrumbs" */;
+			buildPhases = (
+				1903300E880AB186ADDE2C37 /* Sources */,
+				7153A4A91F4F918DF3A002BB /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = NoCrumbs;
+			packageProductDependencies = (
+				A26529D0079C0149161AE076 /* GRDB */,
+				E7DF57F61F6B0D86D735C19F /* Sparkle */,
+			);
+			productName = NoCrumbs;
+			productReference = 5F6657501DB0A6738B4E5D13 /* NoCrumbs.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		766A6945A5C1A796CA8E519A /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					0CB073A9BADF900FF5BC34B9 = {
+						DevelopmentTeam = H32EKFDL92;
+					};
+					3AF2711A96A508BE702107D2 = {
+						DevelopmentTeam = H32EKFDL92;
+					};
+				};
+			};
+			buildConfigurationList = 8CDB52F4A3AC599EACC9C30F /* Build configuration list for PBXProject "NoCrumbs" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = D7C15A1A809FDE90F81802F3;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				6571A95D945154A1D17C73DD /* XCRemoteSwiftPackageReference "GRDB.swift" */,
+				6CE68F545477925B1DC24092 /* XCRemoteSwiftPackageReference "Sparkle" */,
+			);
+			preferredProjectObjectVersion = 77;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				3AF2711A96A508BE702107D2 /* NoCrumbs */,
+				0CB073A9BADF900FF5BC34B9 /* NoCrumbsTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		1903300E880AB186ADDE2C37 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				47A3ECC051305542063B06E0 /* ContentView.swift in Sources */,
+				D80D064DB9F6C9C9DF635713 /* NoCrumbsApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		39DB1C349AA47E01F3AE7896 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		F88A58B94262BBAE2213D8DC /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 3AF2711A96A508BE702107D2 /* NoCrumbs */;
+			targetProxy = 8945BE2EF26B580DAAE0E2C1 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		12144DFBEEF0537CA17A82DD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.geneyoo.NoCrumbsTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NoCrumbs.app/Contents/MacOS/NoCrumbs";
+			};
+			name = Debug;
+		};
+		6254000289B60DF4D2E1E444 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
+				INFOPLIST_FILE = NoCrumbs/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.geneyoo.nocrumbs;
+				PRODUCT_NAME = NoCrumbs;
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		71D9A5EBCF2587665D542DBD /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = H32EKFDL92;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Debug;
+		};
+		896DC3E829B0E82CC5B59B32 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				COMBINE_HIDPI_IMAGES = YES;
+				ENABLE_HARDENED_RUNTIME = NO;
+				INFOPLIST_FILE = NoCrumbs/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.geneyoo.nocrumbs;
+				PRODUCT_NAME = NoCrumbs;
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		AA738C1037632DE821135561 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+					"@loader_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.geneyoo.NoCrumbsTests;
+				SDKROOT = macosx;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/NoCrumbs.app/Contents/MacOS/NoCrumbs";
+			};
+			name = Release;
+		};
+		B00095B02B0A2B3883DC7A91 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = H32EKFDL92;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.9;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0BC5101C04FBD76FC34C1CAD /* Build configuration list for PBXNativeTarget "NoCrumbs" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				6254000289B60DF4D2E1E444 /* Debug */,
+				896DC3E829B0E82CC5B59B32 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		8CDB52F4A3AC599EACC9C30F /* Build configuration list for PBXProject "NoCrumbs" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				71D9A5EBCF2587665D542DBD /* Debug */,
+				B00095B02B0A2B3883DC7A91 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		A755C4C6298B428718905C42 /* Build configuration list for PBXNativeTarget "NoCrumbsTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				12144DFBEEF0537CA17A82DD /* Debug */,
+				AA738C1037632DE821135561 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCRemoteSwiftPackageReference section */
+		6571A95D945154A1D17C73DD /* XCRemoteSwiftPackageReference "GRDB.swift" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/groue/GRDB.swift.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 7.0.0;
+			};
+		};
+		6CE68F545477925B1DC24092 /* XCRemoteSwiftPackageReference "Sparkle" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/sparkle-project/Sparkle.git";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 2.0.0;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		A26529D0079C0149161AE076 /* GRDB */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6571A95D945154A1D17C73DD /* XCRemoteSwiftPackageReference "GRDB.swift" */;
+			productName = GRDB;
+		};
+		E7DF57F61F6B0D86D735C19F /* Sparkle */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 6CE68F545477925B1DC24092 /* XCRemoteSwiftPackageReference "Sparkle" */;
+			productName = Sparkle;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = 766A6945A5C1A796CA8E519A /* Project object */;
+}
