@@ -7,4 +7,6 @@ protocol VCSProvider: Sendable {
     func diff(for hash: String, at path: String) async throws -> String
     func uncommittedDiff(at path: String) async throws -> String
     func diffForFiles(_ filePaths: [String], at path: String) async throws -> String
+    func diffFromBase(_ baseHash: String, filePaths: [String], at path: String) async throws -> String
+    func currentHead(at path: String) async throws -> String
 }

@@ -6,6 +6,10 @@ private let logger = Logger(subsystem: "com.geneyoo.nocrumbs", category: "Git")
 struct GitProvider: VCSProvider {
     let type: VCSType = .git
 
+    func currentHead(at path: String) async throws -> String {
+        try await run("git", args: ["rev-parse", "HEAD"], at: path)
+    }
+
     func currentBranch(at path: String) async throws -> String {
         try await run("git", args: ["rev-parse", "--abbrev-ref", "HEAD"], at: path)
     }
@@ -29,6 +33,13 @@ struct GitProvider: VCSProvider {
 
     func diffForFiles(_ filePaths: [String], at path: String) async throws -> String {
         var args = ["diff", "HEAD", "--"]
+        args.append(contentsOf: filePaths)
+        return try await run("git", args: args, at: path)
+    }
+
+    /// Diff working tree against a specific base commit (shows all changes since that commit).
+    func diffFromBase(_ baseHash: String, filePaths: [String], at path: String) async throws -> String {
+        var args = ["diff", baseHash, "--"]
         args.append(contentsOf: filePaths)
         return try await run("git", args: args, at: path)
     }

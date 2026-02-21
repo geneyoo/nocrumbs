@@ -178,6 +178,14 @@ actor SocketServer {
         }
 
         let now = Date()
+        let vcsType = VCSDetector.detect(at: cwd)
+
+        // Capture HEAD hash as diff baseline — if this fails, we still proceed (hash is optional)
+        var baseHash: String?
+        if vcsType == .git {
+            baseHash = try? await GitProvider().currentHead(at: cwd)
+        }
+
         let session = Session(id: sessionID, projectPath: cwd, startedAt: now, lastActivityAt: now)
         let event = PromptEvent(
             id: UUID(),
@@ -185,7 +193,8 @@ actor SocketServer {
             projectPath: cwd,
             promptText: prompt,
             timestamp: now,
-            vcs: VCSDetector.detect(at: cwd)
+            vcs: vcsType,
+            baseCommitHash: baseHash
         )
 
         await MainActor.run {
@@ -217,6 +226,11 @@ actor SocketServer {
         guard let eventID else {
             // No prompt event yet — create a placeholder event for orphaned changes
             let now = Date()
+            let vcsType = VCSDetector.detect(at: cwd)
+            var baseHash: String?
+            if vcsType == .git {
+                baseHash = try? await GitProvider().currentHead(at: cwd)
+            }
             let session = Session(id: sessionID, projectPath: cwd, startedAt: now, lastActivityAt: now)
             let event = PromptEvent(
                 id: UUID(),
@@ -224,7 +238,8 @@ actor SocketServer {
                 projectPath: cwd,
                 promptText: nil,
                 timestamp: now,
-                vcs: VCSDetector.detect(at: cwd)
+                vcs: vcsType,
+                baseCommitHash: baseHash
             )
             let change = FileChange(
                 id: UUID(),

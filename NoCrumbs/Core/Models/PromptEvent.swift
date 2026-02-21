@@ -7,4 +7,5 @@ struct PromptEvent: Identifiable, Codable, Equatable, Sendable {
     let promptText: String?
     let timestamp: Date
     let vcs: VCSType?
+    let baseCommitHash: String?  // HEAD at prompt time — diff baseline
 }

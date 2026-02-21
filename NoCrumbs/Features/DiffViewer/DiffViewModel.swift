@@ -48,22 +48,30 @@ final class DiffViewModel {
 
         let eventID = event.id
 
+        let baseHash = event.baseCommitHash
+
         Task { [weak self] in
             do {
                 let provider = GitProvider()
                 var allDiffs: [FileDiff] = []
 
-                // 1. Get git diff HEAD for tracked modified files
-                let raw = try await provider.diffForFiles(relativePaths, at: projectPath)
+                // 1. Diff against baseCommitHash (captures all changes since prompt, even if committed)
+                //    Fallback to HEAD if no baseCommitHash (legacy events)
+                let raw: String
+                if let baseHash {
+                    raw = try await provider.diffFromBase(baseHash, filePaths: relativePaths, at: projectPath)
+                } else {
+                    raw = try await provider.diffForFiles(relativePaths, at: projectPath)
+                }
                 let parsedDiffs = DiffParser.parse(raw)
                 allDiffs.append(contentsOf: parsedDiffs)
 
-                // 2. Find files not in the git diff output (untracked or committed)
+                // 2. Find files not in the diff output (untracked or no changes)
                 let diffedPaths = Set(parsedDiffs.compactMap { $0.newPath ?? $0.oldPath })
                 let missingRelPaths = relativePaths.filter { !diffedPaths.contains($0) }
 
                 if !missingRelPaths.isEmpty {
-                    // Check which missing files are untracked (new)
+                    // Check which missing files are untracked (new, not yet staged)
                     let untracked = try await provider.untrackedFiles(missingRelPaths, at: projectPath)
 
                     for relPath in missingRelPaths {
@@ -74,7 +82,7 @@ final class DiffViewModel {
                                 allDiffs.append(synthetic)
                             }
                         }
-                        // else: committed file — omit (no diff to show)
+                        // else: no diff available (file unchanged from base, or already in diff)
                     }
                 }
 

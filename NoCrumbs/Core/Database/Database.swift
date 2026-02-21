@@ -91,6 +91,12 @@ final class Database {
             setUserVersion(1)
             logger.info("🔄 [DB] Migrated to v1")
         }
+
+        if version < 2 {
+            exec("ALTER TABLE promptEvents ADD COLUMN baseCommitHash TEXT")
+            setUserVersion(2)
+            logger.info("🔄 [DB] Migrated to v2 (baseCommitHash)")
+        }
     }
 
     // MARK: - CRUD: Sessions
@@ -115,8 +121,8 @@ final class Database {
 
     func insertPromptEvent(_ event: PromptEvent) throws {
         let sql = """
-            INSERT OR REPLACE INTO promptEvents (id, sessionID, projectPath, promptText, timestamp, vcs)
-            VALUES (?, ?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO promptEvents (id, sessionID, projectPath, promptText, timestamp, vcs, baseCommitHash)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """
         try execute(sql, bindings: [
             .text(event.id.uuidString),
@@ -125,6 +131,7 @@ final class Database {
             event.promptText.map { .text($0) } ?? .null,
             .double(event.timestamp.timeIntervalSince1970),
             event.vcs.map { .text($0.rawValue) } ?? .null,
+            event.baseCommitHash.map { .text($0) } ?? .null,
         ])
         try loadRecentEvents()
         logger.info("✅ [DB] Inserted event \(event.id.uuidString)")
@@ -175,7 +182,7 @@ final class Database {
 
     func recentEvents(forProject projectPath: String, since: Date) throws -> [PromptEvent] {
         let sql = """
-            SELECT id, sessionID, projectPath, promptText, timestamp, vcs
+            SELECT id, sessionID, projectPath, promptText, timestamp, vcs, baseCommitHash
             FROM promptEvents
             WHERE projectPath = ? AND timestamp >= ? AND promptText IS NOT NULL
             ORDER BY timestamp DESC
@@ -191,7 +198,8 @@ final class Database {
                 projectPath: columnText(stmt, 2),
                 promptText: sqlite3_column_text(stmt, 3).map { String(cString: $0) },
                 timestamp: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 4)),
-                vcs: vcsRaw.flatMap { VCSType(rawValue: $0) }
+                vcs: vcsRaw.flatMap { VCSType(rawValue: $0) },
+                baseCommitHash: sqlite3_column_text(stmt, 6).map { String(cString: $0) }
             )
         }
     }
@@ -249,7 +257,7 @@ final class Database {
 
     private func loadRecentEvents() throws {
         recentEvents = try query(
-            "SELECT id, sessionID, projectPath, promptText, timestamp, vcs FROM promptEvents ORDER BY timestamp DESC LIMIT 500"
+            "SELECT id, sessionID, projectPath, promptText, timestamp, vcs, baseCommitHash FROM promptEvents ORDER BY timestamp DESC LIMIT 500"
         ) { stmt in
             let vcsRaw = sqlite3_column_text(stmt, 5).map { String(cString: $0) }
             return PromptEvent(
@@ -258,7 +266,8 @@ final class Database {
                 projectPath: columnText(stmt, 2),
                 promptText: sqlite3_column_text(stmt, 3).map { String(cString: $0) },
                 timestamp: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 4)),
-                vcs: vcsRaw.flatMap { VCSType(rawValue: $0) }
+                vcs: vcsRaw.flatMap { VCSType(rawValue: $0) },
+                baseCommitHash: sqlite3_column_text(stmt, 6).map { String(cString: $0) }
             )
         }
     }

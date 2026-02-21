@@ -5,6 +5,7 @@ struct DiffDetailView: View {
     @Environment(Database.self) private var database
     @State private var viewModel = DiffViewModel()
     @State private var scrollSync = DiffScrollSync()
+    @State private var isFileListVisible = true
 
     private var fileChanges: [FileChange] {
         database.fileChangesCache[event.id] ?? []
@@ -55,11 +56,16 @@ struct DiffDetailView: View {
     // MARK: - Diff Content
 
     private var diffContent: some View {
-        HSplitView {
-            fileList
-                .frame(minWidth: 140, idealWidth: 180, maxWidth: 240)
+        HStack(spacing: 0) {
+            if isFileListVisible {
+                fileList
+                    .frame(width: 180)
+                    .transition(.move(edge: .leading).combined(with: .opacity))
+                Divider()
+            }
             diffPanes
         }
+        .animation(.smooth(duration: 0.2), value: isFileListVisible)
     }
 
     // MARK: - File List
@@ -87,8 +93,19 @@ struct DiffDetailView: View {
 
     private var diffPanes: some View {
         VStack(spacing: 0) {
-            // Column headers
+            // Column headers with file list toggle
             HStack(spacing: 0) {
+                Button {
+                    isFileListVisible.toggle()
+                } label: {
+                    Image(systemName: "sidebar.left")
+                        .font(.caption)
+                        .foregroundStyle(isFileListVisible ? .primary : .secondary)
+                }
+                .buttonStyle(.borderless)
+                .padding(.leading, 8)
+                .help(isFileListVisible ? "Hide file list" : "Show file list")
+
                 Text("Before")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
