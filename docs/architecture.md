@@ -55,19 +55,19 @@ NoCrumbs/
 │   ├── Models/
 │   │   ├── FileDiff.swift      # FileDiff, DiffHunk, DiffLine — diff parsing output models
 │   │   ├── FileChange.swift    # id, eventID, filePath, toolName, timestamp
-│   │   ├── PromptEvent.swift   # id, sessionID, projectPath, promptText?, timestamp, vcs?
+│   │   ├── PromptEvent.swift   # id, sessionID, projectPath, promptText?, timestamp, vcs?, baseCommitHash?
 │   │   ├── Session.swift       # id, projectPath, startedAt, lastActivityAt
 │   │   └── VCSType.swift       # enum: .git, .mercurial
 │   └── VCS/
 │       ├── DiffParser.swift    # Parses unified git diff output → [FileDiff]
 │       ├── GitProvider.swift   # VCSProvider impl — shells out to /usr/bin/git via Process
 │       ├── VCSDetector.swift   # Static: walk up directory tree checking for .git/.hg
-│       └── VCSProvider.swift   # Protocol: currentBranch, isValidCommit, diff, uncommittedDiff, diffForFiles
+│       └── VCSProvider.swift   # Protocol: currentBranch, isValidCommit, diff, uncommittedDiff, diffForFiles, diffFromBase, currentHead
 │
 ├── Features/
 │   ├── DiffViewer/
-│   │   ├── DiffDetailView.swift   # Main diff layout: header + HSplitView (file list + side-by-side panes)
-│   │   ├── DiffViewModel.swift    # @Observable: loads diffs, builds side-by-side line pairs
+│   │   ├── DiffDetailView.swift   # Main diff layout: header + collapsible file list + side-by-side panes
+│   │   ├── DiffViewModel.swift    # @Observable: loads diffs via baseCommitHash, builds side-by-side line pairs
 │   │   ├── DiffTextView.swift     # NSViewRepresentable wrapping NSTextView (TextKit 1)
 │   │   └── DiffScrollSync.swift   # Syncs scroll position between left + right panes
 │   └── Settings/
@@ -92,7 +92,7 @@ CLI/
 
 **Storage:** `~/Library/Application Support/NoCrumbs/nocrumbs.sqlite`
 **Engine:** Raw SQLite3 C API (no ORM) — WAL journal mode, foreign keys ON
-**Schema version:** 1 (tracked via `PRAGMA user_version`)
+**Schema version:** 2 (tracked via `PRAGMA user_version`)
 
 ```sql
 CREATE TABLE sessions (
@@ -109,6 +109,7 @@ CREATE TABLE promptEvents (
     promptText TEXT,              -- NULL for orphaned file changes
     timestamp REAL NOT NULL,
     vcs TEXT,                     -- "git" or "mercurial", NULL if not in repo
+    baseCommitHash TEXT,          -- git HEAD at prompt time (diff baseline) [v2]
     FOREIGN KEY(sessionID) REFERENCES sessions(id) ON DELETE CASCADE
 );
 
@@ -149,7 +150,22 @@ final class Database {
     // CRUD: upsertSession, insertPromptEvent, insertFileChange(s), deleteSession
     // Queries: eventsForSession, recentEvents(forProject:since:), fileChangeCount, totalFileCount
     // Cache refreshed after each write
+    // backfillBaseCommitHashes() — async, fills NULL baseCommitHash via git log --before
 }
+```
+
+### Migrations
+
+- **v1**: Initial schema (sessions, promptEvents, fileChanges with indexes)
+- **v2**: `ALTER TABLE promptEvents ADD COLUMN baseCommitHash TEXT`
+
+### Backfill
+
+On startup, `Database.backfillBaseCommitHashes()` runs async:
+- Finds events with NULL `baseCommitHash` and `vcs == .git`
+- Uses `git log --before=<timestamp> -1 --format=%H` to find what HEAD was at prompt time
+- Updates each event with the resolved hash
+- Caches by `projectPath|timestamp` to avoid redundant git calls
 ```
 
 ### Injection Pattern
@@ -202,8 +218,8 @@ Socket path: ~/Library/Application Support/NoCrumbs/nocrumbs.sock
 **Server** (`SocketServer`): Swift actor, POSIX `socket()/bind()/listen()/accept()`.
 - Accepts connections in a detached Task loop
 - Reads full message, parses JSON, dispatches by `"type"` field
-- `"prompt"` → upserts session + inserts PromptEvent (fire-and-forget)
-- `"change"` → finds most recent event for session, attaches FileChange (or creates orphan event)
+- `"prompt"` → captures `git rev-parse HEAD` as baseCommitHash, upserts session + inserts PromptEvent (fire-and-forget)
+- `"change"` → finds most recent event for session, attaches FileChange (or creates orphan event with baseCommitHash)
 - `"query-prompts"` → returns recent prompts + file counts + annotation_enabled flag (request/response)
 
 **Client** (`SocketClient`):
@@ -288,17 +304,22 @@ private struct SidebarItem: Identifiable {
 ```swift
 protocol VCSProvider: Sendable {
     var type: VCSType { get }
+    func currentHead(at path: String) async throws -> String
     func currentBranch(at path: String) async throws -> String
     func isValidCommit(_ hash: String, at path: String) async throws -> Bool
     func diff(for hash: String, at path: String) async throws -> String
     func uncommittedDiff(at path: String) async throws -> String
     func diffForFiles(_ filePaths: [String], at path: String) async throws -> String
+    func diffFromBase(_ baseHash: String, filePaths: [String], at path: String) async throws -> String
 }
 ```
 
 **Implementations:**
 - `GitProvider` — shells out to `/usr/bin/git` via `Process` with async wrapper
-  - `diffForFiles` → `git diff HEAD -- <files>` (scoped to specific paths)
+  - `currentHead` → `git rev-parse HEAD` (captured at prompt time for diff baseline)
+  - `diffFromBase` → `git diff <baseHash> -- <files>` (primary diff strategy)
+  - `diffForFiles` → `git diff HEAD -- <files>` (legacy fallback)
+  - `headBefore` → `git log --before=<iso> -1 --format=%H` (for backfill)
   - `untrackedFiles` → `git ls-files --others --exclude-standard -- <files>`
   - `cleanFiles` → `git status --porcelain -- <files>` (identifies committed files)
 - `MercurialProvider` — not yet implemented
@@ -317,22 +338,26 @@ Click PromptEvent in sidebar
     → DiffDetailView.reload()
     → DiffViewModel.load(event, fileChanges)
         → Convert absolute paths to relative (FileChange stores absolute)
-        → GitProvider.diffForFiles(relativePaths, at: projectPath)
+        → git diff <baseCommitHash> -- <files>  (shows all changes since prompt, committed or not)
         → DiffParser.parse(rawDiff) → [FileDiff]
         → For untracked files: synthetic all-additions diff from file content
-        → For committed files: omitted (no diff to show)
     → buildLinePairs() → [(left: DiffLine?, right: DiffLine?)]
     → DiffDetailView renders:
-        ┌──────────────────────────────────────────┐
-        │ Prompt: "fix sidebar selection bugs"      │
-        │ 3:51 PM · 7 files                         │
-        ├────────┬──────────────┬───────────────────┤
-        │ file1  │  Before      │  After             │
-        │ file2  │  (NSTextView)│  (NSTextView)      │
-        │ file3  │  line nums   │  line nums         │
-        │        │  red bg      │  green bg          │
-        └────────┴──────────────┴───────────────────┘
+        ┌──────────────────────────────────────────────────┐
+        │ Prompt: "fix sidebar selection bugs"              │
+        │ 3:51 PM · 7 files                                 │
+        ├──┬─────────┬──────────────┬───────────────────────┤
+        │⊞ │ file1   │  Before      │  After                 │
+        │  │ file2   │  (NSTextView)│  (NSTextView)          │
+        │  │ file3   │  line nums   │  line nums             │
+        │  │         │  red bg      │  green bg              │
+        └──┴─────────┴──────────────┴───────────────────────┘
+              ↑ collapsible (sidebar.left toggle button)
 ```
+
+**Key design: `baseCommitHash`** — every prompt event stores git HEAD at the moment it arrives.
+`git diff <baseHash>` always works regardless of whether changes are uncommitted, staged, or committed.
+No fallback strategies needed. Legacy events are backfilled on startup via `git log --before`.
 
 ### Data Models
 
@@ -405,11 +430,11 @@ Wraps `NSTextView` (TextKit 1) via `NSViewRepresentable`:
 ```
 DiffDetailView
 ├── header (prompt text, timestamp, file count)
-├── HSplitView
-│   ├── fileList (List, 140-240pt, sidebar style)
-│   │   └── ForEach(fileDiffs) → status icon + filename
+├── HStack
+│   ├── fileList (List, 180pt, sidebar style) — collapsible via sidebar.left toggle
+│   ├── Divider
 │   └── diffPanes
-│       ├── column headers ("Before" | "After")
+│       ├── column headers (toggle button + "Before" | "After")
 │       └── diffPanesContent (HStack, maxHeight: .infinity)
 │           ├── leftPane (DiffTextView or "File did not exist")
 │           ├── Divider
@@ -417,6 +442,8 @@ DiffDetailView
 ```
 
 **Key layout fix:** `maxHeight: .infinity` on `diffPanesContent` and each pane — required because `NSScrollView` has no intrinsic content size in SwiftUI, so without this the HStack collapses to zero height.
+
+**Reactivity:** `onChange(of: event)` watches the full PromptEvent struct (not just `.id`) so backfill updates to `baseCommitHash` trigger a reload.
 
 ## Menu Bar Behavior
 
@@ -458,7 +485,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_:) {
         UserDefaults.standard.register(defaults: ["annotationEnabled": true])
-        try Database.shared.open()     // SQLite + migrations + cache load
+        try Database.shared.open()     // SQLite + migrations (v1→v2) + cache load
+        Task { await Database.shared.backfillBaseCommitHashes() }  // Async backfill for legacy events
         try await socketServer.start() // POSIX socket bind + listen (with 1s retry)
         try SMAppService.mainApp.register() // Launch at login
         NSApp.setActivationPolicy(.accessory) // Menu bar only until window opens
@@ -517,6 +545,7 @@ echo '{"session_id":"test","tool_name":"Write","tool_input":{"file_path":"test.s
 - `✅ [DB]` — Successful writes (upsert, insert, delete)
 - `❌ [DB]` — Database errors
 - `[NC:Git]` — Git subprocess operations
+- `[DiffVM]` — Diff loading, parsing, baseCommitHash resolution
 
 **Build:**
 ```bash
