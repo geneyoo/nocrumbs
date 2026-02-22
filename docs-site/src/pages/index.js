@@ -50,9 +50,6 @@ function HeroSection() {
             <span className="hero__btn-soon">Coming Soon</span>
           </Link>
         </div>
-        <div className="install-hint">
-          <code>brew install geneyoo/tap/nocrumbs</code>
-        </div>
       </div>
     </header>
   );
