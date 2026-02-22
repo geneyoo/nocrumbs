@@ -18,8 +18,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             "showSessionID": true,
         ])
 
-        // Start Sparkle updater
+        // Start Sparkle updater (only in Release builds with a real appcast)
+        #if !DEBUG
         updaterController.startUpdater()
+        #endif
 
         // Register URL scheme handler
         NSAppleEventManager.shared().setEventHandler(

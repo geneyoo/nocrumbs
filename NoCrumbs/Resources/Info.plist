@@ -27,7 +27,7 @@
 	<key>SUPublicEDKey</key>
 	<string>REPLACE_WITH_EDDSA_PUBLIC_KEY</string>
 	<key>SUEnableAutomaticChecks</key>
-	<true/>
+	<false/>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
