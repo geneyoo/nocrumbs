@@ -43,9 +43,9 @@ function HeroSection() {
           </Link>
           <Link
             className="button button--secondary button--lg"
-            href="https://github.com/geneyoo/nocrumbs"
+            href="#"
           >
-            GitHub
+            GitHub (Coming Soon)
           </Link>
         </div>
         <div className="install-hint">

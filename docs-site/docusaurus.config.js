@@ -59,8 +59,8 @@ const config = {
             label: 'Docs',
           },
           {
-            href: 'https://github.com/pdswan/nocrumbs',
-            label: 'GitHub',
+            href: '#',
+            label: '\uD83D\uDD12 GitHub (Coming Soon)',
             position: 'right',
           },
         ],
@@ -80,8 +80,8 @@ const config = {
             title: 'Community',
             items: [
               {
-                label: 'GitHub',
-                href: 'https://github.com/geneyoo/nocrumbs',
+                label: '\uD83D\uDD12 GitHub (Coming Soon)',
+                href: '#',
               },
             ],
           },
