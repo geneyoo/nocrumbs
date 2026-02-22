@@ -10,7 +10,7 @@ No. NoCrumbs is entirely local. There are no network calls, no telemetry, no clo
 
 ### Does NoCrumbs support Mercurial or SVN?
 
-Currently NoCrumbs supports **git only**. Mercurial support is planned. SVN is not on the roadmap.
+NoCrumbs supports **git** and **Mercurial**. SVN is not on the roadmap.
 
 ### Will NoCrumbs slow down my commits?
 

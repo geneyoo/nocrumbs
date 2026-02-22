@@ -25,6 +25,7 @@ open build/Build/Products/Release/NoCrumbs.app
 swift build -c release --package-path CLI/
 cp CLI/.build/release/nocrumbs /usr/local/bin/
 nocrumbs install
+nocrumbs install-git-hooks
 ```
 
 That's it. Use your AI coding assistant normally — prompts and file changes appear in NoCrumbs automatically.
@@ -119,10 +120,11 @@ No diff blobs, no file snapshots. Lean metadata sidecar only.
 
 ```
 nocrumbs install              Configure Claude Code hooks (run once)
-nocrumbs install-git-hooks    Install prepare-commit-msg hook
+nocrumbs install-git-hooks    Install prepare-commit-msg hook (run per repo)
 nocrumbs event                Pipe any hook event to app
 nocrumbs annotate-commit      Annotate commit message (called by git hook)
 nocrumbs describe             Pipe per-file change descriptions to app
+nocrumbs rename-session       Rename a session
 nocrumbs template             Manage commit annotation templates (add/list/set/remove/preview)
 ```
 

@@ -4,9 +4,11 @@ sidebar_position: 1
 
 # Getting Started
 
-NoCrumbs is a local-first tool that links every file change your AI coding assistant makes back to the prompt that caused it. AI writes the code — you keep the receipts.
+NoCrumbs is a local-first Mac app + CLI that links every AI prompt to the file changes it produced. Install once, then use your AI coding assistant normally.
 
-## Installation
+**Requirements:** macOS 14+, Xcode 15+ (to build from source)
+
+## Install
 
 ### Homebrew (recommended)
 
@@ -14,37 +16,44 @@ NoCrumbs is a local-first tool that links every file change your AI coding assis
 brew install geneyoo/tap/nocrumbs
 ```
 
+This installs both the Mac app and the `nocrumbs` CLI.
+
 ### From source
 
 ```bash
-git clone https://github.com/geneyoo/nocrumbs.git
-cd nocrumbs
+# 1. Clone & build the Mac app
+git clone https://github.com/geneyoo/nocrumbs.git && cd nocrumbs
+xcodebuild -project NoCrumbs.xcodeproj -scheme NoCrumbs -configuration Release \
+  -sdk macosx -derivedDataPath build build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
+open build/Build/Products/Release/NoCrumbs.app
+
+# 2. Build & install the CLI
 swift build -c release --package-path CLI/
-cp .build/release/nocrumbs /usr/local/bin/
+cp CLI/.build/release/nocrumbs /usr/local/bin/
 ```
 
-## Quick Start
+## Configure Hooks
 
-1. **Initialize** NoCrumbs in your project:
+Run these once after installing:
 
 ```bash
-nocrumbs init
+# Register Claude Code hooks (~/.claude/settings.json)
+nocrumbs install
+
+# Install git commit annotation hook (run in each repo)
+nocrumbs install-git-hooks
 ```
 
-This installs the necessary hooks into your Claude Code configuration.
+`nocrumbs install` writes hook entries to your Claude Code config so prompts and file changes are captured automatically. `nocrumbs install-git-hooks` adds a `prepare-commit-msg` hook that annotates your commits with prompt context.
 
-2. **Work normally** — use Claude Code (or any supported AI assistant) as you always do. NoCrumbs captures prompt-to-commit linkage automatically in the background.
+## Verify
 
-3. **Check status** to verify everything is connected:
-
-```bash
-nocrumbs status
-```
-
-4. **Open the Mac app** to browse your prompt timeline and see which prompts produced which commits.
+1. The NoCrumbs icon appears in your menu bar
+2. Open a Claude Code session and send a prompt
+3. Open the NoCrumbs window — your prompt and file changes should appear in the sidebar
 
 ## Next Steps
 
-- [How It Works](/docs/how-it-works) — understand the architecture
-- [CLI Usage](/docs/guides/cli-usage) — full CLI reference
-- [Mac App Usage](/docs/guides/app-usage) — navigating the desktop app
+- [How It Works](/docs/how-it-works) — architecture and data flow
+- [CLI Usage](/docs/guides/cli-usage) — full command reference
+- [Mac App Usage](/docs/guides/app-usage) — navigating the timeline and diff viewer

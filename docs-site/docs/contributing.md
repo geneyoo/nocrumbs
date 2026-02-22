@@ -4,36 +4,46 @@ sidebar_position: 5
 
 # Contributing
 
-Thanks for your interest in contributing to NoCrumbs! Here's how to get started.
+Thanks for your interest in contributing to NoCrumbs!
 
 ## Development Setup
 
 1. **Clone the repo:**
    ```bash
-   git clone https://github.com/pdswan/nocrumbs.git
+   git clone https://github.com/geneyoo/nocrumbs.git
    cd nocrumbs
    ```
 
 2. **Requirements:**
-   - Swift 5.9+
    - macOS 14+
-   - Xcode 15+ (open `.xcworkspace`, not `.xcodeproj`)
+   - Xcode 15+ (Swift 5.9+)
 
-3. **Build order:**
-   - Build the CLI target first: `swift build --package-path CLI/`
-   - Then build the Mac app via Xcode or `xcodebuild`
+3. **Build:**
+   ```bash
+   # Mac app
+   xcodebuild -project NoCrumbs.xcodeproj -scheme NoCrumbs -configuration Debug \
+     -sdk macosx -derivedDataPath build build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
+
+   # CLI
+   swift build -c release --package-path CLI/
+   ```
+
+4. **Run tests:**
+   ```bash
+   xcodebuild test -project NoCrumbs.xcodeproj -scheme NoCrumbs -sdk macosx \
+     -derivedDataPath build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
+   ```
 
 ## Pull Request Requirements
 
 - Run all tests before submitting
 - Add tests for new functionality
-- Update `CHANGELOG.md` with your changes
 - One concern per PR — keep changes focused
 
 ## Code Style
 
-- SwiftFormat is enforced via CI
 - Follow existing patterns in the codebase
+- Use `@Observable` (Swift 5.9+), not `ObservableObject`
 - Use conventional commit prefixes:
 
 | Prefix | Usage |
@@ -43,13 +53,6 @@ Thanks for your interest in contributing to NoCrumbs! Here's how to get started.
 | `docs:` | Documentation only |
 | `refactor:` | Code restructuring |
 | `test:` | Adding or updating tests |
-
-**Examples:**
-```
-feat: add mercurial provider support
-fix: handle missing commit hash in timeline
-docs: update CLI usage guide
-```
 
 ## Scope Statement
 
