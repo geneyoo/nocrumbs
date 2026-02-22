@@ -80,8 +80,8 @@ const config = {
             title: 'Community',
             items: [
               {
-                label: '\uD83D\uDD12 GitHub (Coming Soon)',
-                href: '#',
+                label: 'GitHub',
+                href: 'https://github.com/geneyoo/nocrumbs',
               },
             ],
           },
