@@ -12,3 +12,10 @@ protocol VCSProvider: Sendable {
     func headBefore(_ date: Date, at path: String) async throws -> String?
     func untrackedFiles(_ filePaths: [String], at path: String) async throws -> Set<String>
 }
+
+func makeProvider(for vcs: VCSType) -> any VCSProvider {
+    switch vcs {
+    case .git: GitProvider()
+    case .mercurial: MercurialProvider()
+    }
+}

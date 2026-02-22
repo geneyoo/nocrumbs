@@ -220,8 +220,8 @@ actor SocketServer {
         let vcsType = VCSDetector.detect(at: cwd)
 
         var baseHash: String?
-        if vcsType == .git {
-            baseHash = try? await GitProvider().currentHead(at: cwd)
+        if let vcsType {
+            baseHash = try? await makeProvider(for: vcsType).currentHead(at: cwd)
         }
 
         let event = PromptEvent(
@@ -265,8 +265,8 @@ actor SocketServer {
             // No prompt event yet — create placeholder (same as legacy handleChange)
             let vcsType = VCSDetector.detect(at: cwd)
             var baseHash: String?
-            if vcsType == .git {
-                baseHash = try? await GitProvider().currentHead(at: cwd)
+            if let vcsType {
+                baseHash = try? await makeProvider(for: vcsType).currentHead(at: cwd)
             }
             let placeholderEvent = PromptEvent(
                 id: UUID(),
@@ -392,8 +392,8 @@ actor SocketServer {
 
         // Capture HEAD hash as diff baseline — if this fails, we still proceed (hash is optional)
         var baseHash: String?
-        if vcsType == .git {
-            baseHash = try? await GitProvider().currentHead(at: cwd)
+        if let vcsType {
+            baseHash = try? await makeProvider(for: vcsType).currentHead(at: cwd)
         }
 
         let session = Session(id: sessionID, projectPath: cwd, startedAt: now, lastActivityAt: now)
@@ -439,8 +439,8 @@ actor SocketServer {
             let now = Date()
             let vcsType = VCSDetector.detect(at: cwd)
             var baseHash: String?
-            if vcsType == .git {
-                baseHash = try? await GitProvider().currentHead(at: cwd)
+            if let vcsType {
+                baseHash = try? await makeProvider(for: vcsType).currentHead(at: cwd)
             }
             let session = Session(id: sessionID, projectPath: cwd, startedAt: now, lastActivityAt: now)
             let event = PromptEvent(

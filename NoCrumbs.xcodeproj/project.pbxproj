@@ -17,6 +17,7 @@
 		82F7D1192E2BC5D116E1155F /* Sparkle in Frameworks */ = {isa = PBXBuildFile; productRef = E7DF57F61F6B0D86D735C19F /* Sparkle */; };
 		8A911B5B50873530D8061506 /* PromptEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 851939F6461B1C59CF8F1823 /* PromptEvent.swift */; };
 		C307CB874E94C03E8F8E63FD /* GitProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D069F5ACA9BB864C8B7AFA6 /* GitProvider.swift */; };
+		5B2C3D4E5F6A7B8C9D0E1F2A /* MercurialProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4A1B2C3D4E5F6A7B8C9D0E1F /* MercurialProvider.swift */; };
 		C6790B0751E4DA40828B609D /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = 127A4015EC6E11386657358E /* Session.swift */; };
 		AABB5566778899001122EEFF /* HookEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5566778899AABB001122EEFF /* HookEvent.swift */; };
 		D80D064DB9F6C9C9DF635713 /* NoCrumbsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 776872DA80B73BA9E09C28A3 /* NoCrumbsApp.swift */; };
@@ -56,6 +57,7 @@
 		AA88EE99FF00AA11BB223344 /* SessionStateIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB88FF99AA00BB11CC223344 /* SessionStateIndicator.swift */; };
 		AA1122334455667788990011 /* DiffParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB1122334455667788990011 /* DiffParserTests.swift */; };
 		AA2233445566778899001122 /* GitProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB2233445566778899001122 /* GitProviderTests.swift */; };
+		7D4E5F6A7B8C9D0E1F2A3B4C /* MercurialProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C3D4E5F6A7B8C9D0E1F2A3B /* MercurialProviderTests.swift */; };
 		AA3344556677889900112233 /* DiffViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB3344556677889900112233 /* DiffViewModelTests.swift */; };
 		AA4455667788990011223344 /* VCSDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB4455667788990011223344 /* VCSDetectorTests.swift */; };
 		AA5566778899001122334455 /* DatabaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB5566778899001122334455 /* DatabaseTests.swift */; };
@@ -80,6 +82,7 @@
 		127A4015EC6E11386657358E /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
 		37CE3F16F07E020EEDE309B8 /* VCSDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VCSDetector.swift; sourceTree = "<group>"; };
 		3D069F5ACA9BB864C8B7AFA6 /* GitProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitProvider.swift; sourceTree = "<group>"; };
+		4A1B2C3D4E5F6A7B8C9D0E1F /* MercurialProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MercurialProvider.swift; sourceTree = "<group>"; };
 		3E97C4331A6A2B294BFCA1E6 /* SocketClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocketClient.swift; sourceTree = "<group>"; };
 		5E0978BBFBDC197AD349E9F5 /* SocketServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocketServer.swift; sourceTree = "<group>"; };
 		5F6657501DB0A6738B4E5D13 /* NoCrumbs.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = NoCrumbs.app; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -123,6 +126,7 @@
 		T1F00011947142E6A122A111 /* github-light.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "github-light.json"; sourceTree = "<group>"; };
 		BB1122334455667788990011 /* DiffParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffParserTests.swift; sourceTree = "<group>"; };
 		BB2233445566778899001122 /* GitProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitProviderTests.swift; sourceTree = "<group>"; };
+		6C3D4E5F6A7B8C9D0E1F2A3B /* MercurialProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MercurialProviderTests.swift; sourceTree = "<group>"; };
 		BB3344556677889900112233 /* DiffViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffViewModelTests.swift; sourceTree = "<group>"; };
 		BB4455667788990011223344 /* VCSDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VCSDetectorTests.swift; sourceTree = "<group>"; };
 		BB5566778899001122334455 /* DatabaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseTests.swift; sourceTree = "<group>"; };
@@ -212,6 +216,7 @@
 			children = (
 				BB22CC33DD44EE55FF661122 /* DiffParser.swift */,
 				3D069F5ACA9BB864C8B7AFA6 /* GitProvider.swift */,
+				4A1B2C3D4E5F6A7B8C9D0E1F /* MercurialProvider.swift */,
 				37CE3F16F07E020EEDE309B8 /* VCSDetector.swift */,
 				98CDF552C67056A28C4819EA /* VCSProvider.swift */,
 			);
@@ -372,6 +377,7 @@
 				BB3344556677889900112233 /* DiffViewModelTests.swift */,
 				BB1122334455667788990011 /* DiffParserTests.swift */,
 				BB2233445566778899001122 /* GitProviderTests.swift */,
+				6C3D4E5F6A7B8C9D0E1F2A3B /* MercurialProviderTests.swift */,
 				BB4455667788990011223344 /* VCSDetectorTests.swift */,
 				BB5566778899001122334455 /* DatabaseTests.swift */,
 			);
@@ -505,6 +511,7 @@
 				28E0137ED7D0A9DDC51A27A6 /* FileChange.swift in Sources */,
 				11AA22BB33CC44DD55EE66FF /* FileDiff.swift in Sources */,
 				C307CB874E94C03E8F8E63FD /* GitProvider.swift in Sources */,
+				5B2C3D4E5F6A7B8C9D0E1F2A /* MercurialProvider.swift in Sources */,
 				AABB5566778899001122EEFF /* HookEvent.swift in Sources */,
 				D80D064DB9F6C9C9DF635713 /* NoCrumbsApp.swift in Sources */,
 				8A911B5B50873530D8061506 /* PromptEvent.swift in Sources */,
@@ -535,6 +542,7 @@
 			files = (
 				AA1122334455667788990011 /* DiffParserTests.swift in Sources */,
 				AA2233445566778899001122 /* GitProviderTests.swift in Sources */,
+				7D4E5F6A7B8C9D0E1F2A3B4C /* MercurialProviderTests.swift in Sources */,
 				AA3344556677889900112233 /* DiffViewModelTests.swift in Sources */,
 				AA4455667788990011223344 /* VCSDetectorTests.swift in Sources */,
 				AA5566778899001122334455 /* DatabaseTests.swift in Sources */,

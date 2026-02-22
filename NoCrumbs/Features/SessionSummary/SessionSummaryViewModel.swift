@@ -40,7 +40,8 @@ final class SessionSummaryViewModel {
     var uniqueFiles: [AggregatedFileStat] {
         var byPath: [String: (status: FileDiff.FileStatus, adds: Int, dels: Int, prompts: Set<UUID>)] = [:]
 
-        for (_, promptStat) in promptDiffStats {
+        // Sort by eventID for deterministic iteration — dictionary order is random
+        for (_, promptStat) in promptDiffStats.sorted(by: { $0.key.uuidString < $1.key.uuidString }) {
             for file in promptStat.fileStats {
                 var entry = byPath[file.filePath] ?? (status: file.status, adds: 0, dels: 0, prompts: [])
                 entry.adds += file.additions
@@ -61,7 +62,7 @@ final class SessionSummaryViewModel {
                 promptCount: entry.prompts.count
             )
         }
-        .sorted { $0.totalChanges > $1.totalChanges }
+        .sorted { $0.totalChanges != $1.totalChanges ? $0.totalChanges > $1.totalChanges : $0.filePath < $1.filePath }
     }
 
     // MARK: - Load
@@ -74,7 +75,7 @@ final class SessionSummaryViewModel {
         isLoading = true
 
         let eventsWithChanges = events.filter { event in
-            event.vcs == .git
+            event.vcs != nil
                 && event.baseCommitHash != nil
                 && !(fileChangesCache[event.id] ?? []).isEmpty
         }
@@ -134,7 +135,7 @@ final class SessionSummaryViewModel {
         }
 
         let newEvents = events.filter { event in
-            event.vcs == .git
+            event.vcs != nil
                 && event.baseCommitHash != nil
                 && !(fileChangesCache[event.id] ?? []).isEmpty
                 && promptDiffStats[event.id] == nil

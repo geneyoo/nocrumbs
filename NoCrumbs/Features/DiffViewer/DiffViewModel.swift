@@ -25,7 +25,7 @@ final class DiffViewModel {
     }
 
     func load(event: PromptEvent, fileChanges: [FileChange]) {
-        guard event.vcs == .git else {
+        guard event.vcs != nil else {
             fileDiffs = []
             linePairs = []
             error = "No VCS detected for this event"
