@@ -6,8 +6,6 @@ private let logger = Logger(subsystem: "com.geneyoo.nocrumbs", category: "App")
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let socketServer = SocketServer()
-    private var globalMonitor: Any?
-    private var localMonitor: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         UserDefaults.standard.register(defaults: [
@@ -61,15 +59,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             logger.warning("[NC:App] Launch at login failed: \(error.localizedDescription)")
         }
 
-        // Global hotkey: Cmd+Shift+N
-        globalMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            self?.handleHotkey(event)
-        }
-        localMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            if self?.handleHotkey(event) == true { return nil }
-            return event
-        }
-
         // Start as accessory (menu bar only)
         NSApp.setActivationPolicy(.accessory)
 
@@ -111,6 +100,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         showMainWindow()
     }
 
+    func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool {
+        false  // Keep running as menu bar daemon when window closes (Cmd+W)
+    }
+
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         // Cmd+Q closes window and hides to menu bar instead of quitting
         // Real quit only via menu bar "Quit" button
@@ -124,24 +117,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
-        if let globalMonitor { NSEvent.removeMonitor(globalMonitor) }
-        if let localMonitor { NSEvent.removeMonitor(localMonitor) }
         Task {
             await socketServer.stop()
         }
         Database.shared.close()
         logger.info("[NC:App] Shutdown complete")
-    }
-
-    @discardableResult
-    private func handleHotkey(_ event: NSEvent) -> Bool {
-        let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        guard flags == [.command, .shift],
-            event.charactersIgnoringModifiers == "n"
-        else { return false }
-
-        showMainWindow()
-        return true
     }
 
     private func showMainWindow() {
