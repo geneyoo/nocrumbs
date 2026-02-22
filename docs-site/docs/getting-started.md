@@ -11,7 +11,7 @@ NoCrumbs is a local-first tool that links every file change your AI coding assis
 ### Homebrew (recommended)
 
 ```bash
-brew install nocrumbs
+brew install geneyoo/tap/nocrumbs
 ```
 
 ### From source
