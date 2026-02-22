@@ -6,19 +6,19 @@ import Layout from '@theme/Layout';
 
 const features = [
   {
-    title: 'Local-First, Always',
+    title: 'Real-Time Tracking',
     description:
-      'Your AI context never leaves your machine. No cloud sync, no telemetry, no third-party servers. NoCrumbs works entirely on your local filesystem.',
+      'NoCrumbs captures every AI action as it happens — file writes, commands, commits — and links them back to the prompt that triggered them. No after-the-fact reconstruction.',
   },
   {
-    title: 'Git-Native',
+    title: 'Local-First, Always',
     description:
-      'Hooks into your existing git workflow. NoCrumbs watches for changes and automatically strips AI breadcrumbs from your commits before they hit the repo.',
+      'Everything stays on your machine. No cloud sync, no telemetry, no third-party servers. Just a Unix socket between the CLI and a native Mac app.',
   },
   {
     title: 'CLI + Mac App',
     description:
-      'Use the CLI for automation and scripting, or the native macOS app for a visual overview. Both share the same engine.',
+      'A fire-and-forget CLI hook that never blocks your workflow, paired with a native macOS app for browsing your prompt-to-commit timeline.',
   },
 ];
 
@@ -35,13 +35,13 @@ function HeroSection() {
           </Link>
           <Link
             className="button button--secondary button--lg"
-            href="https://github.com/pdswan/nocrumbs"
+            href="https://github.com/geneyoo/nocrumbs"
           >
             GitHub
           </Link>
         </div>
         <div className="install-hint">
-          <code>brew install nocrumbs</code>
+          <code>brew install geneyoo/tap/nocrumbs</code>
         </div>
       </div>
     </header>

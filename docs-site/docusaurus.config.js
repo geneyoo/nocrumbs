@@ -3,7 +3,7 @@
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'NoCrumbs',
-  tagline: 'Local-first AI context management for your codebase',
+  tagline: 'AI writes the code. You keep the receipts.',
   favicon: 'img/favicon.ico',
 
   url: 'https://nocrumbs.ai',
@@ -63,11 +63,6 @@ const config = {
             label: 'GitHub',
             position: 'right',
           },
-          {
-            href: '#',
-            label: 'Discord',
-            position: 'right',
-          },
         ],
       },
       footer: {
@@ -86,11 +81,7 @@ const config = {
             items: [
               {
                 label: 'GitHub',
-                href: 'https://github.com/pdswan/nocrumbs',
-              },
-              {
-                label: 'Discord',
-                href: '#',
+                href: 'https://github.com/geneyoo/nocrumbs',
               },
             ],
           },

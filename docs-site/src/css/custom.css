@@ -51,6 +51,15 @@
   color: #A8C5B5;
 }
 
+.hero__lead {
+  font-size: 1.25rem;
+  font-weight: 300;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  opacity: 0.5;
+  margin-bottom: 0.25rem;
+}
+
 .hero .button--lg {
   min-width: 160px;
   text-align: center;
