@@ -24,7 +24,7 @@ struct SessionSummaryView: View {
 
     private var titleText: String {
         let project = (session.projectPath as NSString).lastPathComponent
-        let prompt = events.first?.promptText ?? "(no prompt)"
+        let prompt = events.last?.promptText ?? "(no prompt)"
         return "\(project) — \(prompt)"
     }
 
@@ -65,30 +65,6 @@ struct SessionSummaryView: View {
             events: events,
             fileChangesCache: database.fileChangesCache
         )
-    }
-
-    // MARK: - Inline Title
-
-    @ViewBuilder
-    private var inlineTitle: some View {
-        HStack(spacing: LayoutGuide.spacingM) {
-            let sState = database.sessionState(for: session.id)
-            if sState == .live {
-                SessionStateIndicator(state: sState)
-            }
-            Text((session.projectPath as NSString).lastPathComponent)
-                .font(.headline)
-            Text("—")
-                .font(.subheadline)
-                .foregroundStyle(.tertiary)
-            Text(events.first?.promptText ?? "(no prompt)")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-            Spacer()
-        }
-        .padding(.horizontal, LayoutGuide.paddingL)
-        .padding(.vertical, LayoutGuide.paddingS)
     }
 
     // MARK: - Header

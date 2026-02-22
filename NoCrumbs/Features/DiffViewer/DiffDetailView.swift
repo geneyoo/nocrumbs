@@ -22,13 +22,16 @@ struct DiffDetailView: View {
 
     private var sessionFirstPrompt: String {
         let events = database.eventsForSession(id: event.sessionID)
-        return events.first?.promptText ?? "(no prompt)"
+        return events.last?.promptText ?? "(no prompt)"
+    }
+
+    private var titleText: String {
+        let project = (event.projectPath as NSString).lastPathComponent
+        return "\(project) — \(sessionFirstPrompt)"
     }
 
     var body: some View {
         VStack(spacing: LayoutGuide.spacingNone) {
-            inlineTitle
-            Divider()
             header
             Divider()
             if viewModel.isLoading {
@@ -42,33 +45,13 @@ struct DiffDetailView: View {
             }
         }
         .frame(minWidth: 600)
-        .navigationTitle("")
+        .navigationTitle(titleText)
         .onChange(of: event) { _, _ in
             fileSearchQuery = ""
             reload()
         }
         .onChange(of: fileChanges) { _, _ in reload() }
         .onAppear { reload() }
-    }
-
-    // MARK: - Inline Title
-
-    @ViewBuilder
-    private var inlineTitle: some View {
-        HStack(spacing: LayoutGuide.spacingM) {
-            Text((event.projectPath as NSString).lastPathComponent)
-                .font(.headline)
-            Text("—")
-                .font(.subheadline)
-                .foregroundStyle(.tertiary)
-            Text(sessionFirstPrompt)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-            Spacer()
-        }
-        .padding(.horizontal, LayoutGuide.paddingL)
-        .padding(.vertical, LayoutGuide.paddingS)
     }
 
     // MARK: - Header
@@ -146,7 +129,7 @@ struct DiffDetailView: View {
                 Image(systemName: "magnifyingglass")
                     .foregroundStyle(.tertiary)
                     .font(.caption)
-                TextField("Filter files", text: $fileSearchQuery)
+                TextField("Search", text: $fileSearchQuery)
                     .textFieldStyle(.plain)
                     .font(.caption)
                 if !fileSearchQuery.isEmpty {

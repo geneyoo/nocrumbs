@@ -36,11 +36,21 @@ final class HookHealthChecker {
             return false
         }
 
-        // Check both PreToolUse and PostToolUse (common hook points)
+        // Claude Code hooks use a nested structure:
+        // hooks.<EventName>[].hooks[].command
         for key in hooks.keys {
             guard let hookArray = hooks[key] as? [[String: Any]] else { continue }
-            for hook in hookArray {
-                if let command = hook["command"] as? String, command.contains("nocrumbs") {
+            for entry in hookArray {
+                // Check nested hooks array (current format)
+                if let innerHooks = entry["hooks"] as? [[String: Any]] {
+                    for inner in innerHooks {
+                        if let command = inner["command"] as? String, command.contains("nocrumbs") {
+                            return true
+                        }
+                    }
+                }
+                // Also check flat command (legacy format)
+                if let command = entry["command"] as? String, command.contains("nocrumbs") {
                     return true
                 }
             }

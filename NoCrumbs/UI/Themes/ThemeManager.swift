@@ -19,7 +19,10 @@ final class ThemeManager {
         }.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
 
         let savedName = UserDefaults.standard.string(forKey: Self.selectedThemeKey)
-        currentTheme = availableThemes.first { $0.name == savedName } ?? availableThemes.first
+        currentTheme =
+            availableThemes.first { $0.name == savedName }
+            ?? availableThemes.first { $0.name == "One Dark Pro" }
+            ?? availableThemes.first
     }
 
     func selectTheme(named name: String) {
