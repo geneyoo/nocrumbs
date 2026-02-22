@@ -27,6 +27,14 @@ function HeroSection() {
   return (
     <header className="hero hero--primary">
       <div className="container" style={{ textAlign: 'center' }}>
+        <div className="hero__logo">
+          <img src="/img/hero-logo.svg" alt="NoCrumbs" className="hero__logo-img" />
+          <svg className="hero__crumbs" viewBox="0 0 120 50" fill="white" xmlns="http://www.w3.org/2000/svg">
+            <rect className="crumb crumb--1" x="10" y="0" width="14" height="14" />
+            <rect className="crumb crumb--2" x="53" y="0" width="14" height="14" />
+            <rect className="crumb crumb--3" x="32" y="28" width="14" height="14" />
+          </svg>
+        </div>
         <h1 className="hero__title">{siteConfig.title}</h1>
         <p className="hero__subtitle">{siteConfig.tagline}</p>
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', marginTop: '2rem' }}>
