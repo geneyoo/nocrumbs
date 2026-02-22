@@ -265,167 +265,8 @@ final class Database {
         logger.info("✅ [DB] Deleted session \(id) (cascade)")
     }
 
-    // MARK: - Cache Loading
+    // MARK: - CRUD: HookEvents
 
-    private func loadCache() throws {
-        try loadSessions()
-        try loadRecentEvents()
-        try loadFileChanges()
-        try loadRecentHookEvents()
-    }
-
-    private func loadSessions() throws {
-        sessions = try query(
-            "SELECT id, projectPath, startedAt, lastActivityAt FROM sessions ORDER BY lastActivityAt DESC"
-        ) { stmt in
-            Session(
-                id: columnText(stmt, 0),
-                projectPath: columnText(stmt, 1),
-                startedAt: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 2)),
-                lastActivityAt: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 3))
-            )
-        }
-    }
-
-    fileprivate func loadRecentEvents() throws {
-        recentEvents = try query(
-            "SELECT id, sessionID, projectPath, promptText, timestamp, vcs, baseCommitHash FROM promptEvents ORDER BY timestamp DESC LIMIT 500"
-        ) { stmt in
-            let vcsRaw = sqlite3_column_text(stmt, 5).map { String(cString: $0) }
-            return PromptEvent(
-                id: UUID(uuidString: columnText(stmt, 0))!, // swiftlint:disable:this force_unwrapping
-                sessionID: columnText(stmt, 1),
-                projectPath: columnText(stmt, 2),
-                promptText: sqlite3_column_text(stmt, 3).map { String(cString: $0) },
-                timestamp: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 4)),
-                vcs: vcsRaw.flatMap { VCSType(rawValue: $0) },
-                baseCommitHash: sqlite3_column_text(stmt, 6).map { String(cString: $0) }
-            )
-        }
-    }
-
-    private func loadFileChanges() throws {
-        let eventIDs = recentEvents.map { $0.id }
-        var cache: [UUID: [FileChange]] = [:]
-        for eventID in eventIDs {
-            let changes = try fileChanges(forEventID: eventID)
-            if !changes.isEmpty {
-                cache[eventID] = changes
-            }
-        }
-        fileChangesCache = cache
-    }
-
-    fileprivate func loadRecentHookEvents() throws {
-        recentHookEvents = try query(
-            "SELECT id, sessionID, hookEventName, projectPath, timestamp, payload FROM hookEvents ORDER BY timestamp DESC LIMIT 200"
-        ) { stmt in
-            HookEvent(
-                id: UUID(uuidString: columnText(stmt, 0))!, // swiftlint:disable:this force_unwrapping
-                sessionID: columnText(stmt, 1),
-                hookEventName: columnText(stmt, 2),
-                projectPath: columnText(stmt, 3),
-                timestamp: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 4)),
-                payload: sqlite3_column_text(stmt, 5).map { String(cString: $0) }
-            )
-        }
-    }
-
-    // MARK: - SQLite Helpers
-
-    fileprivate enum Binding {
-        case text(String)
-        case double(Double)
-        case null
-    }
-
-    fileprivate func execute(_ sql: String, bindings: [Binding] = []) throws {
-        var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-            let msg = String(cString: sqlite3_errmsg(db))
-            logger.error("❌ [DB] Prepare failed: \(msg)")
-            throw DatabaseError.queryFailed(msg)
-        }
-        defer { sqlite3_finalize(stmt) }
-
-        for (i, binding) in bindings.enumerated() {
-            let idx = Int32(i + 1)
-            switch binding {
-            case .text(let s): sqlite3_bind_text(stmt, idx, s, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
-            case .double(let d): sqlite3_bind_double(stmt, idx, d)
-            case .null: sqlite3_bind_null(stmt, idx)
-            }
-        }
-
-        let result = sqlite3_step(stmt)
-        guard result == SQLITE_DONE || result == SQLITE_ROW else {
-            let msg = String(cString: sqlite3_errmsg(db))
-            logger.error("❌ [DB] Step failed: \(msg)")
-            throw DatabaseError.queryFailed(msg)
-        }
-    }
-
-    fileprivate func query<T>(_ sql: String, bindings: [Binding] = [], map: (OpaquePointer) -> T) throws -> [T] {
-        var stmt: OpaquePointer?
-        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
-            let msg = String(cString: sqlite3_errmsg(db))
-            throw DatabaseError.queryFailed(msg)
-        }
-        defer { sqlite3_finalize(stmt) }
-
-        for (i, binding) in bindings.enumerated() {
-            let idx = Int32(i + 1)
-            switch binding {
-            case .text(let s): sqlite3_bind_text(stmt, idx, s, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
-            case .double(let d): sqlite3_bind_double(stmt, idx, d)
-            case .null: sqlite3_bind_null(stmt, idx)
-            }
-        }
-
-        var results: [T] = []
-        while sqlite3_step(stmt) == SQLITE_ROW {
-            results.append(map(stmt!)) // swiftlint:disable:this force_unwrapping
-        }
-        return results
-    }
-
-    @discardableResult
-    private func exec(_ sql: String) -> Bool {
-        sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK
-    }
-
-    fileprivate func columnText(_ stmt: OpaquePointer?, _ idx: Int32) -> String {
-        String(cString: sqlite3_column_text(stmt, idx))
-    }
-
-    private func userVersion() -> Int32 {
-        var stmt: OpaquePointer?
-        defer { sqlite3_finalize(stmt) }
-        sqlite3_prepare_v2(db, "PRAGMA user_version", -1, &stmt, nil)
-        sqlite3_step(stmt)
-        return sqlite3_column_int(stmt, 0)
-    }
-
-    private func setUserVersion(_ v: Int32) {
-        exec("PRAGMA user_version = \(v)")
-    }
-}
-
-enum DatabaseError: Error, LocalizedError {
-    case openFailed(String)
-    case queryFailed(String)
-
-    var errorDescription: String? {
-        switch self {
-        case .openFailed(let msg): "Database open failed: \(msg)"
-        case .queryFailed(let msg): "Database query failed: \(msg)"
-        }
-    }
-}
-
-// MARK: - HookEvents & Backfill
-
-extension Database {
     func insertHookEvent(_ event: HookEvent) throws {
         let sql = """
             INSERT OR REPLACE INTO hookEvents (id, sessionID, hookEventName, projectPath, timestamp, payload)
@@ -455,6 +296,7 @@ extension Database {
         }
     }
 
+    /// Backfill baseCommitHash for legacy events that have NULL.
     func backfillBaseCommitHashes() async {
         let events: [PromptEvent] = await MainActor.run {
             recentEvents.filter { $0.baseCommitHash == nil && $0.vcs == .git }
@@ -488,6 +330,163 @@ extension Database {
         await MainActor.run {
             try? loadRecentEvents()
             logger.info("🔄 [DB] Backfill complete")
+        }
+    }
+
+    // MARK: - Cache Loading
+
+    private func loadCache() throws {
+        try loadSessions()
+        try loadRecentEvents()
+        try loadFileChanges()
+        try loadRecentHookEvents()
+    }
+
+    private func loadSessions() throws {
+        sessions = try query(
+            "SELECT id, projectPath, startedAt, lastActivityAt FROM sessions ORDER BY lastActivityAt DESC"
+        ) { stmt in
+            Session(
+                id: columnText(stmt, 0),
+                projectPath: columnText(stmt, 1),
+                startedAt: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 2)),
+                lastActivityAt: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 3))
+            )
+        }
+    }
+
+    private func loadRecentEvents() throws {
+        recentEvents = try query(
+            "SELECT id, sessionID, projectPath, promptText, timestamp, vcs, baseCommitHash FROM promptEvents ORDER BY timestamp DESC LIMIT 500"
+        ) { stmt in
+            let vcsRaw = sqlite3_column_text(stmt, 5).map { String(cString: $0) }
+            return PromptEvent(
+                id: UUID(uuidString: columnText(stmt, 0))!, // swiftlint:disable:this force_unwrapping
+                sessionID: columnText(stmt, 1),
+                projectPath: columnText(stmt, 2),
+                promptText: sqlite3_column_text(stmt, 3).map { String(cString: $0) },
+                timestamp: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 4)),
+                vcs: vcsRaw.flatMap { VCSType(rawValue: $0) },
+                baseCommitHash: sqlite3_column_text(stmt, 6).map { String(cString: $0) }
+            )
+        }
+    }
+
+    private func loadFileChanges() throws {
+        let eventIDs = recentEvents.map { $0.id }
+        var cache: [UUID: [FileChange]] = [:]
+        for eventID in eventIDs {
+            let changes = try fileChanges(forEventID: eventID)
+            if !changes.isEmpty {
+                cache[eventID] = changes
+            }
+        }
+        fileChangesCache = cache
+    }
+
+    private func loadRecentHookEvents() throws {
+        recentHookEvents = try query(
+            "SELECT id, sessionID, hookEventName, projectPath, timestamp, payload FROM hookEvents ORDER BY timestamp DESC LIMIT 200"
+        ) { stmt in
+            HookEvent(
+                id: UUID(uuidString: columnText(stmt, 0))!, // swiftlint:disable:this force_unwrapping
+                sessionID: columnText(stmt, 1),
+                hookEventName: columnText(stmt, 2),
+                projectPath: columnText(stmt, 3),
+                timestamp: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 4)),
+                payload: sqlite3_column_text(stmt, 5).map { String(cString: $0) }
+            )
+        }
+    }
+
+    // MARK: - SQLite Helpers
+
+    private enum Binding {
+        case text(String)
+        case double(Double)
+        case null
+    }
+
+    private func execute(_ sql: String, bindings: [Binding] = []) throws {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+            let msg = String(cString: sqlite3_errmsg(db))
+            logger.error("❌ [DB] Prepare failed: \(msg)")
+            throw DatabaseError.queryFailed(msg)
+        }
+        defer { sqlite3_finalize(stmt) }
+
+        for (i, binding) in bindings.enumerated() {
+            let idx = Int32(i + 1)
+            switch binding {
+            case .text(let s): sqlite3_bind_text(stmt, idx, s, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+            case .double(let d): sqlite3_bind_double(stmt, idx, d)
+            case .null: sqlite3_bind_null(stmt, idx)
+            }
+        }
+
+        let result = sqlite3_step(stmt)
+        guard result == SQLITE_DONE || result == SQLITE_ROW else {
+            let msg = String(cString: sqlite3_errmsg(db))
+            logger.error("❌ [DB] Step failed: \(msg)")
+            throw DatabaseError.queryFailed(msg)
+        }
+    }
+
+    private func query<T>(_ sql: String, bindings: [Binding] = [], map: (OpaquePointer) -> T) throws -> [T] {
+        var stmt: OpaquePointer?
+        guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
+            let msg = String(cString: sqlite3_errmsg(db))
+            throw DatabaseError.queryFailed(msg)
+        }
+        defer { sqlite3_finalize(stmt) }
+
+        for (i, binding) in bindings.enumerated() {
+            let idx = Int32(i + 1)
+            switch binding {
+            case .text(let s): sqlite3_bind_text(stmt, idx, s, -1, unsafeBitCast(-1, to: sqlite3_destructor_type.self))
+            case .double(let d): sqlite3_bind_double(stmt, idx, d)
+            case .null: sqlite3_bind_null(stmt, idx)
+            }
+        }
+
+        var results: [T] = []
+        while sqlite3_step(stmt) == SQLITE_ROW {
+            results.append(map(stmt!)) // swiftlint:disable:this force_unwrapping
+        }
+        return results
+    }
+
+    @discardableResult
+    private func exec(_ sql: String) -> Bool {
+        sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK
+    }
+
+    private func columnText(_ stmt: OpaquePointer?, _ idx: Int32) -> String {
+        String(cString: sqlite3_column_text(stmt, idx))
+    }
+
+    private func userVersion() -> Int32 {
+        var stmt: OpaquePointer?
+        defer { sqlite3_finalize(stmt) }
+        sqlite3_prepare_v2(db, "PRAGMA user_version", -1, &stmt, nil)
+        sqlite3_step(stmt)
+        return sqlite3_column_int(stmt, 0)
+    }
+
+    private func setUserVersion(_ v: Int32) {
+        exec("PRAGMA user_version = \(v)")
+    }
+}
+
+enum DatabaseError: Error, LocalizedError {
+    case openFailed(String)
+    case queryFailed(String)
+
+    var errorDescription: String? {
+        switch self {
+        case .openFailed(let msg): "Database open failed: \(msg)"
+        case .queryFailed(let msg): "Database query failed: \(msg)"
         }
     }
 }
