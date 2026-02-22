@@ -35,7 +35,8 @@ private struct SidebarItem: Identifiable {
 private final class SidebarState {
     var selection: UUID?
     var expandedSessions: Set<String> = []
-    var hideEmptyEvents = false
+    @ObservationIgnored
+    @AppStorage("hideEmptyEvents") var hideEmptyEvents = true
     var collapsedProjects: Set<String> = []
     var keyMonitor: Any?
     var renamingSessionID: String?
