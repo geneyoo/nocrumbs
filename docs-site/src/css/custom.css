@@ -1,0 +1,128 @@
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
+
+:root {
+  --ifm-color-primary: #e8653a;
+  --ifm-color-primary-dark: #e04f20;
+  --ifm-color-primary-darker: #d44b1e;
+  --ifm-color-primary-darkest: #af3e19;
+  --ifm-color-primary-light: #ec7b54;
+  --ifm-color-primary-lighter: #ee8760;
+  --ifm-color-primary-lightest: #f3a88a;
+  --ifm-font-family-base: 'Outfit', system-ui, -apple-system, sans-serif;
+  --ifm-heading-font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  --ifm-font-family-monospace: 'JetBrains Mono', SFMono-Regular, Menlo, monospace;
+}
+
+[data-theme='dark'] {
+  --ifm-color-primary: #f0845e;
+  --ifm-color-primary-dark: #ed6d40;
+  --ifm-color-primary-darker: #ec6231;
+  --ifm-color-primary-darkest: #d94714;
+  --ifm-color-primary-light: #f39b7c;
+  --ifm-color-primary-lighter: #f4a68b;
+  --ifm-color-primary-lightest: #f9c9b7;
+  --ifm-background-color: #0f1117;
+  --ifm-navbar-background-color: #0f1117;
+}
+
+[data-theme='dark'] .footer {
+  background-color: #080a0e;
+}
+
+/* Hero section */
+.hero--primary {
+  background: linear-gradient(160deg, #0f1117 0%, #1a1520 50%, #0f1117 100%);
+  padding: 6rem 2rem;
+}
+
+.hero__title {
+  font-size: 3.5rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+}
+
+.hero__subtitle {
+  font-size: 1.35rem;
+  font-weight: 300;
+  opacity: 0.85;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.hero .button--primary {
+  background-color: var(--ifm-color-primary);
+  border-color: var(--ifm-color-primary);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.hero .button--primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 20px rgba(240, 132, 94, 0.4);
+}
+
+.hero .button--secondary {
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  background: transparent;
+  transition: border-color 0.15s ease;
+}
+
+.hero .button--secondary:hover {
+  border-color: rgba(255, 255, 255, 0.6);
+  color: #fff;
+}
+
+/* Install hint */
+.install-hint {
+  margin-top: 2rem;
+  font-family: var(--ifm-font-family-monospace);
+  font-size: 0.9rem;
+  opacity: 0.6;
+}
+
+.install-hint code {
+  background: rgba(255, 255, 255, 0.08);
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+/* Feature cards */
+.features {
+  padding: 4rem 2rem;
+}
+
+.feature-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 2rem;
+  backdrop-filter: blur(10px);
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.feature-card:hover {
+  border-color: rgba(240, 132, 94, 0.3);
+  box-shadow: 0 4px 24px rgba(240, 132, 94, 0.08);
+}
+
+.feature-card h3 {
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+}
+
+.feature-card p {
+  opacity: 0.8;
+  line-height: 1.6;
+}
+
+/* Light mode feature cards */
+[data-theme='light'] .feature-card {
+  background: rgba(0, 0, 0, 0.02);
+  border-color: rgba(0, 0, 0, 0.08);
+}
+
+[data-theme='light'] .feature-card:hover {
+  border-color: rgba(232, 101, 58, 0.3);
+  box-shadow: 0 4px 24px rgba(232, 101, 58, 0.08);
+}
