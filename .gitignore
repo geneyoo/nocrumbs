@@ -22,6 +22,21 @@ Package.resolved
 # Claude Code
 .claude/memory/
 
+# Local secrets & runbooks (never commit)
+*.local
+*.local.md
+.env*
+*.secret
+*.secrets
+*.key
+*.pem
+*.p12
+*.keystore
+*.credential*
+
+# Release artifacts
+build-release/
+
 # App Support (local runtime data)
 *.sqlite
 *.sqlite-wal

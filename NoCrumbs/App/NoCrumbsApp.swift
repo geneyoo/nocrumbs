@@ -1,4 +1,5 @@
 import SwiftUI
+import Sparkle
 
 @main
 struct NoCrumbsApp: App {
@@ -22,6 +23,9 @@ struct NoCrumbsApp: App {
         }
         .defaultSize(width: 1000, height: 700)
         .commands {
+            CommandGroup(after: .appInfo) {
+                CheckForUpdatesView(updater: appDelegate.updaterController.updater)
+            }
             CommandGroup(after: .toolbar) {
                 Button("Zoom In") { appScale.zoomIn() }
                     .keyboardShortcut("+", modifiers: .command)
