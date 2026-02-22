@@ -9,7 +9,7 @@ const config = {
   url: 'https://nocrumbs.ai',
   baseUrl: '/',
 
-  organizationName: 'pdswan',
+  organizationName: 'geneyoo',
   projectName: 'nocrumbs',
 
   onBrokenLinks: 'throw',
