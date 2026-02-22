@@ -1,0 +1,20 @@
+{
+    "name": "Tokyo Night",
+    "background": "#1a1b26",
+    "foreground": "#a9b1d6",
+    "addedLine": "#9ece6a",
+    "removedLine": "#f7768e",
+    "addedBackground": "#1a2e1a",
+    "removedBackground": "#3b1a2a",
+    "lineNumber": "#565f89",
+    "hunkHeader": "#7aa2f7",
+    "contextBackground": "#16161e",
+    "emptyLineBackground": "#16161e",
+    "comment": "#565f89",
+    "string": "#9ece6a",
+    "keyword": "#bb9af7",
+    "type": "#2ac3de",
+    "number": "#ff9e64",
+    "preprocessor": "#f7768e",
+    "property": "#7aa2f7"
+}

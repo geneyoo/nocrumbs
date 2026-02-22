@@ -30,6 +30,7 @@ struct NoCrumbsApp: App {
 
         Settings {
             SettingsView()
+                .environment(themeManager)
         }
 
         MenuBarExtra("NoCrumbs", systemImage: "doc.text.magnifyingglass") {

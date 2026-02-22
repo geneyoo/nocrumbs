@@ -1,0 +1,20 @@
+{
+    "name": "Rosé Pine Dawn",
+    "background": "#faf4ed",
+    "foreground": "#575279",
+    "addedLine": "#56949f",
+    "removedLine": "#b4637a",
+    "addedBackground": "#d4eef0",
+    "removedBackground": "#f4d4de",
+    "lineNumber": "#9893a5",
+    "hunkHeader": "#907aa9",
+    "contextBackground": "#fffaf3",
+    "emptyLineBackground": "#fffaf3",
+    "comment": "#9893a5",
+    "string": "#ea9d34",
+    "keyword": "#907aa9",
+    "type": "#56949f",
+    "number": "#d7827e",
+    "preprocessor": "#b4637a",
+    "property": "#286983"
+}

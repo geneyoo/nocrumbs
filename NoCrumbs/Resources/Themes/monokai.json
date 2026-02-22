@@ -1,0 +1,20 @@
+{
+    "name": "Monokai",
+    "background": "#272822",
+    "foreground": "#f8f8f2",
+    "addedLine": "#a6e22e",
+    "removedLine": "#f92672",
+    "addedBackground": "#1e2e1a",
+    "removedBackground": "#3b1a24",
+    "lineNumber": "#75715e",
+    "hunkHeader": "#66d9ef",
+    "contextBackground": "#1e1f1c",
+    "emptyLineBackground": "#1e1f1c",
+    "comment": "#75715e",
+    "string": "#e6db74",
+    "keyword": "#f92672",
+    "type": "#66d9ef",
+    "number": "#ae81ff",
+    "preprocessor": "#fd971f",
+    "property": "#a6e22e"
+}

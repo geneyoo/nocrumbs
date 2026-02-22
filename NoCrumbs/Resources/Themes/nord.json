@@ -1,0 +1,20 @@
+{
+    "name": "Nord",
+    "background": "#2e3440",
+    "foreground": "#d8dee9",
+    "addedLine": "#a3be8c",
+    "removedLine": "#bf616a",
+    "addedBackground": "#2a3325",
+    "removedBackground": "#3b2328",
+    "lineNumber": "#4c566a",
+    "hunkHeader": "#81a1c1",
+    "contextBackground": "#272c36",
+    "emptyLineBackground": "#272c36",
+    "comment": "#616e88",
+    "string": "#a3be8c",
+    "keyword": "#81a1c1",
+    "type": "#8fbcbb",
+    "number": "#b48ead",
+    "preprocessor": "#d08770",
+    "property": "#88c0d0"
+}

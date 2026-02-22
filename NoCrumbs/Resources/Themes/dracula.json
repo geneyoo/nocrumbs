@@ -1,0 +1,20 @@
+{
+    "name": "Dracula",
+    "background": "#282a36",
+    "foreground": "#f8f8f2",
+    "addedLine": "#50fa7b",
+    "removedLine": "#ff5555",
+    "addedBackground": "#1e3a1e",
+    "removedBackground": "#3b1e1e",
+    "lineNumber": "#6272a4",
+    "hunkHeader": "#8be9fd",
+    "contextBackground": "#21222c",
+    "emptyLineBackground": "#21222c",
+    "comment": "#6272a4",
+    "string": "#f1fa8c",
+    "keyword": "#ff79c6",
+    "type": "#8be9fd",
+    "number": "#bd93f9",
+    "preprocessor": "#ffb86c",
+    "property": "#50fa7b"
+}

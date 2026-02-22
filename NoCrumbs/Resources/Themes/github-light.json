@@ -1,0 +1,20 @@
+{
+    "name": "GitHub Light",
+    "background": "#ffffff",
+    "foreground": "#1f2328",
+    "addedLine": "#1a7f37",
+    "removedLine": "#cf222e",
+    "addedBackground": "#dafbe1",
+    "removedBackground": "#ffebe9",
+    "lineNumber": "#8c959f",
+    "hunkHeader": "#0550ae",
+    "contextBackground": "#f6f8fa",
+    "emptyLineBackground": "#f6f8fa",
+    "comment": "#6e7781",
+    "string": "#0a3069",
+    "keyword": "#cf222e",
+    "type": "#8250df",
+    "number": "#0550ae",
+    "preprocessor": "#953800",
+    "property": "#0550ae"
+}

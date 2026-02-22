@@ -1,0 +1,20 @@
+{
+    "name": "Rosé Pine",
+    "background": "#191724",
+    "foreground": "#e0def4",
+    "addedLine": "#9ccfd8",
+    "removedLine": "#eb6f92",
+    "addedBackground": "#1a2a2e",
+    "removedBackground": "#2e1a24",
+    "lineNumber": "#6e6a86",
+    "hunkHeader": "#c4a7e7",
+    "contextBackground": "#1f1d2e",
+    "emptyLineBackground": "#1f1d2e",
+    "comment": "#6e6a86",
+    "string": "#f6c177",
+    "keyword": "#c4a7e7",
+    "type": "#9ccfd8",
+    "number": "#ebbcba",
+    "preprocessor": "#eb6f92",
+    "property": "#31748f"
+}

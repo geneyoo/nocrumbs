@@ -1,0 +1,20 @@
+{
+    "name": "Nightfox",
+    "background": "#192330",
+    "foreground": "#cdcecf",
+    "addedLine": "#81b29a",
+    "removedLine": "#c94f6d",
+    "addedBackground": "#1a2e28",
+    "removedBackground": "#2e1a24",
+    "lineNumber": "#526176",
+    "hunkHeader": "#719cd6",
+    "contextBackground": "#131a24",
+    "emptyLineBackground": "#131a24",
+    "comment": "#738091",
+    "string": "#a3be8c",
+    "keyword": "#9d79d6",
+    "type": "#63cdcf",
+    "number": "#dbc074",
+    "preprocessor": "#f4a261",
+    "property": "#719cd6"
+}

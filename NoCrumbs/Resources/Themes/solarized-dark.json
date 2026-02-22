@@ -1,0 +1,20 @@
+{
+    "name": "Solarized Dark",
+    "background": "#002b36",
+    "foreground": "#839496",
+    "addedLine": "#859900",
+    "removedLine": "#dc322f",
+    "addedBackground": "#073642",
+    "removedBackground": "#3b1a1a",
+    "lineNumber": "#586e75",
+    "hunkHeader": "#268bd2",
+    "contextBackground": "#001e26",
+    "emptyLineBackground": "#001e26",
+    "comment": "#586e75",
+    "string": "#2aa198",
+    "keyword": "#859900",
+    "type": "#b58900",
+    "number": "#d33682",
+    "preprocessor": "#cb4b16",
+    "property": "#268bd2"
+}

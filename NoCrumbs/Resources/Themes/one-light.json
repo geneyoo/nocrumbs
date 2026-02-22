@@ -1,0 +1,20 @@
+{
+    "name": "One Light",
+    "background": "#fafafa",
+    "foreground": "#383a42",
+    "addedLine": "#50a14f",
+    "removedLine": "#e45649",
+    "addedBackground": "#dff0df",
+    "removedBackground": "#f8d6d4",
+    "lineNumber": "#9d9d9f",
+    "hunkHeader": "#4078f2",
+    "contextBackground": "#f0f0f0",
+    "emptyLineBackground": "#f0f0f0",
+    "comment": "#a0a1a7",
+    "string": "#50a14f",
+    "keyword": "#a626a4",
+    "type": "#c18401",
+    "number": "#986801",
+    "preprocessor": "#e45649",
+    "property": "#4078f2"
+}

@@ -1,0 +1,20 @@
+{
+    "name": "Ayu Dark",
+    "background": "#0b0e14",
+    "foreground": "#bfbdb6",
+    "addedLine": "#7fd962",
+    "removedLine": "#d95757",
+    "addedBackground": "#132010",
+    "removedBackground": "#2e1414",
+    "lineNumber": "#454b54",
+    "hunkHeader": "#39bae6",
+    "contextBackground": "#080a0f",
+    "emptyLineBackground": "#080a0f",
+    "comment": "#636a72",
+    "string": "#aad94c",
+    "keyword": "#ff8f40",
+    "type": "#59c2ff",
+    "number": "#d2a6ff",
+    "preprocessor": "#f29668",
+    "property": "#39bae6"
+}

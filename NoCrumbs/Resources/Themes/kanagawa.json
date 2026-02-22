@@ -1,0 +1,20 @@
+{
+    "name": "Kanagawa",
+    "background": "#1f1f28",
+    "foreground": "#dcd7ba",
+    "addedLine": "#76946a",
+    "removedLine": "#c34043",
+    "addedBackground": "#1a2a1a",
+    "removedBackground": "#2e1a1a",
+    "lineNumber": "#727169",
+    "hunkHeader": "#7e9cd8",
+    "contextBackground": "#16161d",
+    "emptyLineBackground": "#16161d",
+    "comment": "#727169",
+    "string": "#98bb6c",
+    "keyword": "#957fb8",
+    "type": "#7aa89f",
+    "number": "#d27e99",
+    "preprocessor": "#ffa066",
+    "property": "#7e9cd8"
+}

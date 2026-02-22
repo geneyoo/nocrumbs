@@ -1,0 +1,20 @@
+{
+    "name": "Solarized Light",
+    "background": "#fdf6e3",
+    "foreground": "#657b83",
+    "addedLine": "#859900",
+    "removedLine": "#dc322f",
+    "addedBackground": "#e6f0c8",
+    "removedBackground": "#f8d6d4",
+    "lineNumber": "#93a1a1",
+    "hunkHeader": "#268bd2",
+    "contextBackground": "#eee8d5",
+    "emptyLineBackground": "#eee8d5",
+    "comment": "#93a1a1",
+    "string": "#2aa198",
+    "keyword": "#859900",
+    "type": "#b58900",
+    "number": "#d33682",
+    "preprocessor": "#cb4b16",
+    "property": "#268bd2"
+}

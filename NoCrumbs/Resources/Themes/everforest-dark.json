@@ -1,0 +1,20 @@
+{
+    "name": "Everforest Dark",
+    "background": "#2d353b",
+    "foreground": "#d3c6aa",
+    "addedLine": "#a7c080",
+    "removedLine": "#e67e80",
+    "addedBackground": "#283228",
+    "removedBackground": "#3b2828",
+    "lineNumber": "#596763",
+    "hunkHeader": "#7fbbb3",
+    "contextBackground": "#272e33",
+    "emptyLineBackground": "#272e33",
+    "comment": "#859289",
+    "string": "#dbbc7f",
+    "keyword": "#e69875",
+    "type": "#7fbbb3",
+    "number": "#d699b6",
+    "preprocessor": "#e67e80",
+    "property": "#83c092"
+}

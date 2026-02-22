@@ -33,6 +33,23 @@
 		913317F929604861AE97FA87 /* DiffTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82DC92447C6446A1BF848CBC /* DiffTheme.swift */; };
 		A727F52251F34B02989F64F8 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7429159932245388144C228 /* ThemeManager.swift */; };
 		E6538BB9AA424D58A373AFFF /* gruvbox-dark.json in Resources */ = {isa = PBXBuildFile; fileRef = 16CC5B04947142E6A122A17A /* gruvbox-dark.json */; };
+		T1A00001AA424D58A373AF01 /* catppuccin-mocha.json in Resources */ = {isa = PBXBuildFile; fileRef = T1F00001947142E6A122A101 /* catppuccin-mocha.json */; };
+		T1A00002AA424D58A373AF02 /* tokyo-night.json in Resources */ = {isa = PBXBuildFile; fileRef = T1F00002947142E6A122A102 /* tokyo-night.json */; };
+		T1A00003AA424D58A373AF03 /* kanagawa.json in Resources */ = {isa = PBXBuildFile; fileRef = T1F00003947142E6A122A103 /* kanagawa.json */; };
+		T1A00004AA424D58A373AF04 /* rose-pine.json in Resources */ = {isa = PBXBuildFile; fileRef = T1F00004947142E6A122A104 /* rose-pine.json */; };
+		T1A00005AA424D58A373AF05 /* nord.json in Resources */ = {isa = PBXBuildFile; fileRef = T1F00005947142E6A122A105 /* nord.json */; };
+		T1A00006AA424D58A373AF06 /* dracula.json in Resources */ = {isa = PBXBuildFile; fileRef = T1F00006947142E6A122A106 /* dracula.json */; };
+		T1A00007AA424D58A373AF07 /* solarized-dark.json in Resources */ = {isa = PBXBuildFile; fileRef = T1F00007947142E6A122A107 /* solarized-dark.json */; };
+		T1A00008AA424D58A373AF08 /* one-dark-pro.json in Resources */ = {isa = PBXBuildFile; fileRef = T1F00008947142E6A122A108 /* one-dark-pro.json */; };
+		T1A00009AA424D58A373AF09 /* monokai.json in Resources */ = {isa = PBXBuildFile; fileRef = T1F00009947142E6A122A109 /* monokai.json */; };
+		T1A0000AAA424D58A373AF0A /* ayu-dark.json in Resources */ = {isa = PBXBuildFile; fileRef = T1F0000A947142E6A122A10A /* ayu-dark.json */; };
+		T1A0000BAA424D58A373AF0B /* everforest-dark.json in Resources */ = {isa = PBXBuildFile; fileRef = T1F0000B947142E6A122A10B /* everforest-dark.json */; };
+		T1A0000CAA424D58A373AF0C /* nightfox.json in Resources */ = {isa = PBXBuildFile; fileRef = T1F0000C947142E6A122A10C /* nightfox.json */; };
+		T1A0000DAA424D58A373AF0D /* solarized-light.json in Resources */ = {isa = PBXBuildFile; fileRef = T1F0000D947142E6A122A10D /* solarized-light.json */; };
+		T1A0000EAA424D58A373AF0E /* one-light.json in Resources */ = {isa = PBXBuildFile; fileRef = T1F0000E947142E6A122A10E /* one-light.json */; };
+		T1A0000FAA424D58A373AF0F /* catppuccin-latte.json in Resources */ = {isa = PBXBuildFile; fileRef = T1F0000F947142E6A122A10F /* catppuccin-latte.json */; };
+		T1A00010AA424D58A373AF10 /* rose-pine-dawn.json in Resources */ = {isa = PBXBuildFile; fileRef = T1F00010947142E6A122A110 /* rose-pine-dawn.json */; };
+		T1A00011AA424D58A373AF11 /* github-light.json in Resources */ = {isa = PBXBuildFile; fileRef = T1F00011947142E6A122A111 /* github-light.json */; };
 		AA55BB66CC77DD88EE990011 /* DiffStat.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB55CC66DD77EE88FF990011 /* DiffStat.swift */; };
 		AA66CC77DD88EE99FF001122 /* SessionSummaryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB66DD77EE88FF99AA001122 /* SessionSummaryViewModel.swift */; };
 		AA77DD88EE99FF00AA112233 /* SessionSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB77EE88FF99AA00BB112233 /* SessionSummaryView.swift */; };
@@ -84,6 +101,23 @@
 		82DC92447C6446A1BF848CBC /* DiffTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffTheme.swift; sourceTree = "<group>"; };
 		F7429159932245388144C228 /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
 		16CC5B04947142E6A122A17A /* gruvbox-dark.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "gruvbox-dark.json"; sourceTree = "<group>"; };
+		T1F00001947142E6A122A101 /* catppuccin-mocha.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "catppuccin-mocha.json"; sourceTree = "<group>"; };
+		T1F00002947142E6A122A102 /* tokyo-night.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "tokyo-night.json"; sourceTree = "<group>"; };
+		T1F00003947142E6A122A103 /* kanagawa.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "kanagawa.json"; sourceTree = "<group>"; };
+		T1F00004947142E6A122A104 /* rose-pine.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "rose-pine.json"; sourceTree = "<group>"; };
+		T1F00005947142E6A122A105 /* nord.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "nord.json"; sourceTree = "<group>"; };
+		T1F00006947142E6A122A106 /* dracula.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "dracula.json"; sourceTree = "<group>"; };
+		T1F00007947142E6A122A107 /* solarized-dark.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "solarized-dark.json"; sourceTree = "<group>"; };
+		T1F00008947142E6A122A108 /* one-dark-pro.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "one-dark-pro.json"; sourceTree = "<group>"; };
+		T1F00009947142E6A122A109 /* monokai.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "monokai.json"; sourceTree = "<group>"; };
+		T1F0000A947142E6A122A10A /* ayu-dark.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "ayu-dark.json"; sourceTree = "<group>"; };
+		T1F0000B947142E6A122A10B /* everforest-dark.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "everforest-dark.json"; sourceTree = "<group>"; };
+		T1F0000C947142E6A122A10C /* nightfox.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "nightfox.json"; sourceTree = "<group>"; };
+		T1F0000D947142E6A122A10D /* solarized-light.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "solarized-light.json"; sourceTree = "<group>"; };
+		T1F0000E947142E6A122A10E /* one-light.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "one-light.json"; sourceTree = "<group>"; };
+		T1F0000F947142E6A122A10F /* catppuccin-latte.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "catppuccin-latte.json"; sourceTree = "<group>"; };
+		T1F00010947142E6A122A110 /* rose-pine-dawn.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "rose-pine-dawn.json"; sourceTree = "<group>"; };
+		T1F00011947142E6A122A111 /* github-light.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "github-light.json"; sourceTree = "<group>"; };
 		BB1122334455667788990011 /* DiffParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffParserTests.swift; sourceTree = "<group>"; };
 		BB2233445566778899001122 /* GitProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitProviderTests.swift; sourceTree = "<group>"; };
 		BB3344556677889900112233 /* DiffViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffViewModelTests.swift; sourceTree = "<group>"; };
@@ -232,7 +266,24 @@
 		0EF4D1AF682A44028B5883C4 /* Themes */ = {
 			isa = PBXGroup;
 			children = (
+				T1F0000A947142E6A122A10A /* ayu-dark.json */,
+				T1F0000F947142E6A122A10F /* catppuccin-latte.json */,
+				T1F00001947142E6A122A101 /* catppuccin-mocha.json */,
+				T1F00006947142E6A122A106 /* dracula.json */,
+				T1F0000B947142E6A122A10B /* everforest-dark.json */,
+				T1F00011947142E6A122A111 /* github-light.json */,
 				16CC5B04947142E6A122A17A /* gruvbox-dark.json */,
+				T1F00003947142E6A122A103 /* kanagawa.json */,
+				T1F00009947142E6A122A109 /* monokai.json */,
+				T1F0000C947142E6A122A10C /* nightfox.json */,
+				T1F00005947142E6A122A105 /* nord.json */,
+				T1F00008947142E6A122A108 /* one-dark-pro.json */,
+				T1F0000E947142E6A122A10E /* one-light.json */,
+				T1F00004947142E6A122A104 /* rose-pine.json */,
+				T1F00010947142E6A122A110 /* rose-pine-dawn.json */,
+				T1F00007947142E6A122A107 /* solarized-dark.json */,
+				T1F0000D947142E6A122A10D /* solarized-light.json */,
+				T1F00002947142E6A122A102 /* tokyo-night.json */,
 			);
 			path = Themes;
 			sourceTree = "<group>";
@@ -397,7 +448,24 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				T1A0000AAA424D58A373AF0A /* ayu-dark.json in Resources */,
+				T1A0000FAA424D58A373AF0F /* catppuccin-latte.json in Resources */,
+				T1A00001AA424D58A373AF01 /* catppuccin-mocha.json in Resources */,
+				T1A00006AA424D58A373AF06 /* dracula.json in Resources */,
+				T1A0000BAA424D58A373AF0B /* everforest-dark.json in Resources */,
+				T1A00011AA424D58A373AF11 /* github-light.json in Resources */,
 				E6538BB9AA424D58A373AFFF /* gruvbox-dark.json in Resources */,
+				T1A00003AA424D58A373AF03 /* kanagawa.json in Resources */,
+				T1A00009AA424D58A373AF09 /* monokai.json in Resources */,
+				T1A0000CAA424D58A373AF0C /* nightfox.json in Resources */,
+				T1A00005AA424D58A373AF05 /* nord.json in Resources */,
+				T1A00008AA424D58A373AF08 /* one-dark-pro.json in Resources */,
+				T1A0000EAA424D58A373AF0E /* one-light.json in Resources */,
+				T1A00004AA424D58A373AF04 /* rose-pine.json in Resources */,
+				T1A00010AA424D58A373AF10 /* rose-pine-dawn.json in Resources */,
+				T1A00007AA424D58A373AF07 /* solarized-dark.json in Resources */,
+				T1A0000DAA424D58A373AF0D /* solarized-light.json in Resources */,
+				T1A00002AA424D58A373AF02 /* tokyo-night.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
