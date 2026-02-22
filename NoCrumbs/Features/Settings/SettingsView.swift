@@ -3,6 +3,7 @@ import SwiftUI
 struct SettingsView: View {
     @AppStorage("annotationEnabled") private var annotationEnabled = true
     @Environment(ThemeManager.self) private var themeManager
+    @State private var healthChecker = HookHealthChecker.shared
 
     private var selectedThemeName: Binding<String> {
         Binding(
@@ -13,6 +14,22 @@ struct SettingsView: View {
 
     var body: some View {
         Form {
+            Section("Hook Status") {
+                LabeledContent("CLI installed") {
+                    Image(systemName: healthChecker.cliInstalled ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundStyle(healthChecker.cliInstalled ? .green : .red)
+                }
+                LabeledContent("Hooks configured") {
+                    Image(systemName: healthChecker.hooksConfigured ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundStyle(healthChecker.hooksConfigured ? .green : .red)
+                }
+                LabeledContent("Socket active") {
+                    Image(systemName: healthChecker.socketActive ? "checkmark.circle.fill" : "xmark.circle.fill")
+                        .foregroundStyle(healthChecker.socketActive ? .green : .red)
+                }
+            }
+            .onAppear { healthChecker.refresh() }
+
             Section("General") {
                 Toggle("Annotate commit messages with prompt history", isOn: $annotationEnabled)
                     .help(

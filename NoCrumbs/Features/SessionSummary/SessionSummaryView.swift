@@ -173,7 +173,10 @@ struct SessionSummaryView: View {
         DisclosureGroup {
             if let stat, !stat.fileStats.isEmpty {
                 VStack(alignment: .leading, spacing: 2) {
-                    ForEach(stat.fileStats.sorted(by: { $0.totalChanges > $1.totalChanges }), id: \.filePath) { file in
+                    ForEach(
+                        stat.fileStats.sorted(by: { $0.totalChanges != $1.totalChanges ? $0.totalChanges > $1.totalChanges : $0.filePath < $1.filePath }),
+                        id: \.filePath
+                    ) { file in
                         fileStatRow(file)
                     }
                 }

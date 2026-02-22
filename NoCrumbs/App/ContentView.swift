@@ -11,7 +11,11 @@ private struct SidebarItem: Identifiable {
     let event: PromptEvent?
     let projectName: String?
 
-    enum Kind { case projectHeader, session, event }
+    enum Kind { case timePeriodHeader, projectHeader, session, event }
+
+    static func timePeriodHeader(_ period: TimePeriod) -> SidebarItem {
+        SidebarItem(id: UUID(), kind: .timePeriodHeader, session: nil, event: nil, projectName: period.label)
+    }
 
     static func projectHeader(_ name: String) -> SidebarItem {
         SidebarItem(id: UUID(), kind: .projectHeader, session: nil, event: nil, projectName: name)
@@ -35,6 +39,28 @@ private final class SidebarState {
     var keyMonitor: Any?
 }
 
+enum TimePeriod: Int, CaseIterable {
+    case today, yesterday, thisWeek, older
+
+    var label: String {
+        switch self {
+        case .today: "Today"
+        case .yesterday: "Yesterday"
+        case .thisWeek: "This Week"
+        case .older: "Older"
+        }
+    }
+
+    static func period(for date: Date) -> TimePeriod {
+        let cal = Calendar.current
+        if cal.isDateInToday(date) { return .today }
+        if cal.isDateInYesterday(date) { return .yesterday }
+        guard let weekAgo = cal.date(byAdding: .day, value: -7, to: cal.startOfDay(for: Date())) else { return .older }
+        if date >= weekAgo { return .thisWeek }
+        return .older
+    }
+}
+
 struct ContentView: View {
     @Environment(Database.self) private var database
     @State private var state = SidebarState()
@@ -55,31 +81,51 @@ struct ContentView: View {
     }
 
     private var flatItems: [SidebarItem] {
-        // Group sessions by project name
-        let grouped = Dictionary(grouping: database.sessions) {
-            ($0.projectPath as NSString).lastPathComponent
-        }
-        // Preserve order: use first session's appearance order
-        var seenProjects: [String] = []
-        for session in database.sessions {
-            let name = (session.projectPath as NSString).lastPathComponent
-            if !seenProjects.contains(name) {
-                seenProjects.append(name)
-            }
+        // Bucket sessions by time period
+        let byPeriod = Dictionary(grouping: database.sessions) {
+            TimePeriod.period(for: $0.lastActivityAt)
         }
 
+        // Determine if we need time headers (skip if all in one period)
+        let activePeriods = TimePeriod.allCases.filter { byPeriod[$0] != nil }
+        let showTimeHeaders = activePeriods.count > 1
+
         var items: [SidebarItem] = []
-        for projectName in seenProjects {
-            guard let sessions = grouped[projectName] else { continue }
-            let hasVisibleSessions = sessions.contains { !filteredEvents(for: $0.id).isEmpty }
-            guard hasVisibleSessions else { continue }
-            items.append(.projectHeader(projectName))
-            for session in sessions {
-                let events = filteredEvents(for: session.id)
-                guard !events.isEmpty else { continue }
-                items.append(.session(session))
-                if state.expandedSessions.contains(session.id) {
-                    items.append(contentsOf: events.map { .event($0) })
+        for period in TimePeriod.allCases {
+            guard let periodSessions = byPeriod[period] else { continue }
+
+            // Group within period by project
+            let grouped = Dictionary(grouping: periodSessions) {
+                ($0.projectPath as NSString).lastPathComponent
+            }
+            var seenProjects: [String] = []
+            for session in periodSessions {
+                let name = (session.projectPath as NSString).lastPathComponent
+                if !seenProjects.contains(name) {
+                    seenProjects.append(name)
+                }
+            }
+
+            // Check if this period has any visible sessions
+            let hasVisible = periodSessions.contains { !filteredEvents(for: $0.id).isEmpty }
+            guard hasVisible else { continue }
+
+            if showTimeHeaders {
+                items.append(.timePeriodHeader(period))
+            }
+
+            for projectName in seenProjects {
+                guard let sessions = grouped[projectName] else { continue }
+                let hasVisibleSessions = sessions.contains { !filteredEvents(for: $0.id).isEmpty }
+                guard hasVisibleSessions else { continue }
+                items.append(.projectHeader(projectName))
+                for session in sessions {
+                    let events = filteredEvents(for: session.id)
+                    guard !events.isEmpty else { continue }
+                    items.append(.session(session))
+                    if state.expandedSessions.contains(session.id) {
+                        items.append(contentsOf: events.map { .event($0) })
+                    }
                 }
             }
         }
@@ -128,11 +174,7 @@ struct ContentView: View {
     @ViewBuilder
     private var sidebar: some View {
         if database.sessions.isEmpty {
-            ContentUnavailableView(
-                "No Sessions",
-                systemImage: "tray",
-                description: Text("Start a Claude Code session to see prompts here.")
-            )
+            SetupView()
         } else {
             @Bindable var state = state
             List(selection: $state.selection) {
@@ -157,6 +199,9 @@ struct ContentView: View {
     @ViewBuilder
     private func row(for item: SidebarItem) -> some View {
         switch item.kind {
+        case .timePeriodHeader:
+            timePeriodHeaderRow(item.projectName ?? "")
+                .tag(item.id)
         case .projectHeader:
             projectHeaderRow(item.projectName ?? "")
                 .tag(item.id)
@@ -178,6 +223,17 @@ struct ContentView: View {
                 .tag(item.id)
             }
         }
+    }
+
+    @ViewBuilder
+    private func timePeriodHeaderRow(_ label: String) -> some View {
+        Text(label)
+            .font(.caption.weight(.bold))
+            .foregroundStyle(.quaternary)
+            .textCase(.uppercase)
+            .padding(.top, 12)
+            .padding(.bottom, 2)
+            .listRowSeparator(.hidden)
     }
 
     @ViewBuilder

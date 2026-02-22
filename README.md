@@ -1,7 +1,48 @@
-# NoCrumbs — Project Plan
+# NoCrumbs
 > Git blame for the AI era. See every decision Claude Code made in your codebase and why.
 
+A native Mac menu bar app that links every file change Claude Code makes back to the prompt that caused it — in real time, fully local, zero config after setup.
+
+## Quick Start
+
+### 1. Build & launch the app
+
+```bash
+git clone https://github.com/geneyoo/nocrumbs.git && cd nocrumbs
+xcodebuild -project NoCrumbs.xcodeproj -scheme NoCrumbs -configuration Release -sdk macosx -derivedDataPath build build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
+open build/Build/Products/Release/NoCrumbs.app
+```
+
+NoCrumbs lives in the menu bar. Press **⌘⇧N** to toggle the window.
+
+### 2. Install the CLI
+
+```bash
+swift build -c release --package-path CLI/
+cp .build/release/nocrumbs /usr/local/bin/
+```
+
+### 3. Configure Claude Code hooks
+
+```bash
+nocrumbs install
+```
+
+This adds hooks to `~/.claude/settings.json` so Claude Code automatically sends prompt and file change events to NoCrumbs. Run it once — works across all projects.
+
+### 4. Use Claude Code normally
+
+That's it. Open any project with Claude Code and prompts + file changes will appear in NoCrumbs automatically. No permissions required — no Accessibility, no Full Disk Access, no API keys, no accounts.
+
+### Requirements
+
+- macOS 14+
+- Xcode 15+ (to build)
+- Claude Code CLI
+
 ---
+
+## Project Plan
 
 ## Vision
 

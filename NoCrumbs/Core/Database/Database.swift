@@ -54,6 +54,7 @@ final class Database {
 
     // MARK: - Migrations
 
+    // swiftlint:disable:next function_body_length
     private func migrate() throws {
         let version = userVersion()
 
@@ -159,6 +160,33 @@ final class Database {
             exec("CREATE INDEX IF NOT EXISTS idx_fileChanges_filePath ON fileChanges(filePath)")
             setUserVersion(4)
             logger.info("🔄 [DB] Migrated to v4 (deduplicate fileChanges)")
+        }
+
+        if version < 5 {
+            // Merge orphan prompt events (promptText IS NULL) into the next real prompt
+            // in the same session. Reassign file changes, then delete the orphan.
+            exec(
+                """
+                UPDATE fileChanges SET eventID = (
+                    SELECT pe2.id FROM promptEvents pe2
+                    WHERE pe2.sessionID = (SELECT sessionID FROM promptEvents WHERE id = fileChanges.eventID)
+                      AND pe2.promptText IS NOT NULL
+                      AND pe2.timestamp > (SELECT timestamp FROM promptEvents WHERE id = fileChanges.eventID)
+                    ORDER BY pe2.timestamp ASC LIMIT 1
+                )
+                WHERE eventID IN (SELECT id FROM promptEvents WHERE promptText IS NULL)
+                  AND (
+                    SELECT pe2.id FROM promptEvents pe2
+                    WHERE pe2.sessionID = (SELECT sessionID FROM promptEvents WHERE id = fileChanges.eventID)
+                      AND pe2.promptText IS NOT NULL
+                      AND pe2.timestamp > (SELECT timestamp FROM promptEvents WHERE id = fileChanges.eventID)
+                    ORDER BY pe2.timestamp ASC LIMIT 1
+                  ) IS NOT NULL
+                """)
+            // Delete orphan events (any remaining with no next prompt lose their file changes via CASCADE)
+            exec("DELETE FROM promptEvents WHERE promptText IS NULL")
+            setUserVersion(5)
+            logger.info("🔄 [DB] Migrated to v5 (merge orphan prompt events)")
         }
     }
 

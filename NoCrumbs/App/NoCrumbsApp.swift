@@ -6,6 +6,7 @@ struct NoCrumbsApp: App {
     @State private var database = Database.shared
     @State private var themeManager = ThemeManager.shared
     @State private var appScale = AppScale.shared
+    @State private var healthChecker = HookHealthChecker.shared
     @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
@@ -14,6 +15,7 @@ struct NoCrumbsApp: App {
                 .environment(database)
                 .environment(themeManager)
                 .environment(appScale)
+                .environment(healthChecker)
                 .onAppear { themeManager.loadBundledThemes() }
         }
         .defaultSize(width: 1000, height: 700)
