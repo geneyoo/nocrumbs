@@ -115,7 +115,8 @@ final class DiffNSTextView: NSTextView {
 
     private func drawLineNumbers(_ dirtyRect: NSRect) {
         guard let layoutManager = layoutManager,
-              let textContainer = textContainer else { return }
+            let textContainer = textContainer
+        else { return }
 
         let font = NSFont.monospacedSystemFont(ofSize: 10, weight: .regular)
         let attrs: [NSAttributedString.Key: Any] = [

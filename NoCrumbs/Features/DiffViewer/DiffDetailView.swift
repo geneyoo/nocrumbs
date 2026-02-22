@@ -76,10 +76,12 @@ struct DiffDetailView: View {
     // MARK: - File List
 
     private var fileList: some View {
-        List(selection: Binding(
-            get: { viewModel.selectedFileID ?? viewModel.fileDiffs.first?.id },
-            set: { if let id = $0 { viewModel.selectFile(id) } }
-        )) {
+        List(
+            selection: Binding(
+                get: { viewModel.selectedFileID ?? viewModel.fileDiffs.first?.id },
+                set: { if let id = $0 { viewModel.selectFile(id) } }
+            )
+        ) {
             ForEach(viewModel.fileDiffs) { file in
                 HStack(spacing: 6) {
                     statusIcon(for: file.status)

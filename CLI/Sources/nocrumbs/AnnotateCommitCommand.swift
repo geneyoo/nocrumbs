@@ -35,9 +35,10 @@ enum AnnotateCommitCommand {
         }
 
         guard !responseData.isEmpty,
-              let json = try? JSONSerialization.jsonObject(with: responseData) as? [String: Any],
-              let prompts = json["prompts"] as? [[String: Any]],
-              !prompts.isEmpty else {
+            let json = try? JSONSerialization.jsonObject(with: responseData) as? [String: Any],
+            let prompts = json["prompts"] as? [[String: Any]],
+            !prompts.isEmpty
+        else {
             return
         }
 

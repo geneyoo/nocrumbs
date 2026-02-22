@@ -51,7 +51,8 @@ enum InstallCommand {
 
         // Load existing settings if present
         if let data = FileManager.default.contents(atPath: settingsPath),
-           let existing = try? JSONSerialization.jsonObject(with: data) as? [String: Any] {
+            let existing = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        {
             settings = existing
         }
 

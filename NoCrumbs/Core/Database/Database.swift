@@ -53,7 +53,8 @@ final class Database {
         let version = userVersion()
 
         if version < 1 {
-            exec("""
+            exec(
+                """
                 CREATE TABLE IF NOT EXISTS sessions (
                     id TEXT PRIMARY KEY,
                     projectPath TEXT NOT NULL,
@@ -62,7 +63,8 @@ final class Database {
                 )
                 """)
 
-            exec("""
+            exec(
+                """
                 CREATE TABLE IF NOT EXISTS promptEvents (
                     id TEXT PRIMARY KEY,
                     sessionID TEXT NOT NULL,
@@ -74,7 +76,8 @@ final class Database {
                 )
                 """)
 
-            exec("""
+            exec(
+                """
                 CREATE TABLE IF NOT EXISTS fileChanges (
                     id TEXT PRIMARY KEY,
                     eventID TEXT NOT NULL,
@@ -101,7 +104,8 @@ final class Database {
         }
 
         if version < 3 {
-            exec("""
+            exec(
+                """
                 CREATE TABLE IF NOT EXISTS hookEvents (
                     id TEXT PRIMARY KEY,
                     sessionID TEXT NOT NULL,
@@ -128,12 +132,14 @@ final class Database {
             VALUES (?, ?, ?, ?)
             ON CONFLICT(id) DO UPDATE SET lastActivityAt = excluded.lastActivityAt
             """
-        try execute(sql, bindings: [
-            .text(session.id),
-            .text(session.projectPath),
-            .double(session.startedAt.timeIntervalSince1970),
-            .double(session.lastActivityAt.timeIntervalSince1970),
-        ])
+        try execute(
+            sql,
+            bindings: [
+                .text(session.id),
+                .text(session.projectPath),
+                .double(session.startedAt.timeIntervalSince1970),
+                .double(session.lastActivityAt.timeIntervalSince1970),
+            ])
         try loadSessions()
         logger.info("✅ [DB] Upserted session \(session.id)")
     }
@@ -145,15 +151,17 @@ final class Database {
             INSERT OR REPLACE INTO promptEvents (id, sessionID, projectPath, promptText, timestamp, vcs, baseCommitHash)
             VALUES (?, ?, ?, ?, ?, ?, ?)
             """
-        try execute(sql, bindings: [
-            .text(event.id.uuidString),
-            .text(event.sessionID),
-            .text(event.projectPath),
-            event.promptText.map { .text($0) } ?? .null,
-            .double(event.timestamp.timeIntervalSince1970),
-            event.vcs.map { .text($0.rawValue) } ?? .null,
-            event.baseCommitHash.map { .text($0) } ?? .null,
-        ])
+        try execute(
+            sql,
+            bindings: [
+                .text(event.id.uuidString),
+                .text(event.sessionID),
+                .text(event.projectPath),
+                event.promptText.map { .text($0) } ?? .null,
+                .double(event.timestamp.timeIntervalSince1970),
+                event.vcs.map { .text($0.rawValue) } ?? .null,
+                event.baseCommitHash.map { .text($0) } ?? .null,
+            ])
         try loadRecentEvents()
         logger.info("✅ [DB] Inserted event \(event.id.uuidString)")
     }
@@ -165,13 +173,15 @@ final class Database {
             INSERT OR REPLACE INTO fileChanges (id, eventID, filePath, toolName, timestamp)
             VALUES (?, ?, ?, ?, ?)
             """
-        try execute(sql, bindings: [
-            .text(change.id.uuidString),
-            .text(change.eventID.uuidString),
-            .text(change.filePath),
-            .text(change.toolName),
-            .double(change.timestamp.timeIntervalSince1970),
-        ])
+        try execute(
+            sql,
+            bindings: [
+                .text(change.id.uuidString),
+                .text(change.eventID.uuidString),
+                .text(change.filePath),
+                .text(change.toolName),
+                .double(change.timestamp.timeIntervalSince1970),
+            ])
         fileChangesCache[change.eventID, default: []].append(change)
         logger.info("✅ [DB] Inserted file change \(change.filePath)")
     }
@@ -210,13 +220,16 @@ final class Database {
             WHERE projectPath = ? AND timestamp >= ? AND promptText IS NOT NULL
             ORDER BY timestamp DESC
             """
-        return try query(sql, bindings: [
-            .text(projectPath),
-            .double(since.timeIntervalSince1970),
-        ]) { stmt in
+        return try query(
+            sql,
+            bindings: [
+                .text(projectPath),
+                .double(since.timeIntervalSince1970),
+            ]
+        ) { stmt in
             let vcsRaw = sqlite3_column_text(stmt, 5).map { String(cString: $0) }
             return PromptEvent(
-                id: UUID(uuidString: columnText(stmt, 0))!, // swiftlint:disable:this force_unwrapping
+                id: UUID(uuidString: columnText(stmt, 0))!,  // swiftlint:disable:this force_unwrapping
                 sessionID: columnText(stmt, 1),
                 projectPath: columnText(stmt, 2),
                 promptText: sqlite3_column_text(stmt, 3).map { String(cString: $0) },
@@ -272,14 +285,16 @@ final class Database {
             INSERT OR REPLACE INTO hookEvents (id, sessionID, hookEventName, projectPath, timestamp, payload)
             VALUES (?, ?, ?, ?, ?, ?)
             """
-        try execute(sql, bindings: [
-            .text(event.id.uuidString),
-            .text(event.sessionID),
-            .text(event.hookEventName),
-            .text(event.projectPath),
-            .double(event.timestamp.timeIntervalSince1970),
-            event.payload.map { .text($0) } ?? .null,
-        ])
+        try execute(
+            sql,
+            bindings: [
+                .text(event.id.uuidString),
+                .text(event.sessionID),
+                .text(event.hookEventName),
+                .text(event.projectPath),
+                .double(event.timestamp.timeIntervalSince1970),
+                event.payload.map { .text($0) } ?? .null,
+            ])
         try loadRecentHookEvents()
         logger.info("✅ [DB] Inserted hook event \(event.hookEventName) \(event.id.uuidString)")
     }
@@ -361,7 +376,7 @@ final class Database {
         ) { stmt in
             let vcsRaw = sqlite3_column_text(stmt, 5).map { String(cString: $0) }
             return PromptEvent(
-                id: UUID(uuidString: columnText(stmt, 0))!, // swiftlint:disable:this force_unwrapping
+                id: UUID(uuidString: columnText(stmt, 0))!,  // swiftlint:disable:this force_unwrapping
                 sessionID: columnText(stmt, 1),
                 projectPath: columnText(stmt, 2),
                 promptText: sqlite3_column_text(stmt, 3).map { String(cString: $0) },
@@ -389,7 +404,7 @@ final class Database {
             "SELECT id, sessionID, hookEventName, projectPath, timestamp, payload FROM hookEvents ORDER BY timestamp DESC LIMIT 200"
         ) { stmt in
             HookEvent(
-                id: UUID(uuidString: columnText(stmt, 0))!, // swiftlint:disable:this force_unwrapping
+                id: UUID(uuidString: columnText(stmt, 0))!,  // swiftlint:disable:this force_unwrapping
                 sessionID: columnText(stmt, 1),
                 hookEventName: columnText(stmt, 2),
                 projectPath: columnText(stmt, 3),
@@ -452,7 +467,7 @@ final class Database {
 
         var results: [T] = []
         while sqlite3_step(stmt) == SQLITE_ROW {
-            results.append(map(stmt!)) // swiftlint:disable:this force_unwrapping
+            results.append(map(stmt!))  // swiftlint:disable:this force_unwrapping
         }
         return results
     }

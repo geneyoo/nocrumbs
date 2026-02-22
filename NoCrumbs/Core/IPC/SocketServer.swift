@@ -106,7 +106,8 @@ actor SocketServer {
 
     private func handleMessage(_ data: Data, clientFD: Int32) async {
         guard let json = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-              let type = json["type"] as? String else {
+            let type = json["type"] as? String
+        else {
             logger.warning("[NC:Socket] Invalid message")
             close(clientFD)
             return
@@ -138,8 +139,9 @@ actor SocketServer {
 
     private func handleEvent(_ json: [String: Any], db: Database) async {
         guard let sessionID = json["session_id"] as? String,
-              let hookEventName = json["hook_event_name"] as? String,
-              let cwd = json["cwd"] as? String else {
+            let hookEventName = json["hook_event_name"] as? String,
+            let cwd = json["cwd"] as? String
+        else {
             logger.warning("[NC:Socket] Malformed event message")
             return
         }
@@ -152,10 +154,13 @@ actor SocketServer {
         for key in payloadKeys {
             if let value = json[key] { payloadDict[key] = value }
         }
-        let payloadJSON: String? = payloadDict.isEmpty ? nil : {
-            guard let data = try? JSONSerialization.data(withJSONObject: payloadDict) else { return nil }
-            return String(data: data, encoding: .utf8)
-        }()
+        let payloadJSON: String? =
+            payloadDict.isEmpty
+            ? nil
+            : {
+                guard let data = try? JSONSerialization.data(withJSONObject: payloadDict) else { return nil }
+                return String(data: data, encoding: .utf8)
+            }()
 
         let hookEvent = HookEvent(
             id: UUID(),
@@ -228,8 +233,9 @@ actor SocketServer {
 
         // Only bridge Write/Edit tools with a file_path
         guard toolName == "Write" || toolName == "Edit",
-              let toolInput = json["tool_input"] as? [String: Any],
-              let filePath = toolInput["file_path"] as? String else {
+            let toolInput = json["tool_input"] as? [String: Any],
+            let filePath = toolInput["file_path"] as? String
+        else {
             return
         }
 
@@ -299,7 +305,7 @@ actor SocketServer {
 
         let response: [String: Any] = await MainActor.run {
             do {
-                let since = Date().addingTimeInterval(-3600) // last hour
+                let since = Date().addingTimeInterval(-3600)  // last hour
                 let events = try db.recentEvents(forProject: cwd, since: since)
                 let totalFiles = try db.totalFileCount(forProject: cwd, since: since)
                 let sessionID = events.first?.sessionID ?? ""
@@ -333,8 +339,9 @@ actor SocketServer {
 
     private func handlePrompt(_ json: [String: Any], db: Database) async {
         guard let sessionID = json["session_id"] as? String,
-              let prompt = json["prompt"] as? String,
-              let cwd = json["cwd"] as? String else {
+            let prompt = json["prompt"] as? String,
+            let cwd = json["cwd"] as? String
+        else {
             logger.warning("[NC:Socket] Malformed prompt message")
             return
         }
@@ -372,8 +379,9 @@ actor SocketServer {
 
     private func handleChange(_ json: [String: Any], db: Database) async {
         guard let sessionID = json["session_id"] as? String,
-              let filePath = json["file_path"] as? String,
-              let cwd = json["cwd"] as? String else {
+            let filePath = json["file_path"] as? String,
+            let cwd = json["cwd"] as? String
+        else {
             logger.warning("[NC:Socket] Malformed change message")
             return
         }
@@ -435,12 +443,13 @@ actor SocketServer {
         await MainActor.run {
             do {
                 try db.insertFileChange(change)
-                try db.upsertSession(Session(
-                    id: sessionID,
-                    projectPath: cwd,
-                    startedAt: Date(),
-                    lastActivityAt: Date()
-                ))
+                try db.upsertSession(
+                    Session(
+                        id: sessionID,
+                        projectPath: cwd,
+                        startedAt: Date(),
+                        lastActivityAt: Date()
+                    ))
                 logger.info("[NC:Socket] Stored change \(filePath)")
             } catch {
                 logger.error("[NC:Socket] DB error: \(error.localizedDescription)")

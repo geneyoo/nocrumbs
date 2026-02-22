@@ -110,7 +110,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func handleHotkey(_ event: NSEvent) -> Bool {
         let flags = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         guard flags == [.command, .shift],
-              event.charactersIgnoringModifiers == "n" else { return false }
+            event.charactersIgnoringModifiers == "n"
+        else { return false }
 
         showMainWindow()
         return true

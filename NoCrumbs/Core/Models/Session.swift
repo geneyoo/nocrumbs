@@ -8,8 +8,8 @@ struct Session: Identifiable, Codable, Equatable, Sendable {
 }
 
 enum SessionState: Equatable, Sendable {
-    case live         // Recent prompt/tool activity within 5 min
+    case live  // Recent prompt/tool activity within 5 min
     case interrupted  // Most recent event is Stop
-    case ended        // SessionEnd received
-    case idle         // Stale (>5 min, no Stop/End)
+    case ended  // SessionEnd received
+    case idle  // Stale (>5 min, no Stop/End)
 }

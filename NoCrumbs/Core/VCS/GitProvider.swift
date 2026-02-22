@@ -66,10 +66,11 @@ struct GitProvider: VCSProvider {
         args.append(contentsOf: filePaths)
         let output = try await run("git", args: args, at: path)
         // Files NOT in porcelain output are clean
-        let dirtyPaths = Set(output.split(separator: "\n").compactMap { line -> String? in
-            guard line.count > 3 else { return nil }
-            return String(line.dropFirst(3))
-        })
+        let dirtyPaths = Set(
+            output.split(separator: "\n").compactMap { line -> String? in
+                guard line.count > 3 else { return nil }
+                return String(line.dropFirst(3))
+            })
         return Set(filePaths.filter { !dirtyPaths.contains($0) })
     }
 
@@ -80,9 +81,10 @@ struct GitProvider: VCSProvider {
             process.arguments = args
             process.currentDirectoryURL = URL(fileURLWithPath: directory)
 
-            let pipe = Pipe()
-            process.standardOutput = pipe
-            process.standardError = Pipe()
+            let stdoutPipe = Pipe()
+            let stderrPipe = Pipe()
+            process.standardOutput = stdoutPipe
+            process.standardError = stderrPipe
 
             do {
                 try process.run()
@@ -92,12 +94,15 @@ struct GitProvider: VCSProvider {
             }
 
             process.terminationHandler = { _ in
-                let data = pipe.fileHandleForReading.readDataToEndOfFile()
+                let data = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
                 let output = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                 if process.terminationStatus == 0 {
                     continuation.resume(returning: output)
                 } else {
-                    continuation.resume(throwing: VCSError.commandFailed(command, process.terminationStatus))
+                    let errData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+                    let stderr = String(data: errData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    logger.error("\(command) \(args.joined(separator: " ")) → exit \(process.terminationStatus): \(stderr)")
+                    continuation.resume(throwing: VCSError.commandFailed(command, process.terminationStatus, stderr))
                 }
             }
         }
@@ -105,11 +110,13 @@ struct GitProvider: VCSProvider {
 }
 
 enum VCSError: Error, LocalizedError {
-    case commandFailed(String, Int32)
+    case commandFailed(String, Int32, String)
 
     var errorDescription: String? {
         switch self {
-        case .commandFailed(let cmd, let code): "\(cmd) failed with exit code \(code)"
+        case .commandFailed(let cmd, let code, let stderr):
+            let detail = stderr.isEmpty ? "" : " — \(stderr)"
+            return "\(cmd) failed with exit code \(code)\(detail)"
         }
     }
 }

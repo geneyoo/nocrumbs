@@ -59,9 +59,13 @@ enum DiffParser {
         }
 
         let status: FileDiff.FileStatus
-        if oldPath == nil { status = .added
-        } else if newPath == nil { status = .deleted
-        } else { status = .modified }
+        if oldPath == nil {
+            status = .added
+        } else if newPath == nil {
+            status = .deleted
+        } else {
+            status = .modified
+        }
 
         let hunks = hunkLines.compactMap { parseHunk(header: $0.header, body: $0.body) }
 
@@ -77,7 +81,8 @@ enum DiffParser {
     private static func parseHunk(header: String, body: [String]) -> DiffHunk? {
         // Parse @@ -oldStart,oldCount +newStart,newCount @@
         guard let rangeStart = header.firstIndex(of: "-"),
-              let rangeEnd = header.range(of: " @@") else { return nil }
+            let rangeEnd = header.range(of: " @@")
+        else { return nil }
 
         let rangeStr = String(header[rangeStart..<rangeEnd.lowerBound])
         let parts = rangeStr.split(separator: " ")
@@ -92,32 +97,35 @@ enum DiffParser {
 
         for line in body {
             if line.hasPrefix("+") {
-                diffLines.append(DiffLine(
-                    id: UUID(),
-                    type: .addition,
-                    text: String(line.dropFirst()),
-                    oldLineNumber: nil,
-                    newLineNumber: newLine
-                ))
+                diffLines.append(
+                    DiffLine(
+                        id: UUID(),
+                        type: .addition,
+                        text: String(line.dropFirst()),
+                        oldLineNumber: nil,
+                        newLineNumber: newLine
+                    ))
                 newLine += 1
             } else if line.hasPrefix("-") {
-                diffLines.append(DiffLine(
-                    id: UUID(),
-                    type: .deletion,
-                    text: String(line.dropFirst()),
-                    oldLineNumber: oldLine,
-                    newLineNumber: nil
-                ))
+                diffLines.append(
+                    DiffLine(
+                        id: UUID(),
+                        type: .deletion,
+                        text: String(line.dropFirst()),
+                        oldLineNumber: oldLine,
+                        newLineNumber: nil
+                    ))
                 oldLine += 1
             } else if line.hasPrefix(" ") || line.isEmpty {
                 let text = line.isEmpty ? "" : String(line.dropFirst())
-                diffLines.append(DiffLine(
-                    id: UUID(),
-                    type: .context,
-                    text: text,
-                    oldLineNumber: oldLine,
-                    newLineNumber: newLine
-                ))
+                diffLines.append(
+                    DiffLine(
+                        id: UUID(),
+                        type: .context,
+                        text: text,
+                        oldLineNumber: oldLine,
+                        newLineNumber: newLine
+                    ))
                 oldLine += 1
                 newLine += 1
             } else if line.hasPrefix("\\") {

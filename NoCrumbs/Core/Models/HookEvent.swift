@@ -6,7 +6,7 @@ struct HookEvent: Identifiable, Equatable, Sendable {
     let hookEventName: String
     let projectPath: String
     let timestamp: Date
-    let payload: String? // JSON string, schema-free
+    let payload: String?  // JSON string, schema-free
 
     // Convenience accessors — parse payload lazily
     var prompt: String? { payloadValue(forKey: "prompt") as? String }
@@ -18,8 +18,9 @@ struct HookEvent: Identifiable, Equatable, Sendable {
 
     private func payloadValue(forKey key: String) -> Any? {
         guard let payload,
-              let data = payload.data(using: .utf8),
-              let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any] else {
+            let data = payload.data(using: .utf8),
+            let dict = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+        else {
             return nil
         }
         return dict[key]

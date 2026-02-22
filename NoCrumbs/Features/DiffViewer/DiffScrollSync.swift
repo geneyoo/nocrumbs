@@ -16,8 +16,9 @@ final class DiffScrollSync {
 
     private func tryAttach() {
         guard !isAttached,
-              let left = leftScrollView,
-              let right = rightScrollView else { return }
+            let left = leftScrollView,
+            let right = rightScrollView
+        else { return }
         isAttached = true
 
         left.contentView.postsBoundsChangedNotifications = true
@@ -38,7 +39,7 @@ final class DiffScrollSync {
     }
 
     func detach() {
-        NotificationCenter.default.removeObserver(self) // swiftlint:disable:this notification_center_detachment
+        NotificationCenter.default.removeObserver(self)  // swiftlint:disable:this notification_center_detachment
         leftScrollView = nil
         rightScrollView = nil
         isAttached = false

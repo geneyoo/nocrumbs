@@ -37,7 +37,7 @@ struct ContentView: View {
     private func filteredEvents(for sessionID: String) -> [PromptEvent] {
         let allEvents = database.eventsForSession(id: sessionID)
         guard state.hideEmptyEvents else { return allEvents }
-        let latestID = allEvents.first?.id // most recent = "live", never filtered
+        let latestID = allEvents.first?.id  // most recent = "live", never filtered
         return allEvents.filter { event in
             event.id == latestID || !(database.fileChangesCache[event.id] ?? []).isEmpty
         }
@@ -80,10 +80,10 @@ struct ContentView: View {
         state.keyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { event in
             guard event.modifierFlags.contains(.option) else { return event }
             switch event.keyCode {
-            case 123: // Left arrow
+            case 123:  // Left arrow
                 ContentView.toggleFoldExpand(expand: false, state: s, database: db)
                 return nil
-            case 124: // Right arrow
+            case 124:  // Right arrow
                 ContentView.toggleFoldExpand(expand: true, state: s, database: db)
                 return nil
             default:
@@ -216,10 +216,12 @@ struct ContentView: View {
     @ViewBuilder
     private var detail: some View {
         if let sel = state.selection,
-           let event = database.recentEvents.first(where: { $0.id == sel }) {
+            let event = database.recentEvents.first(where: { $0.id == sel })
+        {
             DiffDetailView(event: event)
         } else if let sel = state.selection,
-                  let session = database.sessions.first(where: { UUID(uuidString: $0.id) == sel }) {
+            let session = database.sessions.first(where: { UUID(uuidString: $0.id) == sel })
+        {
             SessionDetailView(session: session, database: database)
         } else {
             Text("Select a prompt")

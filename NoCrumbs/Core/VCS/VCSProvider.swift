@@ -9,4 +9,6 @@ protocol VCSProvider: Sendable {
     func diffForFiles(_ filePaths: [String], at path: String) async throws -> String
     func diffFromBase(_ baseHash: String, filePaths: [String], at path: String) async throws -> String
     func currentHead(at path: String) async throws -> String
+    func headBefore(_ date: Date, at path: String) async throws -> String?
+    func untrackedFiles(_ filePaths: [String], at path: String) async throws -> Set<String>
 }

@@ -13,6 +13,11 @@ final class DiffViewModel {
     private(set) var linePairs: [(left: DiffLine?, right: DiffLine?)] = []
 
     private var currentEventID: UUID?
+    private let provider: any VCSProvider
+
+    init(provider: any VCSProvider = GitProvider()) {
+        self.provider = provider
+    }
 
     var selectedFile: FileDiff? {
         guard let id = selectedFileID else { return fileDiffs.first }
@@ -61,7 +66,7 @@ final class DiffViewModel {
 
         Task { [weak self] in
             do {
-                let provider = GitProvider()
+                let provider = self?.provider ?? GitProvider()
                 var allDiffs: [FileDiff] = []
 
                 // Diff working tree against baseCommitHash (shows all changes since prompt, committed or not)
@@ -70,6 +75,15 @@ final class DiffViewModel {
                     self.error = "Waiting for baseline — try again in a moment"
                     self.isLoading = false
                     logger.warning("no baseHash — waiting for backfill")
+                    return
+                }
+
+                let isValid = try await provider.isValidCommit(baseHash, at: projectPath)
+                guard isValid else {
+                    guard let self, self.currentEventID == eventID else { return }
+                    self.error = "Commit \(String(baseHash.prefix(7))) no longer exists — likely rebased or reset"
+                    self.isLoading = false
+                    logger.warning("baseHash \(baseHash) is dangling (invalid commit)")
                     return
                 }
 
@@ -111,7 +125,7 @@ final class DiffViewModel {
 
     private static func appendUntrackedDiffs(
         to allDiffs: inout [FileDiff], relativePaths: [String],
-        projectPath: String, provider: GitProvider
+        projectPath: String, provider: any VCSProvider
     ) async throws {
         let diffedPaths = Set(allDiffs.compactMap { $0.newPath ?? $0.oldPath })
         let missingRelPaths = relativePaths.filter { !diffedPaths.contains($0) }
@@ -195,10 +209,11 @@ final class DiffViewModel {
                     }
                     let maxCount = max(deletions.count, additions.count)
                     for j in 0..<maxCount {
-                        pairs.append((
-                            left: j < deletions.count ? deletions[j] : nil,
-                            right: j < additions.count ? additions[j] : nil
-                        ))
+                        pairs.append(
+                            (
+                                left: j < deletions.count ? deletions[j] : nil,
+                                right: j < additions.count ? additions[j] : nil
+                            ))
                     }
 
                 case .addition:
