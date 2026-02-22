@@ -122,6 +122,39 @@ final class Database {
             setUserVersion(3)
             logger.info("🔄 [DB] Migrated to v3 (hookEvents)")
         }
+
+        if version < 4 {
+            // Deduplicate fileChanges: keep one record per (eventID, filePath)
+            exec(
+                """
+                DELETE FROM fileChanges WHERE id NOT IN (
+                    SELECT id FROM (
+                        SELECT id, ROW_NUMBER() OVER (PARTITION BY eventID, filePath ORDER BY timestamp DESC) AS rn
+                        FROM fileChanges
+                    ) WHERE rn = 1
+                )
+                """)
+            // Recreate table with UNIQUE constraint on (eventID, filePath)
+            exec(
+                """
+                CREATE TABLE fileChanges_new (
+                    id TEXT PRIMARY KEY,
+                    eventID TEXT NOT NULL,
+                    filePath TEXT NOT NULL,
+                    toolName TEXT NOT NULL,
+                    timestamp REAL NOT NULL,
+                    FOREIGN KEY(eventID) REFERENCES promptEvents(id) ON DELETE CASCADE,
+                    UNIQUE(eventID, filePath)
+                )
+                """)
+            exec("INSERT OR IGNORE INTO fileChanges_new SELECT * FROM fileChanges")
+            exec("DROP TABLE fileChanges")
+            exec("ALTER TABLE fileChanges_new RENAME TO fileChanges")
+            exec("CREATE INDEX IF NOT EXISTS idx_fileChanges_eventID ON fileChanges(eventID)")
+            exec("CREATE INDEX IF NOT EXISTS idx_fileChanges_filePath ON fileChanges(filePath)")
+            setUserVersion(4)
+            logger.info("🔄 [DB] Migrated to v4 (deduplicate fileChanges)")
+        }
     }
 
     // MARK: - CRUD: Sessions
@@ -170,8 +203,11 @@ final class Database {
 
     func insertFileChange(_ change: FileChange) throws {
         let sql = """
-            INSERT OR REPLACE INTO fileChanges (id, eventID, filePath, toolName, timestamp)
+            INSERT INTO fileChanges (id, eventID, filePath, toolName, timestamp)
             VALUES (?, ?, ?, ?, ?)
+            ON CONFLICT(eventID, filePath) DO UPDATE SET
+                toolName = excluded.toolName,
+                timestamp = excluded.timestamp
             """
         try execute(
             sql,
@@ -182,8 +218,15 @@ final class Database {
                 .text(change.toolName),
                 .double(change.timestamp.timeIntervalSince1970),
             ])
-        fileChangesCache[change.eventID, default: []].append(change)
-        logger.info("✅ [DB] Inserted file change \(change.filePath)")
+        // Update cache: replace existing entry for same filePath, or append
+        var entries = fileChangesCache[change.eventID, default: []]
+        if let idx = entries.firstIndex(where: { $0.filePath == change.filePath }) {
+            entries[idx] = change
+        } else {
+            entries.append(change)
+        }
+        fileChangesCache[change.eventID] = entries
+        logger.info("✅ [DB] Upserted file change \(change.filePath)")
     }
 
     func insertFileChanges(_ changes: [FileChange]) throws {
@@ -241,7 +284,7 @@ final class Database {
     }
 
     func fileChangeCount(forEventID eventID: UUID) throws -> Int {
-        let sql = "SELECT COUNT(*) FROM fileChanges WHERE eventID = ?"
+        let sql = "SELECT COUNT(DISTINCT filePath) FROM fileChanges WHERE eventID = ?"
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else { return 0 }
         defer { sqlite3_finalize(stmt) }
@@ -251,7 +294,7 @@ final class Database {
 
     func totalFileCount(forProject projectPath: String, since: Date) throws -> Int {
         let sql = """
-            SELECT COUNT(*) FROM fileChanges fc
+            SELECT COUNT(DISTINCT fc.filePath) FROM fileChanges fc
             JOIN promptEvents pe ON fc.eventID = pe.id
             WHERE pe.projectPath = ? AND pe.timestamp >= ?
             """

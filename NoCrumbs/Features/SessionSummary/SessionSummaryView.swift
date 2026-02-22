@@ -3,6 +3,7 @@ import SwiftUI
 struct SessionSummaryView: View {
     let session: Session
     @Environment(Database.self) private var database
+    @Environment(AppScale.self) private var scale
     @State private var viewModel = SessionSummaryViewModel()
 
     private var events: [PromptEvent] {
@@ -10,7 +11,13 @@ struct SessionSummaryView: View {
     }
 
     private var totalFileChanges: Int {
-        events.reduce(0) { $0 + (database.fileChangesCache[$1.id]?.count ?? 0) }
+        var paths = Set<String>()
+        for event in events {
+            for change in database.fileChangesCache[event.id] ?? [] {
+                paths.insert(change.filePath)
+            }
+        }
+        return paths.count
     }
 
     var body: some View {
@@ -65,7 +72,7 @@ struct SessionSummaryView: View {
                 Spacer()
 
                 Text(formattedDuration)
-                    .font(AppFonts.numeric)
+                    .font(AppFonts.numeric(scale.level))
                     .foregroundStyle(.secondary)
             }
 
@@ -182,7 +189,7 @@ struct SessionSummaryView: View {
                                 .foregroundStyle(.secondary)
                                 .frame(width: 18)
                             Text(relativePath(change.filePath))
-                                .font(AppFonts.filePath)
+                                .font(AppFonts.filePath(scale.level))
                                 .lineLimit(1)
                                 .truncationMode(.middle)
                         }
@@ -196,7 +203,7 @@ struct SessionSummaryView: View {
             HStack(spacing: 8) {
                 // Timestamp
                 Text(event.timestamp, style: .time)
-                    .font(AppFonts.numericSmall)
+                    .font(AppFonts.numericSmall(scale.level))
                     .foregroundStyle(.secondary)
                     .frame(width: 70, alignment: .leading)
 
@@ -207,9 +214,9 @@ struct SessionSummaryView: View {
                         .font(.callout)
 
                     HStack(spacing: 8) {
-                        let count = stat?.totalFiles ?? fileChanges.count
-                        if !count.isZero {
-                            Text("\(count) file\(count == 1 ? "" : "s")")
+                        let fileCount = stat?.totalFiles ?? fileChanges.count
+                        if fileCount > 0 {
+                            Text("\(fileCount) file\(fileCount == 1 ? "" : "s")")
                                 .foregroundStyle(.secondary)
                         }
 
@@ -274,7 +281,7 @@ struct SessionSummaryView: View {
                 .frame(width: 18)
 
             Text(stat.filePath)
-                .font(AppFonts.filePath)
+                .font(AppFonts.filePath(scale.level))
                 .lineLimit(1)
                 .truncationMode(.middle)
 
@@ -282,13 +289,13 @@ struct SessionSummaryView: View {
 
             if stat.additions > 0 {
                 Text("+\(stat.additions)")
-                    .font(AppFonts.numeric)
+                    .font(AppFonts.numeric(scale.level))
                     .foregroundStyle(AppColors.addition)
             }
 
             if stat.deletions > 0 {
                 Text("-\(stat.deletions)")
-                    .font(AppFonts.numeric)
+                    .font(AppFonts.numeric(scale.level))
                     .foregroundStyle(AppColors.deletion)
             }
 
@@ -354,10 +361,11 @@ struct DiffStatSquares: View {
 
 struct FileStatusBadge: View {
     let status: FileDiff.FileStatus
+    @Environment(AppScale.self) private var scale
 
     var body: some View {
         Text(letter)
-            .font(AppFonts.statusBadge)
+            .font(AppFonts.statusBadge(scale.level))
             .foregroundStyle(color)
     }
 

@@ -6,6 +6,7 @@ struct DiffTextView: NSViewRepresentable {
     let side: Side
     var scrollSync: DiffScrollSync?
     var fileExtension: String = ""
+    var scale: CGFloat = 1.0
     var theme: DiffTheme
 
     enum Side { case left, right }
@@ -43,13 +44,14 @@ struct DiffTextView: NSViewRepresentable {
         textView.lineData = lines
         textView.diffSide = side
         textView.lineNumberColor = theme.lineNumberFgColor
+        textView.fontScale = scale
         textView.backgroundColor = theme.editorBgColor
         applyAttributedContent(to: textView)
     }
 
     private func applyAttributedContent(to textView: DiffNSTextView) {
         guard let textStorage = textView.textStorage else { return }
-        let font = AppFonts.diffEditor
+        let font = AppFonts.diffEditor(scale)
 
         let fullString = NSMutableAttributedString()
         var lineRanges: [NSRange] = []
@@ -107,6 +109,7 @@ final class DiffNSTextView: NSTextView {
     var lineData: [DiffLine?] = []
     var diffSide: DiffTextView.Side = .left
     var lineNumberColor: NSColor = .tertiaryLabelColor
+    var fontScale: CGFloat = 1.0
 
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
@@ -118,7 +121,7 @@ final class DiffNSTextView: NSTextView {
             let textContainer = textContainer
         else { return }
 
-        let font = AppFonts.diffLineNumber
+        let font = AppFonts.diffLineNumber(fontScale)
         let attrs: [NSAttributedString.Key: Any] = [
             .font: font,
             .foregroundColor: lineNumberColor,

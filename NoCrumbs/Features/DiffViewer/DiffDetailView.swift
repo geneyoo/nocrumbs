@@ -4,6 +4,7 @@ struct DiffDetailView: View {
     let event: PromptEvent
     @Environment(Database.self) private var database
     @Environment(ThemeManager.self) private var themeManager
+    @Environment(AppScale.self) private var scale
     @State private var viewModel = DiffViewModel()
     @State private var scrollSync = DiffScrollSync()
     @State private var isFileListVisible = true
@@ -86,7 +87,7 @@ struct DiffDetailView: View {
                 HStack(spacing: 6) {
                     statusIcon(for: file.status)
                     Text(displayName(for: file))
-                        .font(AppFonts.filePath)
+                        .font(AppFonts.filePath(scale.level))
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
@@ -157,6 +158,7 @@ struct DiffDetailView: View {
                     side: .left,
                     scrollSync: file.status == .modified ? scrollSync : nil,
                     fileExtension: file.fileExtension,
+                    scale: scale.level,
                     theme: theme
                 )
             }
@@ -175,6 +177,7 @@ struct DiffDetailView: View {
                     side: .right,
                     scrollSync: file.status == .modified ? scrollSync : nil,
                     fileExtension: file.fileExtension,
+                    scale: scale.level,
                     theme: theme
                 )
             }
