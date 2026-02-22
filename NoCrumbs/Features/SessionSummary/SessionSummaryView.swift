@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SessionSummaryView: View {
     let session: Session
+    var onSelectEvent: ((PromptEvent) -> Void)?
     @Environment(Database.self) private var database
     @Environment(AppScale.self) private var scale
     @State private var viewModel = SessionSummaryViewModel()
@@ -37,9 +38,14 @@ struct SessionSummaryView: View {
         .frame(minWidth: 500)
         .navigationTitle("")
         .toolbarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .windowToolbar)
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 HStack(spacing: 6) {
+                    let sState = database.sessionState(for: session.id)
+                    if sState == .live {
+                        SessionStateIndicator(state: sState)
+                    }
                     Text((session.projectPath as NSString).lastPathComponent)
                         .font(.headline)
                     Text("—")
@@ -50,6 +56,7 @@ struct SessionSummaryView: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
+                .frame(height: 22)
             }
         }
         .onAppear { reload() }
@@ -79,13 +86,12 @@ struct SessionSummaryView: View {
     @ViewBuilder
     private var headerSection: some View {
         VStack(alignment: .leading, spacing: 8) {
-            // Status + project name + duration
+            // Duration + actions
             HStack(alignment: .firstTextBaseline) {
-                let sState = database.sessionState(for: session.id)
-                SessionStateIndicator(state: sState)
-
-                Text((session.projectPath as NSString).lastPathComponent)
-                    .font(.title2.bold())
+                // Full project path
+                Text(session.projectPath)
+                    .font(.caption.monospaced())
+                    .foregroundStyle(.tertiary)
 
                 Spacer()
 
@@ -127,11 +133,6 @@ struct SessionSummaryView: View {
                         }
                 }
             }
-
-            // Full project path
-            Text(session.projectPath)
-                .font(.caption.monospaced())
-                .foregroundStyle(.tertiary)
 
             // Time range
             HStack(spacing: 4) {
@@ -232,98 +233,66 @@ struct SessionSummaryView: View {
         let fileChanges = database.fileChangesCache[event.id] ?? []
         let hasError = viewModel.errors[event.id] != nil
 
-        DisclosureGroup {
-            if let stat, !stat.fileStats.isEmpty {
-                VStack(alignment: .leading, spacing: 2) {
-                    ForEach(
-                        stat.fileStats.sorted(by: { $0.totalChanges != $1.totalChanges ? $0.totalChanges > $1.totalChanges : $0.filePath < $1.filePath }),
-                        id: \.filePath
-                    ) { file in
-                        fileStatRow(file)
-                    }
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, 24)
-                .padding(.vertical, 4)
-            } else if !fileChanges.isEmpty {
-                VStack(alignment: .leading, spacing: 2) {
-                    ForEach(fileChanges) { change in
-                        HStack(spacing: 6) {
-                            Image(systemName: "doc")
-                                .font(.caption)
-                                .foregroundStyle(.secondary)
-                                .frame(width: 18)
-                            Text(relativePath(change.filePath))
-                                .font(AppFonts.filePath(scale.level))
-                                .lineLimit(1)
-                                .truncationMode(.middle)
+        HStack(spacing: 4) {
+            // Timestamp
+            Text(event.timestamp, style: .time)
+                .font(AppFonts.numericSmall(scale.level))
+                .foregroundStyle(.secondary)
+                .frame(width: 58, alignment: .leading)
+
+            // Prompt text
+            VStack(alignment: .leading, spacing: 2) {
+                Text(event.promptText ?? "(no prompt)")
+                    .lineLimit(2)
+                    .font(.callout)
+
+                HStack(spacing: 8) {
+                    if let hash = event.baseCommitHash {
+                        let short = String(hash.prefix(7))
+                        if let url = viewModel.commitURL(for: hash) {
+                            Text(short)
+                                .font(.caption.monospaced())
+                                .foregroundStyle(.blue)
+                                .onTapGesture { NSWorkspace.shared.open(url) }
+                                .help("Open commit on remote")
+                        } else {
+                            Text(short)
+                                .font(.caption.monospaced())
+                                .foregroundStyle(.tertiary)
                         }
                     }
+                    let fileCount = stat?.totalFiles ?? fileChanges.count
+                    if fileCount > 0 {
+                        Text("\(fileCount) file\(fileCount == 1 ? "" : "s")")
+                            .foregroundStyle(.secondary)
+                    }
+
+                    if let stat, (stat.totalAdditions > 0 || stat.totalDeletions > 0) {
+                        Text("+\(stat.totalAdditions)")
+                            .foregroundStyle(AppColors.addition)
+                        Text("-\(stat.totalDeletions)")
+                            .foregroundStyle(AppColors.deletion)
+                    }
+
+                    if hasError {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .foregroundStyle(AppColors.warning)
+                            .help(viewModel.errors[event.id] ?? "Unknown error")
+                    }
+
+                    if stat == nil && !hasError && viewModel.isLoading {
+                        ProgressView()
+                            .controlSize(.mini)
+                    }
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.leading, 24)
-                .padding(.vertical, 4)
+                .font(.caption)
             }
-        } label: {
-            HStack(spacing: 8) {
-                // Timestamp
-                Text(event.timestamp, style: .time)
-                    .font(AppFonts.numericSmall(scale.level))
-                    .foregroundStyle(.secondary)
-                    .frame(width: 70, alignment: .leading)
 
-                // Prompt text
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(event.promptText ?? "(no prompt)")
-                        .lineLimit(2)
-                        .font(.callout)
-
-                    HStack(spacing: 8) {
-                        if let hash = event.baseCommitHash {
-                            let short = String(hash.prefix(7))
-                            if let url = viewModel.commitURL(for: hash) {
-                                Text(short)
-                                    .font(.caption.monospaced())
-                                    .foregroundStyle(.blue)
-                                    .onTapGesture { NSWorkspace.shared.open(url) }
-                                    .help("Open commit on remote")
-                            } else {
-                                Text(short)
-                                    .font(.caption.monospaced())
-                                    .foregroundStyle(.tertiary)
-                            }
-                        }
-                        let fileCount = stat?.totalFiles ?? fileChanges.count
-                        if fileCount > 0 {
-                            Text("\(fileCount) file\(fileCount == 1 ? "" : "s")")
-                                .foregroundStyle(.secondary)
-                        }
-
-                        if let stat, (stat.totalAdditions > 0 || stat.totalDeletions > 0) {
-                            Text("+\(stat.totalAdditions)")
-                                .foregroundStyle(AppColors.addition)
-                            Text("-\(stat.totalDeletions)")
-                                .foregroundStyle(AppColors.deletion)
-                        }
-
-                        if hasError {
-                            Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundStyle(AppColors.warning)
-                                .help(viewModel.errors[event.id] ?? "Unknown error")
-                        }
-
-                        if stat == nil && !hasError && viewModel.isLoading {
-                            ProgressView()
-                                .controlSize(.mini)
-                        }
-                    }
-                    .font(.caption)
-                }
-
-                Spacer()
-            }
-            .padding(.vertical, 4)
+            Spacer()
         }
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .onTapGesture { onSelectEvent?(event) }
     }
 
     // MARK: - All Files

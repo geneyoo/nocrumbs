@@ -34,6 +34,7 @@ struct DiffDetailView: View {
         .frame(minWidth: 600)
         .navigationTitle("")
         .toolbarTitleDisplayMode(.inline)
+        .toolbarBackground(.hidden, for: .windowToolbar)
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 HStack(spacing: 6) {
@@ -47,6 +48,7 @@ struct DiffDetailView: View {
                         .foregroundStyle(.secondary)
                         .lineLimit(1)
                 }
+                .frame(height: 22)
             }
         }
         .onChange(of: event) { _, _ in reload() }

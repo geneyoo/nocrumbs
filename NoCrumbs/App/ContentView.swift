@@ -330,7 +330,10 @@ struct ContentView: View {
         } else if let sel = state.selection,
             let session = database.sessions.first(where: { UUID(uuidString: $0.id) == sel })
         {
-            SessionSummaryView(session: session)
+            SessionSummaryView(session: session) { event in
+                state.expandedSessions.insert(session.id)
+                state.selection = event.id
+            }
         } else {
             Text("Select a prompt")
                 .font(.title2)
