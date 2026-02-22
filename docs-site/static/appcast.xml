@@ -1,0 +1,25 @@
+<?xml version="1.0" standalone="yes"?>
+<rss xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0">
+    <channel>
+        <title>NoCrumbs</title>
+        <item>
+            <title>0.4.0</title>
+            <pubDate>Sun, 22 Feb 2026 18:48:36 -0500</pubDate>
+            <sparkle:version>202602221847</sparkle:version>
+            <sparkle:shortVersionString>0.4.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.4.0/NoCrumbs-0.4.0.zip" length="4331780" type="application/octet-stream" sparkle:edSignature="qttu0Ezel4XMzep/Dnmx+/OvwpQpU3jBaBMWCOe3HhSe7+bKKYdBMRct0eXmldin6qA50loN+OawnBuJUSi+Bw=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.4.0/NoCrumbs202602221847-202602221820.delta" sparkle:deltaFrom="202602221820" length="11742" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="YLSasdk1GMjBkov71xiY1v8xBszdBxlxl4rnszqT28TaqJCMNIazZZHWOXNpxuDKgmq9cGABG26uNAHlMP+GAw=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
+            <title>0.1.0</title>
+            <pubDate>Sun, 22 Feb 2026 18:21:56 -0500</pubDate>
+            <sparkle:version>202602221820</sparkle:version>
+            <sparkle:shortVersionString>0.1.0</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.4.0/NoCrumbs-0.1.0.zip" length="4331774" type="application/octet-stream" sparkle:edSignature="MSQ+t7WPt+x0JOLOuQSY7/TOtto/Gq9EKNxlbnqysoI8MetVSWKXLaW6Imv9tV3XNkloNfyxmUIPDDV/wDZHAA=="/>
+        </item>
+    </channel>
+</rss>
