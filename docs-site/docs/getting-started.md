@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Getting Started
 
-NoCrumbs is a local-first Mac app + CLI that links every AI prompt to the file changes it produced. Install once, then use your AI coding assistant normally.
+CLI agents are replacing IDEs — but they leave no trace of which prompt caused which change. NoCrumbs fills that gap. A lightweight CLI hook + native Mac app that links every prompt to the commits it produced. Install once, forget about it.
 
 **Requirements:** macOS 14+, Xcode 15+ (to build from source)
 
