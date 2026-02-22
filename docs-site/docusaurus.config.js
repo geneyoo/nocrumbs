@@ -6,7 +6,7 @@ const config = {
   tagline: 'Local-first AI context management for your codebase',
   favicon: 'img/favicon.ico',
 
-  url: 'https://nocrumbs.app',
+  url: 'https://nocrumbs.ai',
   baseUrl: '/',
 
   organizationName: 'pdswan',
