@@ -64,17 +64,17 @@ Template management:
 NoCrumbs/
 ├── App/
 │   ├── AppDelegate.swift       # NSApplicationDelegate — owns SocketServer + Database lifecycle
-│   │                           #   Global hotkey (Cmd+Shift+N), launch at login, activation policy
+│   │                           #   Sparkle updater, launch at login, activation policy
 │   ├── ContentView.swift       # NavigationSplitView — time-grouped sidebar with session/event tree
 │   │                           #   SidebarItem (.timePeriodHeader, .projectHeader, .session, .event)
 │   │                           #   NSEvent key monitor for Option+Arrow
 │   └── NoCrumbsApp.swift       # @main entry, Window + Settings + MenuBarExtra scenes
 │                               #   Injects Database, ThemeManager, AppScale, HookHealthChecker
-│                               #   Cmd+/- zoom commands
+│                               #   Cmd+/- zoom commands, "Check for Updates…" (Sparkle)
 │
 ├── Core/
 │   ├── Database/
-│   │   └── Database.swift      # @Observable @MainActor singleton, raw SQLite3, WAL, migrations v1-v6
+│   │   └── Database.swift      # @Observable @MainActor singleton, raw SQLite3, WAL, migrations v1-v8
 │   │                           #   In-memory caches: sessions, recentEvents, fileChangesCache,
 │   │                           #   recentHookEvents, commitTemplates
 │   ├── IPC/
@@ -89,7 +89,7 @@ NoCrumbs/
 │   │   ├── FileDiff.swift         # FileDiff, DiffHunk, DiffLine — diff parsing output models
 │   │   ├── HookEvent.swift        # id, sessionID, hookEventName, projectPath, timestamp, payload (JSON)
 │   │   ├── PromptEvent.swift      # id, sessionID, projectPath, promptText?, timestamp, vcs?, baseCommitHash?
-│   │   ├── Session.swift          # id, projectPath, startedAt, lastActivityAt
+│   │   ├── Session.swift          # id, projectPath, startedAt, lastActivityAt, customName?
 │   │   ├── TemplateRenderer.swift # Renders {{placeholder}} templates with TemplateContext data
 │   │   └── VCSType.swift          # enum: .git, .mercurial
 │   ├── Utilities/
@@ -120,7 +120,9 @@ NoCrumbs/
 │       └── SetupView.swift     # First-run guide: install CLI, configure hooks, verify socket
 │
 ├── Resources/
-│   ├── Info.plist              # CFBundleURLTypes for nocrumbs:// URL scheme, LSUIElement
+│   ├── Assets.xcassets         # App icon (16–1024px, Apple squircle mask)
+│   ├── Info.plist              # CFBundleURLTypes for nocrumbs://, LSUIElement, Sparkle (SUFeedURL, SUPublicEDKey)
+│   ├── NoCrumbs.entitlements   # Hardened runtime: Apple Events entitlement
 │   └── Themes/                 # 18 bundled JSON color themes
 │       ├── ayu-dark.json       ├── catppuccin-latte.json
 │       ├── catppuccin-mocha.json ├── dracula.json
@@ -134,11 +136,13 @@ NoCrumbs/
 │
 ├── UI/
 │   ├── Components/
+│   │   ├── CheckForUpdatesView.swift  # Sparkle "Check for Updates…" menu item (KVO bridge)
 │   │   └── SessionStateIndicator.swift  # Live/paused/stale session status indicator
 │   ├── StyleGuide/
 │   │   ├── AppColors.swift     # Semantic color tokens (addition, deletion, modified, muted variants)
 │   │   ├── AppFonts.swift      # Semantic font tokens (filePath, numeric, sectionHeader, diffEditor)
-│   │   └── AppScale.swift      # @Observable singleton — Cmd+/- zoom (0.6–2.0×), persisted to UserDefaults
+│   │   ├── AppScale.swift      # @Observable singleton — Cmd+/- zoom (0.6–2.0×), persisted to UserDefaults
+│   │   └── LayoutGuide.swift   # Spacing/padding/size constants (XS–XXL scale, named component sizes)
 │   └── Themes/
 │       ├── DiffTheme.swift     # Codable color palette (diff + syntax colors, hex→NSColor)
 │       └── ThemeManager.swift  # @Observable singleton — loads bundled JSON themes, persists selection
@@ -155,31 +159,49 @@ NoCrumbsTests/                      # Test target (hosted by app)
 CLI/
 ├── Package.swift               # Swift 5.9, macOS 14+, zero dependencies
 └── Sources/nocrumbs/
-    ├── main.swift              # Subcommand dispatch: event, capture-*, annotate-commit, install*, describe, template
+    ├── main.swift              # Subcommand dispatch: event, capture-*, annotate-commit, install*, describe, template, rename
     ├── CaptureEventCommand.swift  # Unified hook event → JSON to socket (v3+)
     ├── CapturePromptCommand.swift # (legacy) Parse UserPromptSubmit stdin → JSON to socket
     ├── CaptureChangeCommand.swift # (legacy) Parse PostToolUse stdin → JSON to socket
     ├── AnnotateCommitCommand.swift # Query prompts via socket → render template → append to commit message
     │                              #   ContentFlags: showPromptList, showFileCountPerPrompt, showSessionID
     ├── DescribeCommand.swift      # Pipe per-file change descriptions to app via socket
+    ├── RenameSessionCommand.swift # nocrumbs rename-session <session_id> <name>
     ├── TemplateCommand.swift      # nocrumbs template add/list/set/remove/preview
     ├── InstallCommand.swift       # Write hook config to ~/.claude/settings.json + install git hooks
     ├── Models.swift               # Minimal Codable structs (duplicated — CLI can't link app target)
     └── SocketClient.swift         # Connect + write/read to Unix socket (CLI-side, includes sendAndReceive)
+
+scripts/
+├── generate_icon.swift         # Generates macOS app icon sizes with Apple squircle mask
+├── pre-commit-secrets-check.sh # Git pre-commit hook: blocks private key / credential leaks
+└── release.sh                  # Release pipeline: build → sign → notarize → staple → Sparkle appcast
+                                #   Reads secrets from scripts/.env.local (gitignored)
+
+docs-site/                      # Docusaurus v3 site (https://nocrumbs.ai)
+├── docusaurus.config.js        # Site config, dark mode default, GitHub/Dracula syntax themes
+├── docs/                       # Markdown content: getting-started, how-it-works, CLI usage, FAQ
+├── src/pages/index.js          # Landing page
+├── src/css/custom.css          # Brand styles
+└── static/                     # CNAME, logo, hero SVG
+
+.github/workflows/
+└── deploy-docs.yml             # Auto-deploy docs-site to GitHub Pages on push to main (path-filtered)
 ```
 
 ## Database Schema
 
 **Storage:** `~/Library/Application Support/NoCrumbs/nocrumbs.sqlite`
 **Engine:** Raw SQLite3 C API (no ORM) — WAL journal mode, foreign keys ON
-**Schema version:** 6 (tracked via `PRAGMA user_version`)
+**Schema version:** 8 (tracked via `PRAGMA user_version`)
 
 ```sql
 CREATE TABLE sessions (
     id TEXT PRIMARY KEY,          -- Claude Code session_id (UUID string)
     projectPath TEXT NOT NULL,
     startedAt REAL NOT NULL,
-    lastActivityAt REAL NOT NULL
+    lastActivityAt REAL NOT NULL,
+    customName TEXT               -- [v8] user-defined session name
 );
 
 CREATE TABLE promptEvents (
@@ -199,6 +221,7 @@ CREATE TABLE fileChanges (
     filePath TEXT NOT NULL,
     toolName TEXT NOT NULL,       -- "Write" or "Edit"
     timestamp REAL NOT NULL,
+    description TEXT,             -- [v7] AI-generated change description
     FOREIGN KEY(eventID) REFERENCES promptEvents(id) ON DELETE CASCADE,
     UNIQUE(eventID, filePath)     -- [v4] deduplication constraint
 );
@@ -246,7 +269,9 @@ final class Database {
     private(set) var recentEvents: [PromptEvent] = []       // Last 500, desc by timestamp
     private(set) var fileChangesCache: [UUID: [FileChange]]  // In-memory join cache
     private(set) var recentHookEvents: [HookEvent] = []     // Last 200
+    private(set) var sessionStateCache: [String: SessionState] = [:]  // Derived from hookEvents
     private(set) var commitTemplates: [CommitTemplate] = []  // All templates, ordered by createdAt
+    var diffStatCache: [UUID: PromptDiffStat] = [:]          // Computed, not persisted, clears on restart
 
     var activeTemplate: CommitTemplate? {                    // Computed from cache
         commitTemplates.first(where: \.isActive)
@@ -271,6 +296,8 @@ final class Database {
 - **v4**: Deduplicate fileChanges — `UNIQUE(eventID, filePath)` constraint, table rebuild
 - **v5**: Merge orphan prompt events (promptText IS NULL) into next real prompt in same session
 - **v6**: `commitTemplates` table for customizable commit annotation templates
+- **v7**: `ALTER TABLE fileChanges ADD COLUMN description TEXT` (AI-generated change descriptions)
+- **v8**: `ALTER TABLE sessions ADD COLUMN customName TEXT` (user-defined session names)
 
 ### Backfill
 
@@ -303,6 +330,9 @@ struct NoCrumbsApp: App {
                 .onAppear { themeManager.loadBundledThemes() }
         }
         .commands {
+            CommandGroup(after: .appInfo) {
+                CheckForUpdatesView(updater: appDelegate.updaterController.updater)
+            }
             CommandGroup(after: .toolbar) {
                 // Cmd+/- zoom, Cmd+0 reset
             }
@@ -339,6 +369,7 @@ try database.saveCommitTemplate(name: name, body: body)  // Upsert
 try database.setActiveTemplate(name: name)  // Sets one active, clears others
 try database.deleteCommitTemplate(name: name)
 try database.updateFileDescription("what changed", sessionID: id, filePath: path)
+try database.updateSessionName(sessionID: id, name: "my session")  // [v8]
 ```
 
 ## IPC: Unix Domain Socket
@@ -758,7 +789,8 @@ Accessible via native Settings scene (`Cmd+,`) or menu bar "Settings..."
 | Menu bar | `MenuBarExtra` | Native Mac menu bar pattern |
 | Settings | SwiftUI `Settings` scene | Native Cmd+, integration |
 | Zoom scaling | `AppScale` (@Observable) | Cmd+/- zoom (0.6–2.0×), persisted to UserDefaults |
-| Design tokens | `AppColors`, `AppFonts` | Semantic color/font constants, scale-aware |
+| Auto-updates | Sparkle `SPUStandardUpdaterController` | Non-App Store update mechanism, EdDSA-signed appcast |
+| Design tokens | `AppColors`, `AppFonts`, `LayoutGuide` | Semantic color/font/spacing constants, scale-aware |
 | Diff panes | `NSTextView` (`NSViewRepresentable`) | TextKit 1 — battle-tested, no TextKit 2 scrolling bugs |
 | Scroll sync | `DiffScrollSync` (NSView bounds observation) | Syncs left/right panes via boundsDidChangeNotification |
 | Line numbers | Custom `DiffNSTextView.draw()` override | Draws gutter numbers in TextKit 1 coordinate space |
@@ -769,8 +801,10 @@ Accessible via native Settings scene (`Cmd+,`) or menu bar "Settings..."
 ```swift
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let socketServer = SocketServer()
+    lazy var updaterController = SPUStandardUpdaterController(...)
 
     func applicationDidFinishLaunching(_:) {
+        updaterController.startUpdater()  // Sparkle auto-updates
         UserDefaults.standard.register(defaults: [
             "annotationEnabled": true, "deepLinkInAnnotation": true,
             "showPromptList": true, "showFileCountPerPrompt": true, "showSessionID": true,
@@ -798,12 +832,51 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 | Package | Version | Purpose |
 |---------|---------|---------|
-| Sparkle | 2.0+ | Auto-updates (non-App Store) |
+| Sparkle | 2.0+ | Auto-updates via EdDSA-signed appcast (non-App Store) |
 | SQLite3 | System | Raw C API via `-lsqlite3` linker flag |
 
 **CLI:** Zero dependencies (standalone SPM binary).
 
 **Syntax highlighting:** Regex-based (no external dependency). Replaced planned TreeSitter/Neon approach with built-in `SyntaxHighlighter` — simpler, zero dependencies, covers 20+ languages adequately for diff viewing.
+
+## Release Pipeline
+
+**Script:** `scripts/release.sh <version>`
+
+```
+Version bump (PlistBuddy)
+    → Clean Release build (Developer ID Application, hardened runtime, universal binary)
+    → Code signing verification (codesign --verify)
+    → Zip (ditto)
+    → Notarize (xcrun notarytool submit --wait)
+    → Staple (xcrun stapler staple)
+    → Re-zip (final distributable)
+    → Sparkle EdDSA sign (sign_update)
+    → Generate appcast.xml (generate_appcast)
+```
+
+**Signing:** Developer ID Application certificate, hardened runtime enabled in both Debug and Release configs. Entitlements: Apple Events only (for `nocrumbs://` URL scheme).
+
+**Sparkle integration:**
+- `SPUStandardUpdaterController` initialized in `AppDelegate`, started on launch
+- `CheckForUpdatesView` in app menu (after "About") — KVO bridge to `SPUUpdater.canCheckForUpdates`
+- Feed URL: `https://nocrumbs.ai/appcast.xml` (Info.plist `SUFeedURL`)
+- EdDSA public key in Info.plist (`SUPublicEDKey`), private key in macOS Keychain only
+
+**Secrets management:**
+- Team ID, keychain profile read from `scripts/.env.local` (gitignored)
+- Private runbook at `scripts/RUNBOOK.local.md` (gitignored)
+- Pre-commit hook (`scripts/pre-commit-secrets-check.sh`) blocks private key / credential patterns
+- `.gitignore` blocks `*.env*`, `*.key`, `*.pem`, `*.p12`, `*.credential*`, `*.local`, `*.local.md`
+
+## Docs Site
+
+**Docusaurus v3** at `https://nocrumbs.ai`, auto-deployed via GitHub Actions on push to `main` (path-filtered to `docs-site/**`).
+
+- Dark mode default, GitHub/Dracula syntax themes
+- Content: Getting Started, How It Works, Installation, CLI Usage, App Usage, FAQ, Contributing
+- Static: CNAME, logo, hero SVG
+- Deploy: `.github/workflows/deploy-docs.yml` → GitHub Pages (OIDC, no token secrets)
 
 ## Debugging
 
