@@ -19,7 +19,7 @@ NoCrumbs lives in the menu bar. Press **⌘⇧N** to toggle the window.
 
 ```bash
 swift build -c release --package-path CLI/
-cp .build/release/nocrumbs /usr/local/bin/
+cp CLI/.build/release/nocrumbs /usr/local/bin/
 ```
 
 ### 3. Configure Claude Code hooks
@@ -104,26 +104,50 @@ Detects VCS automatically (`.git` vs `.hg`). Same unified diff format, just diff
 ### 6. Commit message annotation
 Automatically appends prompt history to commit messages — below a `---` separator so it never interferes with existing templates (Phabricator, Conventional Commits, Jira prefixes, etc).
 
+**Single prompt — collapsed one-liner:**
 ```
 refactor: convert auth to async/await
-
-Summary: Converted auth module from completion handlers to async/await.
-Test Plan: Run AuthTests
-
 ---
-🍞 2 prompts · 4 files · session abc123
-› refactor auth to async/await
-› add error handling to the new async methods
+🍞 refactor auth to async/await · 4 files · abc12345
+```
+
+**Multiple prompts — expanded list:**
+```
+refactor: convert auth to async/await
+---
+🍞 3 prompts · 8 files · abc12345
+
+1. refactor auth to async/await (3 files)
+2. add error handling to the new async methods (3 files)
+3. update tests for new async patterns (2 files)
 ```
 
 - Appends to the end, after whatever template the user/team already has
 - `---` horizontal rule is a universal separator — Phabricator, GitHub, hg all ignore it
 - `git log --oneline` / `hg log -T '{desc|firstline}'` never sees it
-- First 3 prompts shown, rest collapsed (`+ 9 more`)
-- Session ID is the lookup key back into NoCrumbs
+- Up to 10 prompts shown, rest collapsed (`+ N more`)
+- Noise prompts filtered (e.g. "commit", "push", "ok")
+- Chronological order (oldest first) so intent-setting prompts surface to top
+- Session ID (8-char prefix) is the lookup key back into NoCrumbs
 - Can be disabled via settings
+- Fully customizable via `nocrumbs template` (see below)
 
-### 7. Fully local, no cloud
+### 7. Customizable annotation templates
+Create custom commit annotation formats via CLI — designed for agents to configure per-project:
+
+```bash
+nocrumbs template add --name "minimal" --body '---\n{{summary_line}}'
+nocrumbs template set --name "minimal"
+nocrumbs template preview   # verify with real data
+nocrumbs template list      # see all templates
+nocrumbs template remove --name "minimal"
+```
+
+Available placeholders: `{{prompt_count}}`, `{{total_files}}`, `{{session_id}}`, `{{summary_line}}`, and `{{#prompts}}...{{/prompts}}` loop with `{{index}}`, `{{text}}`, `{{file_count}}`.
+
+Templates are also manageable in the Settings UI (tap to activate, right-click to delete).
+
+### 8. Fully local, no cloud
 All data stays on device. No API keys, no accounts, no telemetry. NoCrumbs never makes network calls. Uses the user's own Claude Code subscription for any AI features.
 
 ---
@@ -140,8 +164,8 @@ Instead of calling an API, NoCrumbs generates a structured prompt and invokes `c
 claude "Generate a PR description from these commits and prompts: ..."
 ```
 
-### Template System
-Teams define PR format once. Auto-filled every time. Consistent across the org without anyone thinking about it.
+### Template System (v1 shipped in M4)
+Commit annotation templates shipped in M4. v2: PR description templates with team-shared presets and per-repo defaults.
 
 ### Theme Support
 Drop-in VS Code / TextMate `.tmTheme` / `.json` theme files. Drag onto preferences window to install. Ships with Tokyo Night, Dracula, Catppuccin, Nord defaults. Future: themes gallery at nocrumbs.app/themes.
@@ -477,18 +501,18 @@ Core product. This is NoCrumbs.
 
 ---
 
-### M4 — Polish
+### M4 — Polish ✅
 What separates a tool engineers love from one they tolerate.
 
-- [ ] Smooth animation when new prompt/diff arrives
-- [ ] `⌘[` / `⌘]` keyboard navigation between prompt events
-- [ ] Dark mode verified
-- [ ] Empty state with setup instructions
-- [ ] Onboarding flow on first launch
-- [ ] Menu bar badge on new activity while window hidden
-- [ ] Handle dangling commits gracefully
-
-**Exit criteria:** Show to a friend. They say it feels polished.
+- [x] Dark mode verified
+- [x] Empty state with setup instructions (SetupView)
+- [x] Onboarding flow on first launch (3-step guide with live health checks)
+- [x] Handle dangling commits gracefully
+- [x] CLI-driven commit annotation templates (`nocrumbs template` subcommands)
+- [x] Improved default annotation format (chronological, noise filtering, 10-prompt cap)
+- [x] Settings UI for template management
+- [ ] Smooth animation when new prompt/diff arrives (backlog)
+- [ ] Menu bar badge on new activity while window hidden (backlog)
 
 ---
 
