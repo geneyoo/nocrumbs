@@ -22,6 +22,12 @@
 	<true/>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
+	<key>SUFeedURL</key>
+	<string>https://nocrumbs.ai/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>REPLACE_WITH_EDDSA_PUBLIC_KEY</string>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>

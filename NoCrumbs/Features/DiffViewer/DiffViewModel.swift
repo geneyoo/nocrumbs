@@ -13,6 +13,8 @@ final class DiffViewModel {
     private(set) var linePairs: [(left: DiffLine?, right: DiffLine?)] = []
 
     private var currentEventID: UUID?
+    private var loadTask: Task<Void, Never>?
+    private var diffCache: [UUID: [FileDiff]] = [:]
     private let provider: any VCSProvider
 
     init(provider: any VCSProvider = GitProvider()) {
@@ -25,6 +27,8 @@ final class DiffViewModel {
     }
 
     func load(event: PromptEvent, fileChanges: [FileChange]) {
+        loadTask?.cancel()
+
         guard event.vcs != nil else {
             fileDiffs = []
             linePairs = []
@@ -42,6 +46,14 @@ final class DiffViewModel {
         }
 
         currentEventID = event.id
+
+        // Return cached results instantly if available
+        if let cached = diffCache[event.id] {
+            error = nil
+            applyDiffs(cached)
+            return
+        }
+
         isLoading = true
         error = nil
 
@@ -73,56 +85,67 @@ final class DiffViewModel {
             logger.info("  file[\(i)]: \(rp)")
         }
 
-        Task { [weak self] in
-            do {
-                let provider = self?.provider ?? GitProvider()
-                var allDiffs: [FileDiff] = []
-
-                // Diff working tree against baseCommitHash (shows all changes since prompt, committed or not)
-                guard let baseHash else {
-                    guard let self, self.currentEventID == eventID else { return }
-                    self.error = "Waiting for baseline — try again in a moment"
-                    self.isLoading = false
-                    logger.warning("no baseHash — waiting for backfill")
-                    return
-                }
-
-                let isValid = try await provider.isValidCommit(baseHash, at: projectPath)
-                guard isValid else {
-                    guard let self, self.currentEventID == eventID else { return }
-                    self.error = "Commit \(String(baseHash.prefix(7))) no longer exists — likely rebased or reset"
-                    self.isLoading = false
-                    logger.warning("baseHash \(baseHash) is dangling (invalid commit)")
-                    return
-                }
-
-                let raw = try await provider.diffFromBase(baseHash, filePaths: relativePaths, at: projectPath)
-                logger.info("git diff \(baseHash) returned \(raw.count) chars")
-                let parsed = DiffParser.parse(raw)
-                logger.info("parsed \(parsed.count) file diffs")
-                allDiffs.append(contentsOf: parsed)
-
-                // Files not in the diff output — check if untracked (new files)
-                try await Self.appendUntrackedDiffs(
-                    to: &allDiffs, relativePaths: relativePaths,
-                    projectPath: projectPath, provider: provider
-                )
-
-                logger.info("total diffs: \(allDiffs.count)")
-                guard let self, self.currentEventID == eventID else { return }
-                self.fileDiffs = allDiffs
-                if self.selectedFileID == nil || !allDiffs.contains(where: { $0.id == self.selectedFileID }) {
-                    self.selectedFileID = allDiffs.first?.id
-                }
-                self.buildLinePairs()
-                self.isLoading = false
-            } catch {
-                logger.error("load failed: \(error.localizedDescription)")
-                guard let self, self.currentEventID == eventID else { return }
-                self.error = error.localizedDescription
-                self.isLoading = false
-            }
+        loadTask = Task { [weak self] in
+            await self?.performLoad(
+                eventID: eventID, baseHash: baseHash,
+                relativePaths: relativePaths, projectPath: projectPath
+            )
         }
+    }
+
+    private func performLoad(
+        eventID: UUID, baseHash: String?,
+        relativePaths: [String], projectPath: String
+    ) async {
+        do {
+            guard let baseHash else {
+                guard currentEventID == eventID else { return }
+                error = "Waiting for baseline — try again in a moment"
+                isLoading = false
+                logger.warning("no baseHash — waiting for backfill")
+                return
+            }
+
+            let isValid = try await provider.isValidCommit(baseHash, at: projectPath)
+            guard !Task.isCancelled else { return }
+            guard isValid else {
+                guard currentEventID == eventID else { return }
+                error = "Commit \(String(baseHash.prefix(7))) no longer exists — likely rebased or reset"
+                isLoading = false
+                logger.warning("baseHash \(baseHash) is dangling (invalid commit)")
+                return
+            }
+
+            let raw = try await provider.diffFromBase(baseHash, filePaths: relativePaths, at: projectPath)
+            guard !Task.isCancelled else { return }
+            logger.info("git diff \(baseHash) returned \(raw.count) chars")
+            var allDiffs = DiffParser.parse(raw)
+            logger.info("parsed \(allDiffs.count) file diffs")
+
+            try await Self.appendUntrackedDiffs(
+                to: &allDiffs, relativePaths: relativePaths,
+                projectPath: projectPath, provider: provider
+            )
+
+            guard !Task.isCancelled, currentEventID == eventID else { return }
+            logger.info("total diffs: \(allDiffs.count)")
+            diffCache[eventID] = allDiffs
+            applyDiffs(allDiffs)
+        } catch {
+            guard !Task.isCancelled, currentEventID == eventID else { return }
+            logger.error("load failed: \(error.localizedDescription)")
+            self.error = error.localizedDescription
+            isLoading = false
+        }
+    }
+
+    private func applyDiffs(_ diffs: [FileDiff]) {
+        fileDiffs = diffs
+        if selectedFileID == nil || !diffs.contains(where: { $0.id == selectedFileID }) {
+            selectedFileID = diffs.first?.id
+        }
+        buildLinePairs()
+        isLoading = false
     }
 
     func selectFile(_ id: UUID) {

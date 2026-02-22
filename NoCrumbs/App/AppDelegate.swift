@@ -1,11 +1,13 @@
 import AppKit
 import OSLog
 import ServiceManagement
+import Sparkle
 
 private let logger = Logger(subsystem: "com.geneyoo.nocrumbs", category: "App")
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let socketServer = SocketServer()
+    lazy var updaterController = SPUStandardUpdaterController(startingUpdater: false, updaterDelegate: nil, userDriverDelegate: nil)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         UserDefaults.standard.register(defaults: [
@@ -15,6 +17,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             "showFileCountPerPrompt": true,
             "showSessionID": true,
         ])
+
+        // Start Sparkle updater
+        updaterController.startUpdater()
 
         // Register URL scheme handler
         NSAppleEventManager.shared().setEventHandler(

@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct SettingsView: View {
+    @AppStorage("hideEmptyEvents") private var hideEmptyEvents = true
     @AppStorage("annotationEnabled") private var annotationEnabled = true
     @AppStorage("deepLinkInAnnotation") private var deepLinkInAnnotation = true
     @AppStorage("showPromptList") private var showPromptList = true
@@ -46,6 +47,11 @@ struct SettingsView: View {
                 }
             }
             .onAppear { healthChecker.refresh() }
+
+            Section("Sidebar") {
+                Toggle("Hide prompts with no file changes", isOn: $hideEmptyEvents)
+                    .help("Only show prompts that produced file changes (the most recent prompt in each session is always shown)")
+            }
 
             Section("General") {
                 Toggle("Annotate commit messages with prompt history", isOn: $annotationEnabled)

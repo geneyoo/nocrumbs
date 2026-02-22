@@ -11,6 +11,10 @@ struct DiffDetailView: View {
     @State private var fileListWidth: CGFloat = LayoutGuide.fileListWidth
     @GestureState private var dragOffset: CGFloat = 0
     @State private var fileSearchQuery = ""
+    @State private var isHeaderExpanded = false
+    @State private var headerHeight: CGFloat = 200
+    @GestureState private var headerDragOffset: CGFloat = 0
+    @State private var reloadTask: Task<Void, Never>?
 
     private var theme: DiffTheme? {
         themeManager.currentTheme
@@ -21,6 +25,11 @@ struct DiffDetailView: View {
     }
 
     private var sessionFirstPrompt: String {
+        if let session = database.sessions.first(where: { $0.id == event.sessionID }),
+            let name = session.customName
+        {
+            return name
+        }
         let events = database.eventsForSession(id: event.sessionID)
         let text = events.last?.promptText ?? "(no prompt)"
         return text.replacingOccurrences(of: "\n", with: " ")
@@ -46,6 +55,7 @@ struct DiffDetailView: View {
         .navigationSubtitle(sessionFirstPrompt)
         .onChange(of: event) { _, _ in
             fileSearchQuery = ""
+            isHeaderExpanded = false
             reload()
         }
         .onChange(of: fileChanges) { _, _ in reload() }
@@ -55,24 +65,96 @@ struct DiffDetailView: View {
     // MARK: - Header
 
     private var header: some View {
+        VStack(spacing: LayoutGuide.spacingNone) {
+            if isHeaderExpanded {
+                expandedHeader
+            } else {
+                collapsedHeader
+            }
+        }
+    }
+
+    private var collapsedHeader: some View {
         VStack(alignment: .leading, spacing: LayoutGuide.spacingS) {
-            Text(event.promptText?.replacingOccurrences(of: "\n", with: " ") ?? "(no prompt text)")
+            Text(event.promptText ?? "(no prompt text)")
                 .font(.headline)
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .textSelection(.enabled)
-            HStack(spacing: LayoutGuide.spacingL) {
-                Text(event.timestamp, style: .time)
-                Text("·")
-                    .foregroundStyle(.quaternary)
-                Text("\(fileChanges.count) file\(fileChanges.count == 1 ? "" : "s")")
-            }
-            .font(.caption)
-            .foregroundStyle(.secondary)
+            headerMeta
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, LayoutGuide.paddingL)
+        .contentShape(Rectangle())
+        .onTapGesture { withAnimation(.smooth(duration: 0.2)) { isHeaderExpanded = true } }
+        .padding(.horizontal, LayoutGuide.paddingXXL)
         .padding(.vertical, LayoutGuide.paddingM)
+    }
+
+    private var expandedHeader: some View {
+        let effectiveHeight = min(max(headerHeight + headerDragOffset, 80), 500)
+        return VStack(spacing: LayoutGuide.spacingNone) {
+            VStack(alignment: .leading, spacing: LayoutGuide.spacingS) {
+                ScrollView(.vertical) {
+                    Text(event.promptText ?? "(no prompt text)")
+                        .font(.headline)
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                }
+                headerMeta
+            }
+            .padding(.horizontal, LayoutGuide.paddingXXL)
+            .padding(.vertical, LayoutGuide.paddingM)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .frame(height: effectiveHeight)
+
+            headerResizeHandle
+        }
+    }
+
+    private var headerMeta: some View {
+        HStack(spacing: LayoutGuide.spacingL) {
+            Text(event.timestamp, style: .time)
+            Text("·")
+                .foregroundStyle(.quaternary)
+            Text("\(fileChanges.count) file\(fileChanges.count == 1 ? "" : "s")")
+            Spacer()
+            Button {
+                withAnimation(.smooth(duration: 0.2)) { isHeaderExpanded = false }
+            } label: {
+                Image(systemName: "chevron.up")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+            .buttonStyle(.borderless)
+            .help("Collapse prompt")
+            .opacity(isHeaderExpanded ? 1 : 0)
+        }
+        .font(.caption)
+        .foregroundStyle(.secondary)
+    }
+
+    private var headerResizeHandle: some View {
+        Rectangle()
+            .fill(Color.clear)
+            .frame(height: 6)
+            .overlay(Divider(), alignment: .center)
+            .contentShape(Rectangle())
+            .onHover { hovering in
+                if hovering {
+                    NSCursor.resizeUpDown.push()
+                } else {
+                    NSCursor.pop()
+                }
+            }
+            .gesture(
+                DragGesture(minimumDistance: 1)
+                    .updating($headerDragOffset) { value, state, _ in
+                        state = value.translation.height
+                    }
+                    .onEnded { value in
+                        headerHeight = min(max(headerHeight + value.translation.height, 80), 500)
+                    }
+            )
     }
 
     // MARK: - Diff Content
@@ -302,7 +384,13 @@ struct DiffDetailView: View {
     private func reload() {
         scrollSync.detach()
         scrollSync = DiffScrollSync()
-        viewModel.load(event: event, fileChanges: fileChanges)
+        reloadTask?.cancel()
+        reloadTask = Task {
+            // 150ms debounce: prevents N concurrent git processes when holding arrow key
+            try? await Task.sleep(nanoseconds: 150_000_000)
+            guard !Task.isCancelled else { return }
+            viewModel.load(event: event, fileChanges: fileChanges)
+        }
     }
 
     private func statusIcon(for status: FileDiff.FileStatus) -> some View {

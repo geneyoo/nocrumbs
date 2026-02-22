@@ -22,8 +22,8 @@ private struct SidebarItem: Identifiable {
     }
 
     static func session(_ s: Session) -> SidebarItem {
-        // swiftlint:disable:next force_unwrapping
-        SidebarItem(id: UUID(uuidString: s.id)!, kind: .session, session: s, event: nil, projectName: nil)
+        let uuid = UUID(uuidString: s.id) ?? UUID()
+        return SidebarItem(id: uuid, kind: .session, session: s, event: nil, projectName: nil)
     }
 
     static func event(_ e: PromptEvent) -> SidebarItem {
@@ -35,8 +35,12 @@ private struct SidebarItem: Identifiable {
 private final class SidebarState {
     var selection: UUID?
     var expandedSessions: Set<String> = []
-    var hideEmptyEvents = false
+    @ObservationIgnored
+    @AppStorage("hideEmptyEvents") var hideEmptyEvents = true
+    var collapsedProjects: Set<String> = []
     var keyMonitor: Any?
+    var renamingSessionID: String?
+    var renameText = ""
 }
 
 enum TimePeriod: Int, CaseIterable {
@@ -120,6 +124,7 @@ struct ContentView: View {
                 let hasVisibleSessions = sessions.contains { !filteredEvents(for: $0.id).isEmpty }
                 guard hasVisibleSessions else { continue }
                 items.append(.projectHeader(projectName))
+                guard !state.collapsedProjects.contains(projectName) else { continue }
                 for session in sessions {
                     let events = filteredEvents(for: session.id)
                     guard !events.isEmpty else { continue }
@@ -194,6 +199,26 @@ struct ContentView: View {
                 }
             }
             .listStyle(.sidebar)
+            .alert(
+                "Rename Session",
+                isPresented: Binding(
+                    get: { state.renamingSessionID != nil },
+                    set: { if !$0 { state.renamingSessionID = nil } }
+                )
+            ) {
+                TextField("Session name", text: $state.renameText)
+                Button("Rename") {
+                    guard let sessionID = state.renamingSessionID else { return }
+                    let name = state.renameText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    try? database.updateSessionName(name.isEmpty ? nil : name, sessionID: sessionID)
+                    state.renamingSessionID = nil
+                }
+                Button("Cancel", role: .cancel) {
+                    state.renamingSessionID = nil
+                }
+            } message: {
+                Text("Enter a custom name for this session, or leave empty to use the first prompt.")
+            }
             .toolbar {
                 ToolbarItem(placement: .automatic) {
                     Button {
@@ -249,13 +274,32 @@ struct ContentView: View {
 
     @ViewBuilder
     private func projectHeaderRow(_ name: String) -> some View {
-        Text(name)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.secondary)
-            .textCase(.uppercase)
-            .padding(.top, 8)
-            .padding(.bottom, 2)
-            .listRowSeparator(.hidden)
+        let collapsed = state.collapsedProjects.contains(name)
+        HStack(spacing: 4) {
+            Image(systemName: "chevron.right")
+                .font(.system(size: 8, weight: .bold))
+                .foregroundStyle(.quaternary)
+                .rotationEffect(.degrees(collapsed ? 0 : 90))
+                .animation(.smooth(duration: 0.2), value: collapsed)
+                .frame(width: 12)
+            Text(name)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(.smooth(duration: 0.25)) {
+                if collapsed {
+                    state.collapsedProjects.remove(name)
+                } else {
+                    state.collapsedProjects.insert(name)
+                }
+            }
+        }
+        .padding(.top, 8)
+        .padding(.bottom, 2)
+        .listRowSeparator(.hidden)
     }
 
     @ViewBuilder
@@ -263,6 +307,7 @@ struct ContentView: View {
         let events = filteredEvents(for: session.id)
         let eventCount = events.count
         let firstPrompt = events.first?.promptText
+        let displayTitle = session.customName ?? firstPrompt ?? "(no prompt)"
         let expanded = state.expandedSessions.contains(session.id)
         let sState = database.sessionState(for: session.id)
         HStack(spacing: 4) {
@@ -289,13 +334,24 @@ struct ContentView: View {
                     } else if sState == .interrupted {
                         Circle().fill(AppColors.paused).frame(width: 6, height: 6)
                     }
-                    Text(firstPrompt ?? "(no prompt)")
+                    Text(displayTitle)
                         .font(.callout)
                         .lineLimit(1)
                 }
                 Text("\(eventCount) prompt\(eventCount == 1 ? "" : "s") · \(session.startedAt, format: .relative(presentation: .named))")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
+            }
+        }
+        .contextMenu {
+            Button("Rename…") {
+                state.renameText = session.customName ?? ""
+                state.renamingSessionID = session.id
+            }
+            if session.customName != nil {
+                Button("Clear Name") {
+                    try? database.updateSessionName(nil, sessionID: session.id)
+                }
             }
         }
     }

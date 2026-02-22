@@ -1,10 +1,18 @@
 # NoCrumbs
 
-> Git blame for the AI era.
+> AI writes the code. You keep the receipts.
 
-A native Mac menu bar app that links every file change Claude Code makes back to the prompt that caused it. Seamless, lightweight, fully local.
+A local-first tool that links every file change your AI coding assistant makes back to the prompt that caused it. Native Mac app + fire-and-forget CLI. No cloud, no telemetry, no accounts.
 
 ## Quick Start
+
+### Homebrew (recommended)
+
+```bash
+brew install geneyoo/tap/nocrumbs
+```
+
+### From source
 
 ```bash
 # 1. Build & launch
@@ -19,9 +27,9 @@ cp CLI/.build/release/nocrumbs /usr/local/bin/
 nocrumbs install
 ```
 
-That's it. Use Claude Code normally — prompts and file changes appear in NoCrumbs automatically.
+That's it. Use your AI coding assistant normally — prompts and file changes appear in NoCrumbs automatically.
 
-**Requirements:** macOS 14+, Xcode 15+ (to build), Claude Code CLI
+**Requirements:** macOS 14+, Xcode 15+ (to build from source)
 
 ---
 
@@ -29,7 +37,7 @@ That's it. Use Claude Code normally — prompts and file changes appear in NoCru
 
 | Feature | How |
 |---------|-----|
-| **Prompt → file change linkage** | Every file change tracked back to the prompt that caused it via session ID |
+| **Real-time tracking** | Captures every AI action as it happens — file writes, commands, commits — and links them back to the prompt that triggered them |
 | **Side-by-side diff viewer** | Syntax-highlighted, Phabricator-style. Click a prompt, see what changed |
 | **Commit message annotation** | Appends prompt history to commit messages automatically. Customizable templates |
 | **Session export** | Copy session summary as markdown. Deep links back to NoCrumbs |
@@ -63,9 +71,9 @@ Granular content toggles in Settings: prompt list, file counts, session ID, deep
 
 **Seamless.** Install once, never think about it again. The CLI hook exits in <50ms, always exit 0, silent fail if app isn't running. Zero friction.
 
-**Lightweight.** Don't store diffs — git already has them. Store only prompt↔file change linkage. DB stays under 1MB for years of use. Raw SQLite, no ORM overhead. Sub-millisecond IPC via Unix domain socket.
+**Lightweight.** Don't store diffs — git already has them. Store only prompt-to-commit linkage. DB stays under 1MB for years of use. Sub-millisecond IPC via Unix domain socket.
 
-**Local first.** No network calls, no API keys, no accounts, no telemetry. Ever.
+**Local-first, always.** No network calls, no API keys, no accounts, no telemetry. Everything stays on your machine via Unix domain socket.
 
 **Capture intent, not noise.** Top-level user prompts only. Subagent activity, plan steps, todos — all discarded.
 
@@ -76,15 +84,10 @@ Granular content toggles in Settings: prompt list, file counts, session ID, deep
 ## Architecture
 
 ```
-Claude Code hooks
-    ↓ stdin JSON → nocrumbs CLI (fire-and-forget)
-    ↓ Unix domain socket
-NoCrumbs.app SocketServer (POSIX, actor)
-    ↓
-SQLite (raw C API, WAL) + git/hg CLI (diffs on demand)
-    ↓ @Observable in-memory cache
-SwiftUI views (sidebar, diff viewer, session summary)
+AI Assistant ──PostToolUse hook──▶ nocrumbs CLI ──socket──▶ Mac App ──▶ SQLite
 ```
+
+The CLI receives hook payloads as JSON, extracts metadata (session ID, prompt text, file paths), and forwards over a Unix domain socket. The Mac app stores prompt metadata locally and derives diffs from git on demand.
 
 For full technical details: [`docs/architecture.md`](docs/architecture.md)
 
@@ -122,6 +125,16 @@ nocrumbs annotate-commit      Annotate commit message (called by git hook)
 nocrumbs describe             Pipe per-file change descriptions to app
 nocrumbs template             Manage commit annotation templates (add/list/set/remove/preview)
 ```
+
+---
+
+## Supported Tools
+
+Currently supported:
+- **Claude Code** (Anthropic) — via PostToolUse hooks
+
+Planned:
+- Additional AI coding assistants as hook APIs become available
 
 ---
 

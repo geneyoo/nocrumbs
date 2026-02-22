@@ -4,7 +4,7 @@ sidebar_position: 1
 
 # Getting Started
 
-NoCrumbs is a local-first tool that links every file change your AI coding assistant makes back to the prompt that caused it — git blame for the AI era.
+NoCrumbs is a local-first tool that links every file change your AI coding assistant makes back to the prompt that caused it. AI writes the code — you keep the receipts.
 
 ## Installation
 
@@ -17,7 +17,7 @@ brew install geneyoo/tap/nocrumbs
 ### From source
 
 ```bash
-git clone https://github.com/pdswan/nocrumbs.git
+git clone https://github.com/geneyoo/nocrumbs.git
 cd nocrumbs
 swift build -c release --package-path CLI/
 cp .build/release/nocrumbs /usr/local/bin/

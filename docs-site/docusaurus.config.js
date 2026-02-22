@@ -32,7 +32,7 @@ const config = {
       ({
         docs: {
           sidebarPath: './sidebars.js',
-          editUrl: 'https://github.com/pdswan/nocrumbs/tree/main/docs-site/',
+          editUrl: 'https://github.com/geneyoo/nocrumbs/tree/main/docs-site/',
         },
         blog: false,
         theme: {

@@ -5,11 +5,17 @@ struct SessionSummaryView: View {
     var onSelectEvent: ((PromptEvent) -> Void)?
     @Environment(Database.self) private var database
     @Environment(AppScale.self) private var scale
+    @AppStorage("hideEmptyEvents") private var hideEmptyEvents = true
     @State private var viewModel = SessionSummaryViewModel()
     @State private var showCopiedFeedback = false
 
     private var events: [PromptEvent] {
-        database.eventsForSession(id: session.id)
+        let allEvents = database.eventsForSession(id: session.id)
+        guard hideEmptyEvents else { return allEvents }
+        let latestID = allEvents.first?.id
+        return allEvents.filter { event in
+            event.id == latestID || !(database.fileChangesCache[event.id] ?? []).isEmpty
+        }
     }
 
     private var totalFileChanges: Int {
@@ -23,6 +29,7 @@ struct SessionSummaryView: View {
     }
 
     private var sessionFirstPrompt: String {
+        if let name = session.customName { return name }
         let text = events.last?.promptText ?? "(no prompt)"
         return text.replacingOccurrences(of: "\n", with: " ")
     }
