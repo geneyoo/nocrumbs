@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# NoCrumbs Release Pipeline
+# NoCrumbs Release Pipeline (fully automated)
 # Usage: ./scripts/release.sh <version> [--team-id <id>] [--password <keychain-profile>]
 #
 # Secrets are loaded from scripts/.env.local (gitignored).
@@ -40,6 +40,27 @@ if [[ -z "$TEAM_ID" ]]; then
     exit 1
 fi
 
+# === Pre-flight checks ===
+echo "→ Pre-flight checks..."
+
+if [[ -n "$(git -C "$PROJECT_DIR" status --porcelain)" ]]; then
+    echo "❌ Working tree is dirty. Commit or stash changes first."
+    git -C "$PROJECT_DIR" status --short
+    exit 1
+fi
+
+if git -C "$PROJECT_DIR" rev-parse "v${VERSION}" >/dev/null 2>&1; then
+    echo "❌ Tag v${VERSION} already exists."
+    exit 1
+fi
+
+if ! gh auth status >/dev/null 2>&1; then
+    echo "❌ GitHub CLI not authenticated. Run: gh auth login"
+    exit 1
+fi
+
+echo "✓ Pre-flight checks passed"
+
 # Resolve Sparkle tools from SPM build
 SPARKLE_BIN="${PROJECT_DIR}/build/SourcePackages/artifacts/sparkle/Sparkle/bin"
 if [[ ! -d "$SPARKLE_BIN" ]]; then
@@ -57,8 +78,8 @@ echo "Team ID: ${TEAM_ID}"
 echo "Project: ${PROJECT_DIR}"
 echo ""
 
-# Step 1: Update version in Info.plist
-echo "→ Setting version to ${VERSION}..."
+# Step 1: Bump version in Info.plist
+echo "→ Bumping Info.plist version to ${VERSION}..."
 /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${VERSION}" \
     "${PROJECT_DIR}/NoCrumbs/Resources/Info.plist"
 
@@ -68,7 +89,21 @@ BUILD_NUMBER=$(date +%Y%m%d%H%M)
     "${PROJECT_DIR}/NoCrumbs/Resources/Info.plist"
 echo "   Version: ${VERSION} (${BUILD_NUMBER})"
 
-# Step 2: Clean build with Developer ID signing + hardened runtime
+# Step 2: Bump CLI version
+echo "→ Bumping CLI version to ${VERSION}..."
+CLI_MAIN="${PROJECT_DIR}/CLI/Sources/nocrumbs/main.swift"
+sed -i '' "s/^let version = \".*\"/let version = \"${VERSION}\"/" "$CLI_MAIN"
+echo "✓ CLI version bumped"
+
+# Step 3: Commit version bumps
+echo "→ Committing version bumps..."
+git -C "$PROJECT_DIR" add \
+    "NoCrumbs/Resources/Info.plist" \
+    "CLI/Sources/nocrumbs/main.swift"
+git -C "$PROJECT_DIR" commit -m "chore: bump version to ${VERSION}"
+echo "✓ Version bump committed"
+
+# Step 4: Clean build with Developer ID signing + hardened runtime
 echo "→ Building Release configuration..."
 xcodebuild -project "${PROJECT_DIR}/NoCrumbs.xcodeproj" \
     -scheme "${APP_NAME}" \
@@ -90,7 +125,7 @@ if [[ ! -d "$APP_PATH" ]]; then
 fi
 echo "✓ Built: ${APP_PATH}"
 
-# Step 3: Re-sign Sparkle embedded binaries with Developer ID + timestamp
+# Step 5: Re-sign Sparkle embedded binaries with Developer ID + timestamp
 echo "→ Re-signing Sparkle framework binaries..."
 SIGN_ID="Developer ID Application: Gene Yoo (${TEAM_ID})"
 find "$APP_PATH/Contents/Frameworks/Sparkle.framework" -type f -perm +111 | while read -r binary; do
@@ -105,14 +140,14 @@ codesign --force --sign "$SIGN_ID" --timestamp --options runtime \
     "$APP_PATH/Contents/Frameworks/Sparkle.framework"
 echo "✓ Sparkle binaries re-signed"
 
-# Step 4: Re-sign the main app (picks up re-signed framework)
+# Step 6: Re-sign the main app (picks up re-signed framework)
 echo "→ Re-signing app bundle..."
 codesign --force --sign "$SIGN_ID" --timestamp --options runtime \
     --entitlements "${PROJECT_DIR}/NoCrumbs/Resources/NoCrumbs.entitlements" \
     "$APP_PATH"
 echo "✓ App re-signed"
 
-# Step 5: Verify code signing
+# Step 7: Verify code signing
 echo "→ Verifying code signature..."
 codesign -dv --verbose=2 "$APP_PATH" 2>&1 | grep -E "(Authority|Runtime|Identifier)"
 codesign --verify --strict --deep "$APP_PATH"
@@ -125,13 +160,13 @@ if codesign -d --entitlements - "$APP_PATH" 2>&1 | grep -q "get-task-allow"; the
 fi
 echo "✓ No debug entitlements"
 
-# Step 6: Create zip for notarization
+# Step 8: Create zip for notarization
 echo "→ Creating zip for notarization..."
 ZIP_PATH="${BUILD_DIR}/${APP_NAME}-${VERSION}.zip"
 ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
 echo "✓ Zip created: ${ZIP_PATH}"
 
-# Step 7: Notarize
+# Step 9: Notarize
 echo "→ Submitting for notarization (this may take a few minutes)..."
 xcrun notarytool submit "$ZIP_PATH" \
     --keychain-profile "${KEYCHAIN_PROFILE}" \
@@ -144,19 +179,19 @@ if ! grep -q "status: Accepted" "${BUILD_DIR}/notarization.log"; then
 fi
 echo "✓ Notarization accepted"
 
-# Step 8: Staple
+# Step 10: Staple
 echo "→ Stapling notarization ticket..."
 xcrun stapler staple "$APP_PATH"
 echo "✓ Stapled"
 
-# Step 9: Re-zip after stapling (final distributable)
+# Step 11: Re-zip after stapling (final distributable)
 echo "→ Creating final distributable zip..."
 rm -f "$ZIP_PATH"
 ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
 ZIP_SIZE=$(stat -f%z "$ZIP_PATH")
 echo "✓ Final zip: ${ZIP_PATH} ($(( ZIP_SIZE / 1048576 )) MB)"
 
-# Step 10: Sign zip with Sparkle EdDSA
+# Step 12: Sign zip with Sparkle EdDSA
 if [[ -n "$SPARKLE_BIN" && -x "${SPARKLE_BIN}/sign_update" ]]; then
     echo "→ Signing zip with Sparkle EdDSA..."
     EDDSA_SIG=$("${SPARKLE_BIN}/sign_update" "$ZIP_PATH")
@@ -168,7 +203,7 @@ else
     EDDSA_SIG="(manual signing required)"
 fi
 
-# Step 11: Generate appcast
+# Step 13: Generate appcast
 APPCAST_DIR="${BUILD_DIR}/appcast"
 mkdir -p "$APPCAST_DIR"
 cp "$ZIP_PATH" "$APPCAST_DIR/"
@@ -182,6 +217,40 @@ else
     echo "⚠️  Skipping appcast generation — generate_appcast not found"
 fi
 
+# Step 14: Copy appcast to docs-site for GitHub Pages
+if [[ -f "${APPCAST_DIR}/appcast.xml" ]]; then
+    echo "→ Copying appcast to docs-site..."
+    cp "${APPCAST_DIR}/appcast.xml" "${PROJECT_DIR}/docs-site/static/appcast.xml"
+    echo "✓ Appcast copied to docs-site/static/appcast.xml"
+fi
+
+# Step 15: Tag and push
+echo "→ Tagging v${VERSION} and pushing..."
+git -C "$PROJECT_DIR" tag "v${VERSION}"
+git -C "$PROJECT_DIR" push origin main --tags
+echo "✓ Tag v${VERSION} pushed"
+
+# Step 16: Create GitHub Release
+echo "→ Creating GitHub Release v${VERSION}..."
+gh release create "v${VERSION}" "$ZIP_PATH" \
+    --repo geneyoo/nocrumbs \
+    --title "v${VERSION}" \
+    --generate-notes
+echo "✓ GitHub Release v${VERSION} created"
+
+# Step 17: Commit and push appcast (triggers GitHub Pages deploy)
+if [[ -f "${PROJECT_DIR}/docs-site/static/appcast.xml" ]]; then
+    echo "→ Committing appcast and pushing (triggers Pages deploy)..."
+    git -C "$PROJECT_DIR" add "docs-site/static/appcast.xml"
+    if git -C "$PROJECT_DIR" diff --cached --quiet; then
+        echo "   Appcast unchanged, skipping commit"
+    else
+        git -C "$PROJECT_DIR" commit -m "chore: update appcast for v${VERSION}"
+        git -C "$PROJECT_DIR" push origin main
+        echo "✓ Appcast committed and pushed — GitHub Pages will deploy"
+    fi
+fi
+
 # Summary
 echo ""
 echo "=== Release ${VERSION} Complete ==="
@@ -189,13 +258,6 @@ echo ""
 echo "Artifacts:"
 echo "  Zip:     ${ZIP_PATH}"
 echo "  Appcast: ${APPCAST_DIR}/appcast.xml"
+echo "  Release: https://github.com/geneyoo/nocrumbs/releases/tag/v${VERSION}"
 echo ""
-echo "Next steps:"
-echo "  1. Upload zip to GitHub Release v${VERSION}"
-echo "  2. Upload appcast.xml to https://nocrumbs.ai/appcast.xml"
-echo "  3. Tag: git tag v${VERSION} && git push --tags"
-echo ""
-if [[ "$EDDSA_SIG" != "(manual signing required)" ]]; then
-    echo "Sparkle signature (for manual appcast editing):"
-    echo "  ${EDDSA_SIG}"
-fi
+echo "Appcast will be live at https://nocrumbs.ai/appcast.xml after Pages deploys."
