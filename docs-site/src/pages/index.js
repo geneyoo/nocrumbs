@@ -42,10 +42,12 @@ function HeroSection() {
             Get Started
           </Link>
           <Link
-            className="button button--secondary button--lg"
+            className="button button--secondary button--lg hero__btn-locked"
             href="#"
+            onClick={(e) => e.preventDefault()}
           >
-            GitHub (Coming Soon)
+            GitHub
+            <span className="hero__btn-soon">Coming Soon</span>
           </Link>
         </div>
         <div className="install-hint">

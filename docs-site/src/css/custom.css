@@ -159,6 +159,22 @@
   color: #fff;
 }
 
+.hero__btn-locked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.2;
+  cursor: default;
+}
+
+.hero__btn-soon {
+  font-size: 0.55rem;
+  font-weight: 400;
+  opacity: 0.6;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
 /* Install hint */
 .install-hint {
   margin-top: 2rem;
