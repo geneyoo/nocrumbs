@@ -6,7 +6,10 @@ sidebar_position: 2
 
 ## The Problem
 
-AI coding assistants are transforming how we write software, but they create a visibility gap: once code is committed, there's no easy way to trace *which prompt* produced *which change*. Traditional `git blame` tells you who and when, but not *why* — and with AI-assisted coding, the "why" is the prompt.
+- **IDEs are pre-agentic.** They were built for humans writing code line-by-line — file trees, syntax highlighting, inline diffs. That workflow is fading.
+- **CLI agents are replacing them** — Claude Code, Codex CLI, aider. No file trees, no inline diffs. Just a prompt and a commit. Faster, less overhead, no UI tax.
+- **But you lose all traceability.** The agent touches a dozen files across 3 commits, and `git log` gives you a hash and a message. Which prompt caused which change? Gone.
+- **`git blame` tells you who and when — not why.** With AI writing the code, the "why" is the prompt. And nothing captures that today.
 
 ## The Solution
 
@@ -53,7 +56,7 @@ NoCrumbs operates as a lightweight hook with minimal overhead:
 ## Supported Tools
 
 Currently supported:
-- **Claude Code** (Anthropic) — via hook events
+- **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** (Anthropic) — via hook events
 
-Planned:
-- Additional AI coding assistants as hook APIs become available
+Coming soon:
+- **[Codex CLI](https://github.com/openai/codex)** (OpenAI) — via hook events

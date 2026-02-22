@@ -6,19 +6,19 @@ import Layout from '@theme/Layout';
 
 const features = [
   {
-    title: 'Real-Time Tracking',
+    title: 'Prompt → Commit',
     description:
-      'NoCrumbs captures every AI action as it happens — file writes, commands, commits — and links them back to the prompt that triggered them. No after-the-fact reconstruction.',
+      'Every file write, every edit, every commit — linked back to the prompt that caused it. git blame finally tells you why.',
   },
   {
-    title: 'Local-First, Always',
+    title: 'Built for CLI Agents',
     description:
-      'Everything stays on your machine. No cloud sync, no telemetry, no third-party servers. Just a Unix socket between the CLI and a native Mac app.',
+      'Claude Code, Codex CLI, aider — no IDE required. NoCrumbs hooks in at the terminal level and stays out of your way.',
   },
   {
-    title: 'CLI + Mac App',
+    title: 'Local. Always.',
     description:
-      'A fire-and-forget CLI hook that never blocks your workflow, paired with a native macOS app for browsing your prompt-to-commit timeline.',
+      'No cloud, no telemetry, no accounts. A Unix socket, a SQLite database, and your machine. That\'s it.',
   },
 ];
 
