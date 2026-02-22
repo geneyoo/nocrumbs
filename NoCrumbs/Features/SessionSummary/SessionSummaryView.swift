@@ -35,6 +35,23 @@ struct SessionSummaryView: View {
             .padding()
         }
         .frame(minWidth: 500)
+        .navigationTitle("")
+        .toolbarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                HStack(spacing: 6) {
+                    Text((session.projectPath as NSString).lastPathComponent)
+                        .font(.headline)
+                    Text("—")
+                        .font(.subheadline)
+                        .foregroundStyle(.tertiary)
+                    Text(events.first?.promptText ?? "(no prompt)")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+        }
         .onAppear { reload() }
         .onChange(of: session.id) { _, _ in
             viewModel.invalidate()

@@ -32,6 +32,23 @@ struct DiffDetailView: View {
             }
         }
         .frame(minWidth: 600)
+        .navigationTitle("")
+        .toolbarTitleDisplayMode(.inline)
+        .toolbar {
+            ToolbarItem(placement: .navigation) {
+                HStack(spacing: 6) {
+                    Text((event.projectPath as NSString).lastPathComponent)
+                        .font(.headline)
+                    Text("—")
+                        .font(.subheadline)
+                        .foregroundStyle(.tertiary)
+                    Text(event.promptText ?? "(no prompt)")
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(1)
+                }
+            }
+        }
         .onChange(of: event) { _, _ in reload() }
         .onChange(of: fileChanges) { _, _ in reload() }
         .onAppear { reload() }
