@@ -65,7 +65,7 @@ struct SessionSummaryView: View {
                 Spacer()
 
                 Text(formattedDuration)
-                    .font(.callout.monospacedDigit())
+                    .font(AppFonts.numeric)
                     .foregroundStyle(.secondary)
             }
 
@@ -104,9 +104,9 @@ struct SessionSummaryView: View {
 
                 if adds > 0 || dels > 0 {
                     Text("+\(adds)")
-                        .foregroundStyle(.green)
+                        .foregroundStyle(AppColors.addition)
                     Text("-\(dels)")
-                        .foregroundStyle(.red)
+                        .foregroundStyle(AppColors.deletion)
                 }
 
                 if viewModel.isLoading {
@@ -170,6 +170,7 @@ struct SessionSummaryView: View {
                         fileStatRow(file)
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.leading, 24)
                 .padding(.vertical, 4)
             } else if !fileChanges.isEmpty {
@@ -177,16 +178,17 @@ struct SessionSummaryView: View {
                     ForEach(fileChanges) { change in
                         HStack(spacing: 6) {
                             Image(systemName: "doc")
-                                .font(.caption2)
+                                .font(.caption)
                                 .foregroundStyle(.secondary)
-                                .frame(width: 14)
+                                .frame(width: 18)
                             Text(relativePath(change.filePath))
-                                .font(.caption.monospaced())
+                                .font(AppFonts.filePath)
                                 .lineLimit(1)
                                 .truncationMode(.middle)
                         }
                     }
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(.leading, 24)
                 .padding(.vertical, 4)
             }
@@ -194,7 +196,7 @@ struct SessionSummaryView: View {
             HStack(spacing: 8) {
                 // Timestamp
                 Text(event.timestamp, style: .time)
-                    .font(.caption.monospacedDigit())
+                    .font(AppFonts.numericSmall)
                     .foregroundStyle(.secondary)
                     .frame(width: 70, alignment: .leading)
 
@@ -206,21 +208,21 @@ struct SessionSummaryView: View {
 
                     HStack(spacing: 8) {
                         let count = stat?.totalFiles ?? fileChanges.count
-                        if count > 0 {
+                        if !count.isZero {
                             Text("\(count) file\(count == 1 ? "" : "s")")
                                 .foregroundStyle(.secondary)
                         }
 
                         if let stat, (stat.totalAdditions > 0 || stat.totalDeletions > 0) {
                             Text("+\(stat.totalAdditions)")
-                                .foregroundStyle(.green)
+                                .foregroundStyle(AppColors.addition)
                             Text("-\(stat.totalDeletions)")
-                                .foregroundStyle(.red)
+                                .foregroundStyle(AppColors.deletion)
                         }
 
                         if hasError {
                             Image(systemName: "exclamationmark.triangle.fill")
-                                .foregroundStyle(.yellow)
+                                .foregroundStyle(AppColors.warning)
                                 .help(viewModel.errors[event.id] ?? "Unknown error")
                         }
 
@@ -272,7 +274,7 @@ struct SessionSummaryView: View {
                 .frame(width: 18)
 
             Text(stat.filePath)
-                .font(.caption.monospaced())
+                .font(AppFonts.filePath)
                 .lineLimit(1)
                 .truncationMode(.middle)
 
@@ -280,14 +282,14 @@ struct SessionSummaryView: View {
 
             if stat.additions > 0 {
                 Text("+\(stat.additions)")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.green)
+                    .font(AppFonts.numeric)
+                    .foregroundStyle(AppColors.addition)
             }
 
             if stat.deletions > 0 {
                 Text("-\(stat.deletions)")
-                    .font(.caption.monospacedDigit())
-                    .foregroundStyle(.red)
+                    .font(AppFonts.numeric)
+                    .foregroundStyle(AppColors.deletion)
             }
 
             DiffStatSquares(additions: stat.additions, deletions: stat.deletions)
@@ -316,11 +318,11 @@ struct DiffStatBar: View {
 
             HStack(spacing: 0) {
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(.green.opacity(0.7))
+                    .fill(AppColors.additionMuted)
                     .frame(width: addWidth)
 
                 RoundedRectangle(cornerRadius: 2)
-                    .fill(.red.opacity(0.7))
+                    .fill(AppColors.deletionMuted)
                     .frame(width: geo.size.width - addWidth)
             }
             .clipShape(RoundedRectangle(cornerRadius: 3))
@@ -341,7 +343,7 @@ struct DiffStatSquares: View {
 
             ForEach(0..<5, id: \.self) { i in
                 RoundedRectangle(cornerRadius: 1)
-                    .fill(i < greenCount ? Color.green.opacity(0.8) : Color.red.opacity(0.8))
+                    .fill(i < greenCount ? AppColors.additionSquare : AppColors.deletionSquare)
                     .frame(width: 6, height: 6)
             }
         }
@@ -355,7 +357,7 @@ struct FileStatusBadge: View {
 
     var body: some View {
         Text(letter)
-            .font(.system(size: 9, weight: .bold, design: .monospaced))
+            .font(AppFonts.statusBadge)
             .foregroundStyle(color)
     }
 
@@ -369,9 +371,9 @@ struct FileStatusBadge: View {
 
     private var color: Color {
         switch status {
-        case .added: .green
-        case .modified: .orange
-        case .deleted: .red
+        case .added: AppColors.addition
+        case .modified: AppColors.modified
+        case .deleted: AppColors.deletion
         }
     }
 }

@@ -9,16 +9,16 @@ struct SessionStateIndicator: View {
         switch state {
         case .live:
             LiveDot()
-            Text("Live")
+            Text("Cooking")
                 .font(.caption2.weight(.medium))
-                .foregroundStyle(.green)
+                .foregroundStyle(AppColors.live)
         case .interrupted:
             Image(systemName: "pause.circle.fill")
                 .font(.caption2)
-                .foregroundStyle(.orange)
+                .foregroundStyle(AppColors.paused)
             Text("Paused")
                 .font(.caption2.weight(.medium))
-                .foregroundStyle(.orange)
+                .foregroundStyle(AppColors.paused)
         case .ended:
             Image(systemName: "stop.circle.fill")
                 .font(.caption2)
@@ -39,7 +39,7 @@ struct LiveDot: View {
 
     var body: some View {
         Circle()
-            .fill(.green)
+            .fill(AppColors.live)
             .frame(width: 6, height: 6)
             .scaleEffect(pulse ? 1.4 : 1.0)
             .opacity(pulse ? 0.6 : 1.0)

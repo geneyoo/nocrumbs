@@ -41,6 +41,8 @@
 		AA2233445566778899001122 /* GitProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB2233445566778899001122 /* GitProviderTests.swift */; };
 		AA3344556677889900112233 /* DiffViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB3344556677889900112233 /* DiffViewModelTests.swift */; };
 		AA4455667788990011223344 /* VCSDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB4455667788990011223344 /* VCSDetectorTests.swift */; };
+		DA11AA22BB33CC44DD55EE01 /* AppColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA11AA22BB33CC44DD55EE01 /* AppColors.swift */; };
+		DA11AA22BB33CC44DD55EE02 /* AppFonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA11AA22BB33CC44DD55EE02 /* AppFonts.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -89,6 +91,8 @@
 		BB66DD77EE88FF99AA001122 /* SessionSummaryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionSummaryViewModel.swift; sourceTree = "<group>"; };
 		BB77EE88FF99AA00BB112233 /* SessionSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionSummaryView.swift; sourceTree = "<group>"; };
 		BB88FF99AA00BB11CC223344 /* SessionStateIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStateIndicator.swift; sourceTree = "<group>"; };
+		CA11AA22BB33CC44DD55EE01 /* AppColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppColors.swift; sourceTree = "<group>"; };
+		CA11AA22BB33CC44DD55EE02 /* AppFonts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFonts.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -179,10 +183,20 @@
 			path = Components;
 			sourceTree = "<group>";
 		};
+		EA11AA22BB33CC44DD55EE01 /* StyleGuide */ = {
+			isa = PBXGroup;
+			children = (
+				CA11AA22BB33CC44DD55EE01 /* AppColors.swift */,
+				CA11AA22BB33CC44DD55EE02 /* AppFonts.swift */,
+			);
+			path = StyleGuide;
+			sourceTree = "<group>";
+		};
 		C260A28EAF9A2AA97C588171 /* UI */ = {
 			isa = PBXGroup;
 			children = (
 				DD00EE11FF22AA33BB445566 /* Components */,
+				EA11AA22BB33CC44DD55EE01 /* StyleGuide */,
 				E141BB780A574A87AD3EE283 /* Themes */,
 			);
 			name = UI;
@@ -419,6 +433,8 @@
 				AA66CC77DD88EE99FF001122 /* SessionSummaryViewModel.swift in Sources */,
 				AA77DD88EE99FF00AA112233 /* SessionSummaryView.swift in Sources */,
 				AA88EE99FF00AA11BB223344 /* SessionStateIndicator.swift in Sources */,
+				DA11AA22BB33CC44DD55EE01 /* AppColors.swift in Sources */,
+				DA11AA22BB33CC44DD55EE02 /* AppFonts.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

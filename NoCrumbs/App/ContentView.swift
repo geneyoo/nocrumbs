@@ -9,16 +9,21 @@ private struct SidebarItem: Identifiable {
     let kind: Kind
     let session: Session?
     let event: PromptEvent?
+    let projectName: String?
 
-    enum Kind { case session, event }
+    enum Kind { case projectHeader, session, event }
+
+    static func projectHeader(_ name: String) -> SidebarItem {
+        SidebarItem(id: UUID(), kind: .projectHeader, session: nil, event: nil, projectName: name)
+    }
 
     static func session(_ s: Session) -> SidebarItem {
         // swiftlint:disable:next force_unwrapping
-        SidebarItem(id: UUID(uuidString: s.id)!, kind: .session, session: s, event: nil)
+        SidebarItem(id: UUID(uuidString: s.id)!, kind: .session, session: s, event: nil, projectName: nil)
     }
 
     static func event(_ e: PromptEvent) -> SidebarItem {
-        SidebarItem(id: e.id, kind: .event, session: nil, event: e)
+        SidebarItem(id: e.id, kind: .event, session: nil, event: e, projectName: nil)
     }
 }
 
@@ -50,13 +55,32 @@ struct ContentView: View {
     }
 
     private var flatItems: [SidebarItem] {
-        var items: [SidebarItem] = []
+        // Group sessions by project name
+        let grouped = Dictionary(grouping: database.sessions) {
+            ($0.projectPath as NSString).lastPathComponent
+        }
+        // Preserve order: use first session's appearance order
+        var seenProjects: [String] = []
         for session in database.sessions {
-            let events = filteredEvents(for: session.id)
-            guard !events.isEmpty else { continue }
-            items.append(.session(session))
-            if state.expandedSessions.contains(session.id) {
-                items.append(contentsOf: events.map { .event($0) })
+            let name = (session.projectPath as NSString).lastPathComponent
+            if !seenProjects.contains(name) {
+                seenProjects.append(name)
+            }
+        }
+
+        var items: [SidebarItem] = []
+        for projectName in seenProjects {
+            guard let sessions = grouped[projectName] else { continue }
+            let hasVisibleSessions = sessions.contains { !filteredEvents(for: $0.id).isEmpty }
+            guard hasVisibleSessions else { continue }
+            items.append(.projectHeader(projectName))
+            for session in sessions {
+                let events = filteredEvents(for: session.id)
+                guard !events.isEmpty else { continue }
+                items.append(.session(session))
+                if state.expandedSessions.contains(session.id) {
+                    items.append(contentsOf: events.map { .event($0) })
+                }
             }
         }
         return items
@@ -130,17 +154,41 @@ struct ContentView: View {
         }
     }
 
+    @ViewBuilder
     private func row(for item: SidebarItem) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            if item.kind == .session, let session = item.session {
-                sessionRow(session)
-            } else if let event = item.event {
-                eventRow(event)
+        switch item.kind {
+        case .projectHeader:
+            projectHeaderRow(item.projectName ?? "")
+                .tag(item.id)
+        case .session:
+            if let session = item.session {
+                VStack(alignment: .leading, spacing: 2) {
+                    sessionRow(session)
+                }
+                .padding(.vertical, 2)
+                .tag(item.id)
+            }
+        case .event:
+            if let event = item.event {
+                VStack(alignment: .leading, spacing: 2) {
+                    eventRow(event)
+                }
+                .padding(.vertical, 2)
+                .padding(.leading, 20)
+                .tag(item.id)
             }
         }
-        .padding(.vertical, 2)
-        .padding(.leading, item.kind == .event ? 20 : 0)
-        .tag(item.id)
+    }
+
+    @ViewBuilder
+    private func projectHeaderRow(_ name: String) -> some View {
+        Text(name)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(.secondary)
+            .textCase(.uppercase)
+            .padding(.top, 8)
+            .padding(.bottom, 2)
+            .listRowSeparator(.hidden)
     }
 
     @ViewBuilder
@@ -149,6 +197,7 @@ struct ContentView: View {
         let eventCount = events.count
         let firstPrompt = events.first?.promptText
         let expanded = state.expandedSessions.contains(session.id)
+        let sState = database.sessionState(for: session.id)
         HStack(spacing: 4) {
             Image(systemName: "chevron.right")
                 .font(.caption.weight(.medium))
@@ -166,25 +215,17 @@ struct ContentView: View {
                         }
                     }
                 }
-            Image(systemName: "folder\(expanded ? ".fill" : "")")
-                .foregroundStyle(.secondary)
-                .frame(width: 16)
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 4) {
-                    let sState = database.sessionState(for: session.id)
                     if sState == .live {
-                        Circle().fill(.green).frame(width: 6, height: 6)
+                        Circle().fill(AppColors.live).frame(width: 6, height: 6)
                     } else if sState == .interrupted {
-                        Circle().fill(.orange).frame(width: 6, height: 6)
+                        Circle().fill(AppColors.paused).frame(width: 6, height: 6)
                     }
-                    Text((session.projectPath as NSString).lastPathComponent)
-                        .font(.callout.weight(.medium))
-                    if let firstPrompt {
-                        Text("·").foregroundStyle(.quaternary)
-                        Text(firstPrompt).lineLimit(1).foregroundStyle(.secondary)
-                    }
+                    Text(firstPrompt ?? "(no prompt)")
+                        .font(.callout)
+                        .lineLimit(1)
                 }
-                .font(.callout)
                 Text("\(eventCount) prompt\(eventCount == 1 ? "" : "s") · \(session.startedAt, format: .relative(presentation: .named))")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
@@ -253,4 +294,3 @@ struct ContentView: View {
         }
     }
 }
-

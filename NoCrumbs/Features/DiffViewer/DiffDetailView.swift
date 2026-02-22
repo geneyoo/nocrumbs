@@ -86,7 +86,7 @@ struct DiffDetailView: View {
                 HStack(spacing: 6) {
                     statusIcon(for: file.status)
                     Text(displayName(for: file))
-                        .font(.callout.monospaced())
+                        .font(AppFonts.filePath)
                         .lineLimit(1)
                         .truncationMode(.middle)
                 }
@@ -235,15 +235,15 @@ struct DiffDetailView: View {
         switch status {
         case .added:
             Image(systemName: "plus.circle.fill")
-                .foregroundStyle(.green)
+                .foregroundStyle(AppColors.addition)
                 .font(.caption)
         case .deleted:
             Image(systemName: "minus.circle.fill")
-                .foregroundStyle(.red)
+                .foregroundStyle(AppColors.deletion)
                 .font(.caption)
         case .modified:
             Image(systemName: "pencil.circle.fill")
-                .foregroundStyle(.orange)
+                .foregroundStyle(AppColors.modified)
                 .font(.caption)
         }
     }

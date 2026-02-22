@@ -49,7 +49,7 @@ struct DiffTextView: NSViewRepresentable {
 
     private func applyAttributedContent(to textView: DiffNSTextView) {
         guard let textStorage = textView.textStorage else { return }
-        let font = NSFont.monospacedSystemFont(ofSize: 12, weight: .regular)
+        let font = AppFonts.diffEditor
 
         let fullString = NSMutableAttributedString()
         var lineRanges: [NSRange] = []
@@ -118,7 +118,7 @@ final class DiffNSTextView: NSTextView {
             let textContainer = textContainer
         else { return }
 
-        let font = NSFont.monospacedSystemFont(ofSize: 10, weight: .regular)
+        let font = AppFonts.diffLineNumber
         let attrs: [NSAttributedString.Key: Any] = [
             .font: font,
             .foregroundColor: lineNumberColor,
