@@ -21,6 +21,7 @@ Package.resolved
 
 # Claude Code
 .claude/memory/
+.claude/settings.local.json
 
 # Local secrets & runbooks (never commit)
 *.local
