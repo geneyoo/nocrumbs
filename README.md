@@ -1,4 +1,4 @@
-# NoCrumbs
+# 🥐 NoCrumbs
 
 > AI writes the code. You keep the receipts.
 
