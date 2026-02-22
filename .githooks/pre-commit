@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Pre-commit hook: scan staged changes for secrets using gitleaks
+
+if [ "$SKIP_GITLEAKS" = "1" ]; then
+  exit 0
+fi
+
+if ! command -v gitleaks &>/dev/null; then
+  echo "⚠️  gitleaks not installed — skipping secret scan (brew install gitleaks)"
+  exit 0
+fi
+
+gitleaks protect --staged --no-banner
+if [ $? -ne 0 ]; then
+  echo ""
+  echo "❌ Secret detected in staged changes. Commit blocked."
+  echo "   If this is a false positive, use: SKIP_GITLEAKS=1 git commit ..."
+  exit 1
+fi
