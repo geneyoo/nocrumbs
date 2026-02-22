@@ -16,4 +16,7 @@ enum AppColors {
     static let live = Color.green
     static let paused = Color.orange
     static let warning = Color.yellow
+
+    // Links
+    static let link = Color.blue
 }

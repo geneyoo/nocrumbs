@@ -34,7 +34,7 @@ struct DiffDetailView: View {
         .frame(minWidth: 600)
         .navigationTitle("")
         .toolbarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .windowToolbar)
+        .toolbarBackground(Color(nsColor: .windowBackgroundColor), for: .windowToolbar)
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 HStack(spacing: 6) {

@@ -38,7 +38,7 @@ struct SessionSummaryView: View {
         .frame(minWidth: 500)
         .navigationTitle("")
         .toolbarTitleDisplayMode(.inline)
-        .toolbarBackground(.hidden, for: .windowToolbar)
+        .toolbarBackground(Color(nsColor: .windowBackgroundColor), for: .windowToolbar)
         .toolbar {
             ToolbarItem(placement: .navigation) {
                 HStack(spacing: 6) {
@@ -252,7 +252,7 @@ struct SessionSummaryView: View {
                         if let url = viewModel.commitURL(for: hash) {
                             Text(short)
                                 .font(.caption.monospaced())
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(AppColors.link)
                                 .onTapGesture { NSWorkspace.shared.open(url) }
                                 .help("Open commit on remote")
                         } else {
