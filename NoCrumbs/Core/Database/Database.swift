@@ -15,6 +15,8 @@ final class Database {  // swiftlint:disable:this type_body_length
     private(set) var recentHookEvents: [HookEvent] = []
     private(set) var sessionStateCache: [String: SessionState] = [:]
     private(set) var commitTemplates: [CommitTemplate] = []
+    /// In-memory cache for computed diff stats — survives view navigation, cleared on app restart.
+    var diffStatCache: [UUID: PromptDiffStat] = [:]
 
     var activeTemplate: CommitTemplate? {
         commitTemplates.first(where: \.isActive)

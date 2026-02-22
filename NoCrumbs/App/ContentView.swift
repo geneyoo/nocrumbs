@@ -141,8 +141,14 @@ struct ContentView: View {
         } detail: {
             detail
         }
-        .onAppear { installKeyMonitor() }
+        .onAppear {
+            installKeyMonitor()
+            autoSelectFirstEvent()
+        }
         .onDisappear { removeKeyMonitor() }
+        .onChange(of: database.recentEvents.count) { _, _ in
+            autoSelectFirstEvent()
+        }
         .onChange(of: deepLinkRouter.pendingSessionID) { _, newValue in
             guard newValue != nil else { return }
             navigateToDeepLink()
@@ -333,6 +339,17 @@ struct ContentView: View {
     }
 
     // MARK: - Deep Link Navigation
+
+    private func autoSelectFirstEvent() {
+        guard state.selection == nil else { return }
+        // Select the most recent event from the most recent session
+        guard let session = database.sessions.first else { return }
+        let events = filteredEvents(for: session.id)
+        if let first = events.first {
+            state.expandedSessions.insert(session.id)
+            state.selection = first.id
+        }
+    }
 
     private func navigateToDeepLink() {
         guard let (sessionIDPrefix, eventID) = deepLinkRouter.consume() else { return }

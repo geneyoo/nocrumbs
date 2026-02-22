@@ -196,7 +196,7 @@ struct SessionSummaryView: View {
     private var promptTimelineSection: some View {
         GroupBox {
             LazyVStack(alignment: .leading, spacing: 0) {
-                ForEach(events.reversed()) { event in
+                ForEach(events) { event in
                     promptRow(event)
                     if event.id != events.last?.id {
                         Divider().padding(.leading, 8)

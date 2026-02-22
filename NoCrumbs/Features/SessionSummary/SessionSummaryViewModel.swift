@@ -5,50 +5,48 @@ private let logger = Logger(subsystem: "com.geneyoo.nocrumbs", category: "Sessio
 
 @Observable @MainActor
 final class SessionSummaryViewModel {
-    private(set) var promptDiffStats: [UUID: PromptDiffStat] = [:]
     private(set) var isLoading = false
     private(set) var loadingProgress: (completed: Int, total: Int) = (0, 0)
     private(set) var errors: [UUID: String] = [:]
     private(set) var remoteURL: String?
 
     private var currentSessionID: String?
+    private var loadTask: Task<Void, Never>?
     private let provider: any VCSProvider
 
     init(provider: any VCSProvider = GitProvider()) {
         self.provider = provider
     }
 
-    // MARK: - Computed Aggregates
+    // MARK: - Access (reads from Database cache)
+
+    var promptDiffStats: [UUID: PromptDiffStat] {
+        Database.shared.diffStatCache
+    }
 
     var aggregateAdditions: Int {
-        promptDiffStats.values.reduce(0) { $0 + $1.totalAdditions }
+        currentEventIDs.reduce(0) { sum, id in
+            sum + (Database.shared.diffStatCache[id]?.totalAdditions ?? 0)
+        }
     }
 
     var aggregateDeletions: Int {
-        promptDiffStats.values.reduce(0) { $0 + $1.totalDeletions }
-    }
-
-    var uniqueFileCount: Int {
-        var paths = Set<String>()
-        for stat in promptDiffStats.values {
-            for file in stat.fileStats {
-                paths.insert(file.filePath)
-            }
+        currentEventIDs.reduce(0) { sum, id in
+            sum + (Database.shared.diffStatCache[id]?.totalDeletions ?? 0)
         }
-        return paths.count
     }
 
     var uniqueFiles: [AggregatedFileStat] {
         var byPath: [String: (status: FileDiff.FileStatus, adds: Int, dels: Int, prompts: Set<UUID>)] = [:]
+        let cache = Database.shared.diffStatCache
 
-        // Sort by eventID for deterministic iteration — dictionary order is random
-        for (_, promptStat) in promptDiffStats.sorted(by: { $0.key.uuidString < $1.key.uuidString }) {
+        for id in currentEventIDs {
+            guard let promptStat = cache[id] else { continue }
             for file in promptStat.fileStats {
                 var entry = byPath[file.filePath] ?? (status: file.status, adds: 0, dels: 0, prompts: [])
                 entry.adds += file.additions
                 entry.dels += file.deletions
                 entry.prompts.insert(promptStat.eventID)
-                // Last status wins (a file could be added then modified)
                 entry.status = file.status
                 byPath[file.filePath] = entry
             }
@@ -66,6 +64,12 @@ final class SessionSummaryViewModel {
         .sorted { $0.totalChanges != $1.totalChanges ? $0.totalChanges > $1.totalChanges : $0.filePath < $1.filePath }
     }
 
+    /// Event IDs belonging to the current session (for scoping aggregates).
+    private var currentEventIDs: [UUID] {
+        guard let sid = currentSessionID else { return [] }
+        return Database.shared.eventsForSession(id: sid).map(\.id)
+    }
+
     func commitURL(for hash: String) -> URL? {
         guard let remote = remoteURL else { return nil }
         return RemoteURLParser.commitURL(remoteURL: remote, hash: hash)
@@ -76,39 +80,56 @@ final class SessionSummaryViewModel {
     func load(session: Session, events: [PromptEvent], fileChangesCache: [UUID: [FileChange]]) {
         guard currentSessionID != session.id else { return }
         currentSessionID = session.id
-        promptDiffStats = [:]
         errors = [:]
         remoteURL = nil
-        isLoading = true
 
-        // Fetch remote URL once per session (Git only)
+        // Cancel any in-flight load from a previous session
+        loadTask?.cancel()
+
+        // Fetch remote URL once per session
         if events.first?.vcs == .git, let projectPath = events.first?.projectPath {
             Task {
                 self.remoteURL = try? await GitProvider().remoteURL(at: projectPath)
             }
         }
 
-        let eventsWithChanges = events.filter { event in
+        loadMissing(events: events, fileChangesCache: fileChangesCache, sessionID: session.id)
+    }
+
+    func reloadIfNeeded(session: Session, events: [PromptEvent], fileChangesCache: [UUID: [FileChange]]) {
+        guard currentSessionID == session.id else {
+            load(session: session, events: events, fileChangesCache: fileChangesCache)
+            return
+        }
+        loadMissing(events: events, fileChangesCache: fileChangesCache, sessionID: session.id)
+    }
+
+    private func loadMissing(events: [PromptEvent], fileChangesCache: [UUID: [FileChange]], sessionID: String) {
+        let cache = Database.shared.diffStatCache
+
+        let uncached = events.filter { event in
             event.vcs != nil
                 && event.baseCommitHash != nil
                 && !(fileChangesCache[event.id] ?? []).isEmpty
+                && cache[event.id] == nil
+                && errors[event.id] == nil
         }
 
-        loadingProgress = (0, eventsWithChanges.count)
-
-        guard !eventsWithChanges.isEmpty else {
+        guard !uncached.isEmpty else {
             isLoading = false
             return
         }
 
-        logger.info("Loading diffstats for \(eventsWithChanges.count) events in session \(session.id)")
+        isLoading = true
+        loadingProgress = (0, uncached.count)
 
-        let sessionID = session.id
+        logger.info("Loading diffstats for \(uncached.count) uncached events in session \(sessionID)")
+
         let provider = self.provider
 
-        Task { [weak self] in
+        loadTask = Task { [weak self] in
             await withTaskGroup(of: (UUID, Result<PromptDiffStat, Error>).self) { group in
-                for event in eventsWithChanges {
+                for event in uncached {
                     let changes = fileChangesCache[event.id] ?? []
                     group.addTask {
                         do {
@@ -123,10 +144,10 @@ final class SessionSummaryViewModel {
                 }
 
                 for await (eventID, result) in group {
-                    guard let self, self.currentSessionID == sessionID else { return }
+                    guard let self, !Task.isCancelled, self.currentSessionID == sessionID else { return }
                     switch result {
                     case .success(let stat):
-                        self.promptDiffStats[eventID] = stat
+                        Database.shared.diffStatCache[eventID] = stat
                     case .failure(let error):
                         self.errors[eventID] = error.localizedDescription
                         logger.warning("Failed to load diffstat for event \(eventID): \(error.localizedDescription)")
@@ -135,58 +156,9 @@ final class SessionSummaryViewModel {
                 }
             }
 
-            guard let self, self.currentSessionID == sessionID else { return }
+            guard let self, !Task.isCancelled, self.currentSessionID == sessionID else { return }
             self.isLoading = false
-            logger.info("Loaded \(self.promptDiffStats.count) diffstats, \(self.errors.count) errors")
-        }
-    }
-
-    /// Incremental reload — loads only events not already cached.
-    func reloadIfNeeded(session: Session, events: [PromptEvent], fileChangesCache: [UUID: [FileChange]]) {
-        guard currentSessionID == session.id else {
-            load(session: session, events: events, fileChangesCache: fileChangesCache)
-            return
-        }
-
-        let newEvents = events.filter { event in
-            event.vcs != nil
-                && event.baseCommitHash != nil
-                && !(fileChangesCache[event.id] ?? []).isEmpty
-                && promptDiffStats[event.id] == nil
-                && errors[event.id] == nil
-        }
-
-        guard !newEvents.isEmpty else { return }
-
-        let sessionID = session.id
-        let provider = self.provider
-
-        Task { [weak self] in
-            await withTaskGroup(of: (UUID, Result<PromptDiffStat, Error>).self) { group in
-                for event in newEvents {
-                    let changes = fileChangesCache[event.id] ?? []
-                    group.addTask {
-                        do {
-                            let stat = try await Self.loadDiffStat(
-                                event: event, fileChanges: changes, provider: provider
-                            )
-                            return (event.id, .success(stat))
-                        } catch {
-                            return (event.id, .failure(error))
-                        }
-                    }
-                }
-
-                for await (eventID, result) in group {
-                    guard let self, self.currentSessionID == sessionID else { return }
-                    switch result {
-                    case .success(let stat):
-                        self.promptDiffStats[eventID] = stat
-                    case .failure(let error):
-                        self.errors[eventID] = error.localizedDescription
-                    }
-                }
-            }
+            logger.info("Loaded diffstats, cache now has \(Database.shared.diffStatCache.count) entries")
         }
     }
 
@@ -203,7 +175,7 @@ final class SessionSummaryViewModel {
             .init(
                 session: session,
                 events: events,
-                promptDiffStats: promptDiffStats,
+                promptDiffStats: Database.shared.diffStatCache,
                 uniqueFiles: uniqueFiles,
                 aggregateAdditions: aggregateAdditions,
                 aggregateDeletions: aggregateDeletions,
@@ -213,7 +185,8 @@ final class SessionSummaryViewModel {
 
     func invalidate() {
         currentSessionID = nil
-        promptDiffStats = [:]
+        loadTask?.cancel()
+        loadTask = nil
         errors = [:]
         remoteURL = nil
         isLoading = false

@@ -86,31 +86,40 @@ struct GitProvider: VCSProvider {
 
     private func run(_ command: String, args: [String], at directory: String) async throws -> String {
         try await withCheckedThrowingContinuation { continuation in
-            let process = Process()
-            process.executableURL = URL(fileURLWithPath: "/usr/bin/\(command)")
-            process.arguments = args
-            process.currentDirectoryURL = URL(fileURLWithPath: directory)
+            DispatchQueue.global().async {
+                let process = Process()
+                process.executableURL = URL(fileURLWithPath: "/usr/bin/\(command)")
+                process.arguments = args
+                process.currentDirectoryURL = URL(fileURLWithPath: directory)
 
-            let stdoutPipe = Pipe()
-            let stderrPipe = Pipe()
-            process.standardOutput = stdoutPipe
-            process.standardError = stderrPipe
+                let stdoutPipe = Pipe()
+                let stderrPipe = Pipe()
+                process.standardOutput = stdoutPipe
+                process.standardError = stderrPipe
 
-            do {
-                try process.run()
-            } catch {
-                continuation.resume(throwing: error)
-                return
-            }
+                do {
+                    try process.run()
+                } catch {
+                    continuation.resume(throwing: error)
+                    return
+                }
 
-            process.terminationHandler = { _ in
-                let data = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
-                let output = String(data: data, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                // Read stdout BEFORE waitUntilExit to prevent pipe buffer deadlock.
+                // If git output exceeds ~64KB, the process blocks on write until the
+                // pipe is drained. Reading in terminationHandler = classic deadlock.
+                let stdoutData = stdoutPipe.fileHandleForReading.readDataToEndOfFile()
+                let stderrData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
+                process.waitUntilExit()
+
+                let output =
+                    String(data: stdoutData, encoding: .utf8)?
+                    .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                 if process.terminationStatus == 0 {
                     continuation.resume(returning: output)
                 } else {
-                    let errData = stderrPipe.fileHandleForReading.readDataToEndOfFile()
-                    let stderr = String(data: errData, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
+                    let stderr =
+                        String(data: stderrData, encoding: .utf8)?
+                        .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
                     logger.error("\(command) \(args.joined(separator: " ")) → exit \(process.terminationStatus): \(stderr)")
                     continuation.resume(throwing: VCSError.commandFailed(command, process.terminationStatus, stderr))
                 }
