@@ -58,9 +58,12 @@
 		AA2233445566778899001122 /* GitProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB2233445566778899001122 /* GitProviderTests.swift */; };
 		AA3344556677889900112233 /* DiffViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB3344556677889900112233 /* DiffViewModelTests.swift */; };
 		AA4455667788990011223344 /* VCSDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB4455667788990011223344 /* VCSDetectorTests.swift */; };
+		AA5566778899001122334455 /* DatabaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB5566778899001122334455 /* DatabaseTests.swift */; };
 		DA11AA22BB33CC44DD55EE01 /* AppColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA11AA22BB33CC44DD55EE01 /* AppColors.swift */; };
 		DA11AA22BB33CC44DD55EE02 /* AppFonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA11AA22BB33CC44DD55EE02 /* AppFonts.swift */; };
 		DA11AA22BB33CC44DD55EE03 /* AppScale.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA11AA22BB33CC44DD55EE03 /* AppScale.swift */; };
+		FA11BB22CC33DD44EE55FF01 /* HookHealthChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA11BB22CC33DD44EE55FF01 /* HookHealthChecker.swift */; };
+		FA11BB22CC33DD44EE55FF02 /* SetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA11BB22CC33DD44EE55FF02 /* SetupView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -122,6 +125,7 @@
 		BB2233445566778899001122 /* GitProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitProviderTests.swift; sourceTree = "<group>"; };
 		BB3344556677889900112233 /* DiffViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffViewModelTests.swift; sourceTree = "<group>"; };
 		BB4455667788990011223344 /* VCSDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VCSDetectorTests.swift; sourceTree = "<group>"; };
+		BB5566778899001122334455 /* DatabaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseTests.swift; sourceTree = "<group>"; };
 		BB55CC66DD77EE88FF990011 /* DiffStat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffStat.swift; sourceTree = "<group>"; };
 		BB66DD77EE88FF99AA001122 /* SessionSummaryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionSummaryViewModel.swift; sourceTree = "<group>"; };
 		BB77EE88FF99AA00BB112233 /* SessionSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionSummaryView.swift; sourceTree = "<group>"; };
@@ -129,6 +133,8 @@
 		CA11AA22BB33CC44DD55EE01 /* AppColors.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppColors.swift; sourceTree = "<group>"; };
 		CA11AA22BB33CC44DD55EE02 /* AppFonts.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppFonts.swift; sourceTree = "<group>"; };
 		CA11AA22BB33CC44DD55EE03 /* AppScale.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppScale.swift; sourceTree = "<group>"; };
+		EA11BB22CC33DD44EE55FF01 /* HookHealthChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HookHealthChecker.swift; sourceTree = "<group>"; };
+		EA11BB22CC33DD44EE55FF02 /* SetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -183,6 +189,7 @@
 		AA98B77E378D2004301C9CB7 /* Utilities */ = {
 			isa = PBXGroup;
 			children = (
+				EA11BB22CC33DD44EE55FF01 /* HookHealthChecker.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -319,12 +326,21 @@
 			path = SessionSummary;
 			sourceTree = "<group>";
 		};
+	FA98B77E378D2004301C9CB8 /* Setup */ = {
+			isa = PBXGroup;
+			children = (
+				EA11BB22CC33DD44EE55FF02 /* SetupView.swift */,
+			);
+			path = Setup;
+			sourceTree = "<group>";
+		};
 		EB41E4B38DD9092AAFBF25DF /* Features */ = {
 			isa = PBXGroup;
 			children = (
 				AABB112233445566CCDD7788 /* DiffViewer */,
 				CC99DD00EE11FF22AA334455 /* SessionSummary */,
 				E2F3A4B5C6D7E8F90A1B2C3D /* Settings */,
+				FA98B77E378D2004301C9CB8 /* Setup */,
 			);
 			name = Features;
 			path = NoCrumbs/Features;
@@ -357,6 +373,7 @@
 				BB1122334455667788990011 /* DiffParserTests.swift */,
 				BB2233445566778899001122 /* GitProviderTests.swift */,
 				BB4455667788990011223344 /* VCSDetectorTests.swift */,
+				BB5566778899001122334455 /* DatabaseTests.swift */,
 			);
 			name = Tests;
 			path = NoCrumbsTests;
@@ -507,6 +524,8 @@
 				DA11AA22BB33CC44DD55EE01 /* AppColors.swift in Sources */,
 				DA11AA22BB33CC44DD55EE02 /* AppFonts.swift in Sources */,
 				DA11AA22BB33CC44DD55EE03 /* AppScale.swift in Sources */,
+				FA11BB22CC33DD44EE55FF01 /* HookHealthChecker.swift in Sources */,
+				FA11BB22CC33DD44EE55FF02 /* SetupView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -518,6 +537,7 @@
 				AA2233445566778899001122 /* GitProviderTests.swift in Sources */,
 				AA3344556677889900112233 /* DiffViewModelTests.swift in Sources */,
 				AA4455667788990011223344 /* VCSDetectorTests.swift in Sources */,
+				AA5566778899001122334455 /* DatabaseTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

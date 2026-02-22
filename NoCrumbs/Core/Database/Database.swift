@@ -25,6 +25,11 @@ final class Database {
         dbPath = dir.appendingPathComponent("nocrumbs.sqlite").path
     }
 
+    /// Testable initializer — uses a custom DB path (e.g. temp file or ":memory:")
+    init(path: String) {
+        dbPath = path
+    }
+
     func open() throws {
         guard sqlite3_open(dbPath, &db) == SQLITE_OK else {
             let msg = String(cString: sqlite3_errmsg(db))
@@ -311,6 +316,16 @@ final class Database {
             "UPDATE promptEvents SET baseCommitHash = ? WHERE id = ?",
             bindings: [.text(hash), .text(eventID.uuidString)]
         )
+    }
+
+    /// Backfill promptText on an orphan event (created before prompt arrived).
+    func updatePromptText(_ text: String, forEventID eventID: UUID) throws {
+        try execute(
+            "UPDATE promptEvents SET promptText = ? WHERE id = ?",
+            bindings: [.text(text), .text(eventID.uuidString)]
+        )
+        try loadRecentEvents()
+        logger.info("✅ [DB] Backfilled prompt text for \(eventID.uuidString)")
     }
 
     func deleteSession(id: String) throws {

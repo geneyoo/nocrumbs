@@ -199,6 +199,24 @@ actor SocketServer {
         _ json: [String: Any], sessionID: String, cwd: String, now: Date, db: Database
     ) async {
         let prompt = json["prompt"] as? String
+
+        // Backfill orphan if prompt text is available and an orphan exists for this session
+        if let prompt {
+            let backfilled: Bool = await MainActor.run {
+                if let orphan = db.recentEvents.first(where: { $0.sessionID == sessionID && $0.promptText == nil }) {
+                    do {
+                        try db.updatePromptText(prompt, forEventID: orphan.id)
+                        logger.info("[NC:Socket] Bridged backfill orphan \(orphan.id.uuidString)")
+                        return true
+                    } catch {
+                        logger.error("[NC:Socket] Bridge backfill failed: \(error.localizedDescription)")
+                    }
+                }
+                return false
+            }
+            if backfilled { return }
+        }
+
         let vcsType = VCSDetector.detect(at: cwd)
 
         var baseHash: String?
@@ -347,6 +365,29 @@ actor SocketServer {
         }
 
         let now = Date()
+
+        // Backfill orphan: if a placeholder event exists for this session with nil promptText,
+        // update it instead of creating a duplicate
+        let backfilled: Bool = await MainActor.run {
+            if let orphan = db.recentEvents.first(where: { $0.sessionID == sessionID && $0.promptText == nil }) {
+                do {
+                    try db.updatePromptText(prompt, forEventID: orphan.id)
+                    logger.info("[NC:Socket] Backfilled orphan \(orphan.id.uuidString) with prompt")
+                    return true
+                } catch {
+                    logger.error("[NC:Socket] Backfill failed: \(error.localizedDescription)")
+                }
+            }
+            return false
+        }
+
+        if backfilled {
+            await MainActor.run {
+                try? db.upsertSession(Session(id: sessionID, projectPath: cwd, startedAt: now, lastActivityAt: now))
+            }
+            return
+        }
+
         let vcsType = VCSDetector.detect(at: cwd)
 
         // Capture HEAD hash as diff baseline — if this fails, we still proceed (hash is optional)
