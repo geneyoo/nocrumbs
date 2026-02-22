@@ -452,7 +452,7 @@ The `nocrumbs` CLI (v0.3.0) is invoked by Claude Code hooks.
 - Otherwise, uses built-in default format (summary line + prompt list, respects toggles)
 - Respects `annotation_enabled` setting from app
 - Skips merge/squash commits
-- Won't double-annotate (checks for existing 🍞 marker)
+- Won't double-annotate (checks for existing 🥐 marker)
 
 **`nocrumbs describe`** — pipe per-file change descriptions to app:
 - Reads stdin JSON: `{"session_id": "...", "descriptions": [{"file_path": "...", "description": "..."}]}`
@@ -477,7 +477,7 @@ Simple `{{placeholder}}` syntax for commit annotation templates:
 | `{{prompt_count}}` | Number of prompts |
 | `{{total_files}}` | Total unique files changed |
 | `{{session_id}}` | Session UUID (8-char prefix) |
-| `{{summary_line}}` | Pre-built: `🍞 3 prompts · 12 files · abc12345` |
+| `{{summary_line}}` | Pre-built: `🥐 3 prompts · 12 files · abc12345` |
 | `{{#prompts}}...{{/prompts}}` | Loop over prompts |
 | `{{index}}` | 1-based prompt index (inside loop) |
 | `{{text}}` | Prompt text, truncated to 72 chars (inside loop) |

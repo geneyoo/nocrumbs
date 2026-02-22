@@ -95,7 +95,7 @@ enum AnnotateCommitCommand {
         guard var commitMsg = try? String(contentsOfFile: commitMsgPath, encoding: .utf8) else { return }
 
         // Don't double-annotate
-        guard !commitMsg.contains("🍞") else { return }
+        guard !commitMsg.contains("🥐") else { return }
 
         commitMsg += annotation
         try? commitMsg.write(toFile: commitMsgPath, atomically: true, encoding: .utf8)
@@ -129,7 +129,7 @@ enum AnnotateCommitCommand {
 
         let sessionSuffix = flags.showSessionID ? " · \(sessionID.prefix(8))" : ""
         let summaryLine =
-            "🍞 \(promptCount) prompt\(promptCount == 1 ? "" : "s") · "
+            "🥐 \(promptCount) prompt\(promptCount == 1 ? "" : "s") · "
             + "\(totalFiles) file\(totalFiles == 1 ? "" : "s")"
             + sessionSuffix
 
@@ -188,12 +188,12 @@ enum AnnotateCommitCommand {
         if displayPrompts.count == 1, let prompt = displayPrompts.first {
             let truncated = prompt.text.count > 72 ? String(prompt.text.prefix(69)) + "..." : prompt.text
             let files = "\(totalFiles) file\(totalFiles == 1 ? "" : "s")"
-            return "\n---\n🍞 \(truncated) · \(files)\(sessionSuffix)\(deepLinkSuffix)\n"
+            return "\n---\n🥐 \(truncated) · \(files)\(sessionSuffix)\(deepLinkSuffix)\n"
         }
 
         // Multi-prompt — expanded list
         var annotation = "\n---\n"
-        annotation += "🍞 \(prompts.count) prompt\(prompts.count == 1 ? "" : "s") · "
+        annotation += "🥐 \(prompts.count) prompt\(prompts.count == 1 ? "" : "s") · "
         annotation += "\(totalFiles) file\(totalFiles == 1 ? "" : "s")\(sessionSuffix)\n"
 
         if flags.showPromptList {

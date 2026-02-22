@@ -12,7 +12,7 @@ enum TemplateRenderer {
         var result = template
 
         let summaryLine =
-            "🍞 \(context.promptCount) prompt\(context.promptCount == 1 ? "" : "s") · "
+            "🥐 \(context.promptCount) prompt\(context.promptCount == 1 ? "" : "s") · "
             + "\(context.totalFiles) file\(context.totalFiles == 1 ? "" : "s") · "
             + "\(context.sessionID.prefix(8))"
 

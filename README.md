@@ -50,14 +50,14 @@ Single prompt:
 ```
 refactor: convert auth to async/await
 ---
-🍞 refactor auth to async/await · 4 files · abc12345
+🥐 refactor auth to async/await · 4 files · abc12345
 ```
 
 Multiple prompts:
 ```
 refactor: convert auth to async/await
 ---
-🍞 3 prompts · 8 files · abc12345
+🥐 3 prompts · 8 files · abc12345
 
 1. refactor auth to async/await (3 files)
 2. add error handling to the new async methods (3 files)

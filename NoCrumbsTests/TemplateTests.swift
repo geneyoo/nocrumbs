@@ -23,7 +23,7 @@ final class TemplateRendererTests: XCTestCase {
     func testSummaryLine() {
         let template = "{{summary_line}}"
         let result = TemplateRenderer.render(template, context: sampleContext)
-        XCTAssertEqual(result, "🍞 3 prompts · 8 files · abcdef12")
+        XCTAssertEqual(result, "🥐 3 prompts · 8 files · abcdef12")
     }
 
     func testSummaryLineSingular() {
@@ -32,7 +32,7 @@ final class TemplateRendererTests: XCTestCase {
             prompts: [(text: "fix bug", fileCount: 1)]
         )
         let result = TemplateRenderer.render("{{summary_line}}", context: ctx)
-        XCTAssertEqual(result, "🍞 1 prompt · 1 file · abc12345")
+        XCTAssertEqual(result, "🥐 1 prompt · 1 file · abc12345")
     }
 
     func testPromptLoop() {
@@ -62,7 +62,7 @@ final class TemplateRendererTests: XCTestCase {
     func testNoLoopBlock() {
         let template = "---\n{{summary_line}}"
         let result = TemplateRenderer.render(template, context: sampleContext)
-        XCTAssertEqual(result, "---\n🍞 3 prompts · 8 files · abcdef12")
+        XCTAssertEqual(result, "---\n🥐 3 prompts · 8 files · abcdef12")
     }
 
     func testEmptyPrompts() {
@@ -85,7 +85,7 @@ final class TemplateRendererTests: XCTestCase {
             {{/prompts}}
             """
         let result = TemplateRenderer.render(template, context: sampleContext)
-        XCTAssertTrue(result.contains("🍞 3 prompts · 8 files · abcdef12"))
+        XCTAssertTrue(result.contains("🥐 3 prompts · 8 files · abcdef12"))
         XCTAssertTrue(result.contains("1. refactor auth to async/await (3 files)"))
         XCTAssertTrue(result.contains("3. update tests (2 files)"))
     }
