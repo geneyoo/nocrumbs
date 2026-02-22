@@ -33,6 +33,10 @@
 		913317F929604861AE97FA87 /* DiffTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82DC92447C6446A1BF848CBC /* DiffTheme.swift */; };
 		A727F52251F34B02989F64F8 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7429159932245388144C228 /* ThemeManager.swift */; };
 		E6538BB9AA424D58A373AFFF /* gruvbox-dark.json in Resources */ = {isa = PBXBuildFile; fileRef = 16CC5B04947142E6A122A17A /* gruvbox-dark.json */; };
+		AA55BB66CC77DD88EE990011 /* DiffStat.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB55CC66DD77EE88FF990011 /* DiffStat.swift */; };
+		AA66CC77DD88EE99FF001122 /* SessionSummaryViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB66DD77EE88FF99AA001122 /* SessionSummaryViewModel.swift */; };
+		AA77DD88EE99FF00AA112233 /* SessionSummaryView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB77EE88FF99AA00BB112233 /* SessionSummaryView.swift */; };
+		AA88EE99FF00AA11BB223344 /* SessionStateIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB88FF99AA00BB11CC223344 /* SessionStateIndicator.swift */; };
 		AA1122334455667788990011 /* DiffParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB1122334455667788990011 /* DiffParserTests.swift */; };
 		AA2233445566778899001122 /* GitProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB2233445566778899001122 /* GitProviderTests.swift */; };
 		AA3344556677889900112233 /* DiffViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB3344556677889900112233 /* DiffViewModelTests.swift */; };
@@ -81,6 +85,10 @@
 		BB2233445566778899001122 /* GitProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitProviderTests.swift; sourceTree = "<group>"; };
 		BB3344556677889900112233 /* DiffViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffViewModelTests.swift; sourceTree = "<group>"; };
 		BB4455667788990011223344 /* VCSDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VCSDetectorTests.swift; sourceTree = "<group>"; };
+		BB55CC66DD77EE88FF990011 /* DiffStat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffStat.swift; sourceTree = "<group>"; };
+		BB66DD77EE88FF99AA001122 /* SessionSummaryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionSummaryViewModel.swift; sourceTree = "<group>"; };
+		BB77EE88FF99AA00BB112233 /* SessionSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionSummaryView.swift; sourceTree = "<group>"; };
+		BB88FF99AA00BB11CC223344 /* SessionStateIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionStateIndicator.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -163,9 +171,18 @@
 			path = VCS;
 			sourceTree = "<group>";
 		};
+		DD00EE11FF22AA33BB445566 /* Components */ = {
+			isa = PBXGroup;
+			children = (
+				BB88FF99AA00BB11CC223344 /* SessionStateIndicator.swift */,
+			);
+			path = Components;
+			sourceTree = "<group>";
+		};
 		C260A28EAF9A2AA97C588171 /* UI */ = {
 			isa = PBXGroup;
 			children = (
+				DD00EE11FF22AA33BB445566 /* Components */,
 				E141BB780A574A87AD3EE283 /* Themes */,
 			);
 			name = UI;
@@ -184,6 +201,7 @@
 		CB242500DFFB780C2EEBD47A /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				BB55CC66DD77EE88FF990011 /* DiffStat.swift */,
 				A10564EE9AF457416465F62D /* FileChange.swift */,
 				AA11BB22CC33DD44EE55FF66 /* FileDiff.swift */,
 				5566778899AABB001122EEFF /* HookEvent.swift */,
@@ -224,10 +242,20 @@
 			);
 			sourceTree = "<group>";
 		};
+		CC99DD00EE11FF22AA334455 /* SessionSummary */ = {
+			isa = PBXGroup;
+			children = (
+				BB77EE88FF99AA00BB112233 /* SessionSummaryView.swift */,
+				BB66DD77EE88FF99AA001122 /* SessionSummaryViewModel.swift */,
+			);
+			path = SessionSummary;
+			sourceTree = "<group>";
+		};
 		EB41E4B38DD9092AAFBF25DF /* Features */ = {
 			isa = PBXGroup;
 			children = (
 				AABB112233445566CCDD7788 /* DiffViewer */,
+				CC99DD00EE11FF22AA334455 /* SessionSummary */,
 				E2F3A4B5C6D7E8F90A1B2C3D /* Settings */,
 			);
 			name = Features;
@@ -387,6 +415,10 @@
 				184663C5EAA33A42CA66BBBB /* VCSType.swift in Sources */,
 				913317F929604861AE97FA87 /* DiffTheme.swift in Sources */,
 				A727F52251F34B02989F64F8 /* ThemeManager.swift in Sources */,
+				AA55BB66CC77DD88EE990011 /* DiffStat.swift in Sources */,
+				AA66CC77DD88EE99FF001122 /* SessionSummaryViewModel.swift in Sources */,
+				AA77DD88EE99FF00AA112233 /* SessionSummaryView.swift in Sources */,
+				AA88EE99FF00AA11BB223344 /* SessionStateIndicator.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
