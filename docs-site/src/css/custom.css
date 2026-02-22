@@ -1,37 +1,37 @@
 @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap');
 
 :root {
-  --ifm-color-primary: #e8653a;
-  --ifm-color-primary-dark: #e04f20;
-  --ifm-color-primary-darker: #d44b1e;
-  --ifm-color-primary-darkest: #af3e19;
-  --ifm-color-primary-light: #ec7b54;
-  --ifm-color-primary-lighter: #ee8760;
-  --ifm-color-primary-lightest: #f3a88a;
+  --ifm-color-primary: #5FA876;
+  --ifm-color-primary-dark: #4e9a66;
+  --ifm-color-primary-darker: #468d5d;
+  --ifm-color-primary-darkest: #39744d;
+  --ifm-color-primary-light: #6BB383;
+  --ifm-color-primary-lighter: #7bbb90;
+  --ifm-color-primary-lightest: #9dcbab;
   --ifm-font-family-base: 'Outfit', system-ui, -apple-system, sans-serif;
   --ifm-heading-font-family: 'Outfit', system-ui, -apple-system, sans-serif;
   --ifm-font-family-monospace: 'JetBrains Mono', SFMono-Regular, Menlo, monospace;
 }
 
 [data-theme='dark'] {
-  --ifm-color-primary: #f0845e;
-  --ifm-color-primary-dark: #ed6d40;
-  --ifm-color-primary-darker: #ec6231;
-  --ifm-color-primary-darkest: #d94714;
-  --ifm-color-primary-light: #f39b7c;
-  --ifm-color-primary-lighter: #f4a68b;
-  --ifm-color-primary-lightest: #f9c9b7;
-  --ifm-background-color: #0f1117;
-  --ifm-navbar-background-color: #0f1117;
+  --ifm-color-primary: #7BD0C5;
+  --ifm-color-primary-dark: #62c7ba;
+  --ifm-color-primary-darker: #55c3b4;
+  --ifm-color-primary-darkest: #3baf9f;
+  --ifm-color-primary-light: #94d9d0;
+  --ifm-color-primary-lighter: #a1ddd5;
+  --ifm-color-primary-lightest: #c3eae5;
+  --ifm-background-color: #1a2e26;
+  --ifm-navbar-background-color: #1a2e26;
 }
 
 [data-theme='dark'] .footer {
-  background-color: #080a0e;
+  background-color: #13231c;
 }
 
 /* Hero section */
 .hero--primary {
-  background: linear-gradient(160deg, #0f1117 0%, #1a1520 50%, #0f1117 100%);
+  background: linear-gradient(160deg, #1a2e26 0%, #243d33 50%, #1a2e26 100%);
   padding: 6rem 2rem;
 }
 
@@ -39,6 +39,7 @@
   font-size: 3.5rem;
   font-weight: 700;
   letter-spacing: -0.03em;
+  color: #fff;
 }
 
 .hero__subtitle {
@@ -47,28 +48,37 @@
   opacity: 0.85;
   max-width: 600px;
   margin: 0 auto;
+  color: #A8C5B5;
+}
+
+.hero .button--lg {
+  min-width: 160px;
+  text-align: center;
 }
 
 .hero .button--primary {
-  background-color: var(--ifm-color-primary);
-  border-color: var(--ifm-color-primary);
+  background: linear-gradient(135deg, #7BD0C5, #5FA876);
+  border: none;
+  color: #2D3E35;
+  font-weight: 600;
   transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
 .hero .button--primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 20px rgba(240, 132, 94, 0.4);
+  box-shadow: 0 4px 20px rgba(123, 208, 197, 0.4);
+  color: #2D3E35;
 }
 
 .hero .button--secondary {
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #fff;
+  border: 1px solid rgba(168, 197, 181, 0.4);
+  color: #A8C5B5;
   background: transparent;
-  transition: border-color 0.15s ease;
+  transition: border-color 0.15s ease, color 0.15s ease;
 }
 
 .hero .button--secondary:hover {
-  border-color: rgba(255, 255, 255, 0.6);
+  border-color: rgba(168, 197, 181, 0.7);
   color: #fff;
 }
 
@@ -81,10 +91,10 @@
 }
 
 .install-hint code {
-  background: rgba(255, 255, 255, 0.08);
+  background: rgba(168, 197, 181, 0.08);
   padding: 0.35rem 0.75rem;
   border-radius: 6px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(168, 197, 181, 0.15);
 }
 
 /* Feature cards */
@@ -93,8 +103,8 @@
 }
 
 .feature-card {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(168, 197, 181, 0.04);
+  border: 1px solid rgba(168, 197, 181, 0.1);
   border-radius: 12px;
   padding: 2rem;
   backdrop-filter: blur(10px);
@@ -102,8 +112,8 @@
 }
 
 .feature-card:hover {
-  border-color: rgba(240, 132, 94, 0.3);
-  box-shadow: 0 4px 24px rgba(240, 132, 94, 0.08);
+  border-color: rgba(123, 208, 197, 0.3);
+  box-shadow: 0 4px 24px rgba(123, 208, 197, 0.08);
 }
 
 .feature-card h3 {
@@ -116,13 +126,13 @@
   line-height: 1.6;
 }
 
-/* Light mode feature cards */
+/* Light mode overrides */
 [data-theme='light'] .feature-card {
-  background: rgba(0, 0, 0, 0.02);
-  border-color: rgba(0, 0, 0, 0.08);
+  background: rgba(95, 168, 118, 0.04);
+  border-color: rgba(95, 168, 118, 0.12);
 }
 
 [data-theme='light'] .feature-card:hover {
-  border-color: rgba(232, 101, 58, 0.3);
-  box-shadow: 0 4px 24px rgba(232, 101, 58, 0.08);
+  border-color: rgba(95, 168, 118, 0.3);
+  box-shadow: 0 4px 24px rgba(95, 168, 118, 0.08);
 }
