@@ -6,6 +6,7 @@ struct DiffTextView: NSViewRepresentable {
     let side: Side
     var scrollSync: DiffScrollSync?
     var fileExtension: String = ""
+    var theme: DiffTheme
 
     enum Side { case left, right }
 
@@ -22,7 +23,7 @@ struct DiffTextView: NSViewRepresentable {
         textView.isRichText = true
         textView.usesFindPanel = true
         textView.drawsBackground = true
-        textView.backgroundColor = .textBackgroundColor
+        textView.backgroundColor = theme.editorBgColor
         textView.textContainerInset = NSSize(width: 4, height: 4)
         textView.isVerticallyResizable = true
         textView.isHorizontallyResizable = false
@@ -41,6 +42,8 @@ struct DiffTextView: NSViewRepresentable {
         guard let textView = scrollView.documentView as? DiffNSTextView else { return }
         textView.lineData = lines
         textView.diffSide = side
+        textView.lineNumberColor = theme.lineNumberFgColor
+        textView.backgroundColor = theme.editorBgColor
         applyAttributedContent(to: textView)
     }
 
@@ -60,19 +63,19 @@ struct DiffTextView: NSViewRepresentable {
                 text = line.text
                 switch line.type {
                 case .addition:
-                    bgColor = NSColor.systemGreen.withAlphaComponent(0.12)
-                    fgColor = .textColor
+                    bgColor = theme.additionBgColor
+                    fgColor = theme.editorFgColor
                 case .deletion:
-                    bgColor = NSColor.systemRed.withAlphaComponent(0.12)
-                    fgColor = .textColor
+                    bgColor = theme.deletionBgColor
+                    fgColor = theme.editorFgColor
                 case .context:
-                    bgColor = .clear
-                    fgColor = .textColor
+                    bgColor = theme.contextBgColor
+                    fgColor = theme.editorFgColor
                 }
             } else {
                 text = ""
-                bgColor = NSColor.separatorColor.withAlphaComponent(0.05)
-                fgColor = .tertiaryLabelColor
+                bgColor = theme.emptyLineBgColor
+                fgColor = theme.lineNumberFgColor
             }
 
             let lineStr = text + (index < lines.count - 1 ? "\n" : "")
@@ -89,7 +92,7 @@ struct DiffTextView: NSViewRepresentable {
 
         // Overlay syntax highlighting colors
         if !fileExtension.isEmpty {
-            SyntaxHighlighter.highlight(fullString, fileExtension: fileExtension, lineRanges: lineRanges)
+            SyntaxHighlighter.highlight(fullString, fileExtension: fileExtension, lineRanges: lineRanges, theme: theme)
         }
 
         textStorage.beginEditing()
@@ -103,6 +106,7 @@ struct DiffTextView: NSViewRepresentable {
 final class DiffNSTextView: NSTextView {
     var lineData: [DiffLine?] = []
     var diffSide: DiffTextView.Side = .left
+    var lineNumberColor: NSColor = .tertiaryLabelColor
 
     override func draw(_ dirtyRect: NSRect) {
         super.draw(dirtyRect)
@@ -116,7 +120,7 @@ final class DiffNSTextView: NSTextView {
         let font = NSFont.monospacedSystemFont(ofSize: 10, weight: .regular)
         let attrs: [NSAttributedString.Key: Any] = [
             .font: font,
-            .foregroundColor: NSColor.tertiaryLabelColor,
+            .foregroundColor: lineNumberColor,
         ]
 
         let inset = textContainerInset

@@ -4,12 +4,15 @@ import SwiftUI
 struct NoCrumbsApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate // swiftlint:disable:this weak_delegate
     @State private var database = Database.shared
+    @State private var themeManager = ThemeManager.shared
     @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
         Window("NoCrumbs", id: "main") {
             ContentView()
                 .environment(database)
+                .environment(themeManager)
+                .onAppear { themeManager.loadBundledThemes() }
         }
         .defaultSize(width: 1000, height: 700)
 

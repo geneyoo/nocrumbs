@@ -1,0 +1,20 @@
+{
+    "name": "Gruvbox Dark",
+    "background": "#282828",
+    "foreground": "#ebdbb2",
+    "addedLine": "#b8bb26",
+    "removedLine": "#fb4934",
+    "addedBackground": "#32361a",
+    "removedBackground": "#3c1f1e",
+    "lineNumber": "#928374",
+    "hunkHeader": "#83a598",
+    "contextBackground": "#1d2021",
+    "emptyLineBackground": "#1d2021",
+    "comment": "#928374",
+    "string": "#b8bb26",
+    "keyword": "#fb4934",
+    "type": "#fabd2f",
+    "number": "#d3869b",
+    "preprocessor": "#fe8019",
+    "property": "#83a598"
+}

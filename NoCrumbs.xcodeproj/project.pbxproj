@@ -29,6 +29,9 @@
 		44DD55EE66FF112233AABB44 /* DiffDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD44EE55FF6611223344AABB /* DiffDetailView.swift */; };
 		55EE66FF1122AABB33CC4455 /* DiffTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE55FF66112233AABB44CC55 /* DiffTextView.swift */; };
 		66FF112233AABB44CC5566DD /* DiffScrollSync.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF6611223344AABB55CC66DD /* DiffScrollSync.swift */; };
+		913317F929604861AE97FA87 /* DiffTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82DC92447C6446A1BF848CBC /* DiffTheme.swift */; };
+		A727F52251F34B02989F64F8 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7429159932245388144C228 /* ThemeManager.swift */; };
+		E6538BB9AA424D58A373AFFF /* gruvbox-dark.json in Resources */ = {isa = PBXBuildFile; fileRef = 16CC5B04947142E6A122A17A /* gruvbox-dark.json */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -65,6 +68,9 @@
 		DD44EE55FF6611223344AABB /* DiffDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffDetailView.swift; sourceTree = "<group>"; };
 		EE55FF66112233AABB44CC55 /* DiffTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffTextView.swift; sourceTree = "<group>"; };
 		FF6611223344AABB55CC66DD /* DiffScrollSync.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffScrollSync.swift; sourceTree = "<group>"; };
+		82DC92447C6446A1BF848CBC /* DiffTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffTheme.swift; sourceTree = "<group>"; };
+		F7429159932245388144C228 /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
+		16CC5B04947142E6A122A17A /* gruvbox-dark.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "gruvbox-dark.json"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -150,9 +156,19 @@
 		C260A28EAF9A2AA97C588171 /* UI */ = {
 			isa = PBXGroup;
 			children = (
+				E141BB780A574A87AD3EE283 /* Themes */,
 			);
 			name = UI;
 			path = NoCrumbs/UI;
+			sourceTree = "<group>";
+		};
+		E141BB780A574A87AD3EE283 /* Themes */ = {
+			isa = PBXGroup;
+			children = (
+				82DC92447C6446A1BF848CBC /* DiffTheme.swift */,
+				F7429159932245388144C228 /* ThemeManager.swift */,
+			);
+			path = Themes;
 			sourceTree = "<group>";
 		};
 		CB242500DFFB780C2EEBD47A /* Models */ = {
@@ -167,12 +183,30 @@
 			path = Models;
 			sourceTree = "<group>";
 		};
+		0EF4D1AF682A44028B5883C4 /* Themes */ = {
+			isa = PBXGroup;
+			children = (
+				16CC5B04947142E6A122A17A /* gruvbox-dark.json */,
+			);
+			path = Themes;
+			sourceTree = "<group>";
+		};
+		87622775A1FE4539B53BC1D2 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				0EF4D1AF682A44028B5883C4 /* Themes */,
+			);
+			name = Resources;
+			path = NoCrumbs/Resources;
+			sourceTree = "<group>";
+		};
 		D7C15A1A809FDE90F81802F3 = {
 			isa = PBXGroup;
 			children = (
 				6211C7DCFC6FBBEE9801D178 /* App */,
 				B2EAFE23A7C76371D648260F /* Core */,
 				EB41E4B38DD9092AAFBF25DF /* Features */,
+				87622775A1FE4539B53BC1D2 /* Resources */,
 				FCBEDC9D97CFEF4FEA1FD7AD /* Tests */,
 				C260A28EAF9A2AA97C588171 /* UI */,
 				4565555D11DA1EFCC3C578F5 /* Products */,
@@ -244,6 +278,7 @@
 			buildPhases = (
 				1903300E880AB186ADDE2C37 /* Sources */,
 				7153A4A91F4F918DF3A002BB /* Frameworks */,
+				5B5057509CD94B9C959DE07C /* Resources */,
 			);
 			buildRules = (
 			);
@@ -297,6 +332,17 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		5B5057509CD94B9C959DE07C /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E6538BB9AA424D58A373AFFF /* gruvbox-dark.json in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		1903300E880AB186ADDE2C37 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -323,6 +369,8 @@
 				E5439CA1FB677D97447268AE /* VCSDetector.swift in Sources */,
 				70E7223E6442AAB1656BE297 /* VCSProvider.swift in Sources */,
 				184663C5EAA33A42CA66BBBB /* VCSType.swift in Sources */,
+				913317F929604861AE97FA87 /* DiffTheme.swift in Sources */,
+				A727F52251F34B02989F64F8 /* ThemeManager.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

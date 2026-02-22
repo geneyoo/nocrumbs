@@ -3,9 +3,14 @@ import SwiftUI
 struct DiffDetailView: View {
     let event: PromptEvent
     @Environment(Database.self) private var database
+    @Environment(ThemeManager.self) private var themeManager
     @State private var viewModel = DiffViewModel()
     @State private var scrollSync = DiffScrollSync()
     @State private var isFileListVisible = true
+
+    private var theme: DiffTheme? {
+        themeManager.currentTheme
+    }
 
     private var fileChanges: [FileChange] {
         database.fileChangesCache[event.id] ?? []
@@ -144,12 +149,15 @@ struct DiffDetailView: View {
         case .added:
             placeholderPane("File did not exist")
         case .deleted, .modified:
-            DiffTextView(
-                lines: viewModel.linePairs.map(\.left),
-                side: .left,
-                scrollSync: file.status == .modified ? scrollSync : nil,
-                fileExtension: file.fileExtension
-            )
+            if let theme {
+                DiffTextView(
+                    lines: viewModel.linePairs.map(\.left),
+                    side: .left,
+                    scrollSync: file.status == .modified ? scrollSync : nil,
+                    fileExtension: file.fileExtension,
+                    theme: theme
+                )
+            }
         }
     }
 
@@ -159,21 +167,27 @@ struct DiffDetailView: View {
         case .deleted:
             placeholderPane("File was deleted")
         case .added, .modified:
-            DiffTextView(
-                lines: viewModel.linePairs.map(\.right),
-                side: .right,
-                scrollSync: file.status == .modified ? scrollSync : nil,
-                fileExtension: file.fileExtension
-            )
+            if let theme {
+                DiffTextView(
+                    lines: viewModel.linePairs.map(\.right),
+                    side: .right,
+                    scrollSync: file.status == .modified ? scrollSync : nil,
+                    fileExtension: file.fileExtension,
+                    theme: theme
+                )
+            }
         }
     }
 
+    @ViewBuilder
     private func placeholderPane(_ text: String) -> some View {
+        let fg: Color = theme.map { Color(nsColor: $0.lineNumberFgColor) } ?? Color.secondary
+        let bg: Color = theme.map { Color(nsColor: $0.editorBgColor) } ?? Color(nsColor: .controlBackgroundColor).opacity(0.5)
         Text(text)
             .font(.callout)
-            .foregroundStyle(.tertiary)
+            .foregroundStyle(fg)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(Color(nsColor: .controlBackgroundColor).opacity(0.5))
+            .background(bg)
     }
 
     // MARK: - States
