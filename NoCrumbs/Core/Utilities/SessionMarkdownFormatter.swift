@@ -24,7 +24,11 @@ enum SessionMarkdownFormatter {
         let duration = formattedDuration(from: session.startedAt, to: session.lastActivityAt)
         let timeRange = formattedTimeRange(from: session.startedAt, to: session.lastActivityAt)
 
-        lines.append("## Session: \(shortID)")
+        if let name = session.customName {
+            lines.append("## Session: \(name)")
+        } else {
+            lines.append("## Session: \(shortID)")
+        }
         lines.append("**Project:** \(projectName)")
         lines.append("**Duration:** \(timeRange) (\(duration))")
 

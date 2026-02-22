@@ -216,6 +216,12 @@ final class Database {  // swiftlint:disable:this type_body_length
             setUserVersion(7)
             logger.info("🔄 [DB] Migrated to v7 (fileChange descriptions)")
         }
+
+        if version < 8 {
+            exec("ALTER TABLE sessions ADD COLUMN customName TEXT")
+            setUserVersion(8)
+            logger.info("🔄 [DB] Migrated to v8 (session customName)")
+        }
     }
 
     // MARK: - CRUD: Sessions
@@ -234,13 +240,11 @@ final class Database {  // swiftlint:disable:this type_body_length
                 .double(session.startedAt.timeIntervalSince1970),
                 .double(session.lastActivityAt.timeIntervalSince1970),
             ])
-        // Inline cache update instead of full reload
+        // Inline cache update instead of full reload — preserve existing customName
         if let idx = sessions.firstIndex(where: { $0.id == session.id }) {
-            sessions[idx] = Session(
-                id: session.id, projectPath: session.projectPath,
-                startedAt: sessions[idx].startedAt,
-                lastActivityAt: session.lastActivityAt
-            )
+            var updated = sessions[idx]
+            updated.lastActivityAt = session.lastActivityAt
+            sessions[idx] = updated
         } else {
             sessions.insert(session, at: 0)
         }
@@ -429,6 +433,17 @@ final class Database {  // swiftlint:disable:this type_body_length
         logger.info("✅ [DB] Updated description for \(filePath)")
     }
 
+    func updateSessionName(_ name: String?, sessionID: String) throws {
+        try execute(
+            "UPDATE sessions SET customName = ? WHERE id = ?",
+            bindings: [name.map { .text($0) } ?? .null, .text(sessionID)]
+        )
+        if let idx = sessions.firstIndex(where: { $0.id == sessionID }) {
+            sessions[idx].customName = name
+        }
+        logger.info("✅ [DB] Updated session name for \(sessionID.prefix(8))")
+    }
+
     func deleteSession(id: String) throws {
         try execute("DELETE FROM sessions WHERE id = ?", bindings: [.text(id)])
         // Full reload needed — cascade deletes events + file changes + hook events
@@ -591,13 +606,14 @@ final class Database {  // swiftlint:disable:this type_body_length
 
     private func loadSessions() throws {
         sessions = try query(
-            "SELECT id, projectPath, startedAt, lastActivityAt FROM sessions ORDER BY lastActivityAt DESC"
+            "SELECT id, projectPath, startedAt, lastActivityAt, customName FROM sessions ORDER BY lastActivityAt DESC"
         ) { stmt in
             Session(
                 id: columnText(stmt, 0),
                 projectPath: columnText(stmt, 1),
                 startedAt: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 2)),
-                lastActivityAt: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 3))
+                lastActivityAt: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 3)),
+                customName: sqlite3_column_text(stmt, 4).map { String(cString: $0) }
             )
         }
     }

@@ -14,6 +14,7 @@ guard args.count >= 2 else {
     print("  nocrumbs install             Install Claude Code hooks")
     print("  nocrumbs install-git-hooks   Install prepare-commit-msg git hook")
     print("  nocrumbs describe            Pipe per-file change descriptions to app")
+    print("  nocrumbs rename-session      Rename a session (pipe JSON with session_id + name)")
     print("  nocrumbs template            Manage commit annotation templates")
     print("  nocrumbs --version           Show version")
     exit(0)
@@ -39,6 +40,8 @@ do {
         try InstallGitHooksCommand.run()
     case "describe":
         try DescribeCommand.run()
+    case "rename-session":
+        try RenameSessionCommand.run()
     case "template":
         try TemplateCommand.run()
     default:

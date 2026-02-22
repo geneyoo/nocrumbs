@@ -130,6 +130,9 @@ actor SocketServer {
         case "file-descriptions":
             close(clientFD)
             await handleFileDescriptions(json, db: db)
+        case "session-rename":
+            close(clientFD)
+            await handleSessionRename(json, db: db)
         case "query-prompts":
             await handleQueryPrompts(json, db: db, clientFD: clientFD)
         case "template":
@@ -342,6 +345,26 @@ actor SocketServer {
         }
 
         logger.info("[NC:Socket] Updated \(descriptions.count) file descriptions for session \(sessionID.prefix(8))")
+    }
+
+    private func handleSessionRename(_ json: [String: Any], db: Database) async {
+        guard let sessionID = json["session_id"] as? String else {
+            logger.warning("[NC:Socket] Malformed session-rename message")
+            return
+        }
+
+        // Empty string or missing → clear custom name
+        let name: String? = (json["name"] as? String).flatMap { $0.isEmpty ? nil : $0 }
+
+        await MainActor.run {
+            do {
+                try db.updateSessionName(name, sessionID: sessionID)
+            } catch {
+                logger.error("[NC:Socket] Failed to rename session: \(error.localizedDescription)")
+            }
+        }
+
+        logger.info("[NC:Socket] Renamed session \(sessionID.prefix(8)) to \(name ?? "(cleared)")")
     }
 
     private func handleQueryPrompts(_ json: [String: Any], db: Database, clientFD: Int32) async {

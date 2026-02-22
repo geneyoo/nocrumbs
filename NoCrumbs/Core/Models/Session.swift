@@ -5,6 +5,7 @@ struct Session: Identifiable, Codable, Equatable, Sendable {
     let projectPath: String
     let startedAt: Date
     var lastActivityAt: Date
+    var customName: String?
 }
 
 enum SessionState: Equatable, Sendable {

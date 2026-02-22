@@ -4,30 +4,18 @@
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>en</string>
+	<key>CFBundleDisplayName</key>
+	<string>NoCrumbs</string>
 	<key>CFBundleExecutable</key>
 	<string>$(EXECUTABLE_NAME)</string>
 	<key>CFBundleIdentifier</key>
 	<string>$(PRODUCT_BUNDLE_IDENTIFIER)</string>
 	<key>CFBundleName</key>
 	<string>NoCrumbs</string>
-	<key>CFBundleDisplayName</key>
-	<string>NoCrumbs</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
 	<string>0.1.0</string>
-	<key>CFBundleVersion</key>
-	<string>1</string>
-	<key>LSUIElement</key>
-	<true/>
-	<key>LSMinimumSystemVersion</key>
-	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
-	<key>SUFeedURL</key>
-	<string>https://nocrumbs.ai/appcast.xml</string>
-	<key>SUPublicEDKey</key>
-	<string>2ecpQfTbR1kwYczt4tA/SlS/IsXrolUy3ywGOYqGQK4=</string>
-	<key>SUEnableAutomaticChecks</key>
-	<true/>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
@@ -39,5 +27,17 @@
 			</array>
 		</dict>
 	</array>
+	<key>CFBundleVersion</key>
+	<string>202602221820</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
+	<key>LSUIElement</key>
+	<true/>
+	<key>SUEnableAutomaticChecks</key>
+	<true/>
+	<key>SUFeedURL</key>
+	<string>https://nocrumbs.ai/appcast.xml</string>
+	<key>SUPublicEDKey</key>
+	<string>2ecpQfTbR1kwYczt4tA/SlS/IsXrolUy3ywGOYqGQK4=</string>
 </dict>
 </plist>
