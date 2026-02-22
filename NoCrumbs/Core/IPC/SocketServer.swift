@@ -117,6 +117,9 @@ actor SocketServer {
         let db = await MainActor.run { Database.shared }
 
         switch type {
+        case "event":
+            close(clientFD)
+            await handleEvent(json, db: db)
         case "prompt":
             close(clientFD)
             await handlePrompt(json, db: db)
@@ -128,6 +131,163 @@ actor SocketServer {
         default:
             logger.warning("[NC:Socket] Unknown type: \(type)")
             close(clientFD)
+        }
+    }
+
+    // MARK: - Generic Event Handler
+
+    private func handleEvent(_ json: [String: Any], db: Database) async {
+        guard let sessionID = json["session_id"] as? String,
+              let hookEventName = json["hook_event_name"] as? String,
+              let cwd = json["cwd"] as? String else {
+            logger.warning("[NC:Socket] Malformed event message")
+            return
+        }
+
+        let now = Date()
+
+        // Build payload JSON from remaining interesting fields
+        var payloadDict: [String: Any] = [:]
+        let payloadKeys = ["prompt", "tool_name", "tool_input", "stop_hook_active", "agent_id", "agent_type"]
+        for key in payloadKeys {
+            if let value = json[key] { payloadDict[key] = value }
+        }
+        let payloadJSON: String? = payloadDict.isEmpty ? nil : {
+            guard let data = try? JSONSerialization.data(withJSONObject: payloadDict) else { return nil }
+            return String(data: data, encoding: .utf8)
+        }()
+
+        let hookEvent = HookEvent(
+            id: UUID(),
+            sessionID: sessionID,
+            hookEventName: hookEventName,
+            projectPath: cwd,
+            timestamp: now,
+            payload: payloadJSON
+        )
+
+        let session = Session(id: sessionID, projectPath: cwd, startedAt: now, lastActivityAt: now)
+
+        await MainActor.run {
+            do {
+                try db.upsertSession(session)
+                try db.insertHookEvent(hookEvent)
+            } catch {
+                logger.error("[NC:Socket] DB error (event): \(error.localizedDescription)")
+            }
+        }
+
+        // Bridge to legacy tables for backward compat
+        switch hookEventName {
+        case "UserPromptSubmit":
+            await bridgePromptEvent(json, sessionID: sessionID, cwd: cwd, now: now, db: db)
+        case "PostToolUse":
+            await bridgeFileChange(json, sessionID: sessionID, cwd: cwd, now: now, db: db)
+        default:
+            break
+        }
+
+        logger.info("[NC:Socket] Stored event \(hookEventName) for session \(sessionID.prefix(8))")
+    }
+
+    private func bridgePromptEvent(
+        _ json: [String: Any], sessionID: String, cwd: String, now: Date, db: Database
+    ) async {
+        let prompt = json["prompt"] as? String
+        let vcsType = VCSDetector.detect(at: cwd)
+
+        var baseHash: String?
+        if vcsType == .git {
+            baseHash = try? await GitProvider().currentHead(at: cwd)
+        }
+
+        let event = PromptEvent(
+            id: UUID(),
+            sessionID: sessionID,
+            projectPath: cwd,
+            promptText: prompt,
+            timestamp: now,
+            vcs: vcsType,
+            baseCommitHash: baseHash
+        )
+
+        await MainActor.run {
+            do {
+                try db.insertPromptEvent(event)
+                logger.info("[NC:Socket] Bridged prompt event \(event.id.uuidString)")
+            } catch {
+                logger.error("[NC:Socket] Bridge prompt error: \(error.localizedDescription)")
+            }
+        }
+    }
+
+    private func bridgeFileChange(
+        _ json: [String: Any], sessionID: String, cwd: String, now: Date, db: Database
+    ) async {
+        let toolName = json["tool_name"] as? String ?? "unknown"
+
+        // Only bridge Write/Edit tools with a file_path
+        guard toolName == "Write" || toolName == "Edit",
+              let toolInput = json["tool_input"] as? [String: Any],
+              let filePath = toolInput["file_path"] as? String else {
+            return
+        }
+
+        let eventID: UUID? = await MainActor.run {
+            db.recentEvents.first(where: { $0.sessionID == sessionID })?.id
+        }
+
+        guard let eventID else {
+            // No prompt event yet — create placeholder (same as legacy handleChange)
+            let vcsType = VCSDetector.detect(at: cwd)
+            var baseHash: String?
+            if vcsType == .git {
+                baseHash = try? await GitProvider().currentHead(at: cwd)
+            }
+            let placeholderEvent = PromptEvent(
+                id: UUID(),
+                sessionID: sessionID,
+                projectPath: cwd,
+                promptText: nil,
+                timestamp: now,
+                vcs: vcsType,
+                baseCommitHash: baseHash
+            )
+            let change = FileChange(
+                id: UUID(),
+                eventID: placeholderEvent.id,
+                filePath: filePath,
+                toolName: toolName,
+                timestamp: now
+            )
+
+            await MainActor.run {
+                do {
+                    try db.insertPromptEvent(placeholderEvent)
+                    try db.insertFileChange(change)
+                    logger.info("[NC:Socket] Bridged orphaned change \(filePath)")
+                } catch {
+                    logger.error("[NC:Socket] Bridge orphan error: \(error.localizedDescription)")
+                }
+            }
+            return
+        }
+
+        let change = FileChange(
+            id: UUID(),
+            eventID: eventID,
+            filePath: filePath,
+            toolName: toolName,
+            timestamp: now
+        )
+
+        await MainActor.run {
+            do {
+                try db.insertFileChange(change)
+                logger.info("[NC:Socket] Bridged change \(filePath)")
+            } catch {
+                logger.error("[NC:Socket] Bridge change error: \(error.localizedDescription)")
+            }
         }
     }
 

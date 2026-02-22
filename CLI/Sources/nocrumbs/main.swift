@@ -1,14 +1,15 @@
 import Foundation
 
-let version = "0.2.0"
+let version = "0.3.0"
 let args = CommandLine.arguments
 
 guard args.count >= 2 else {
     print("nocrumbs \(version) — git blame for the AI era")
     print("")
     print("Usage:")
-    print("  nocrumbs capture-prompt      Pipe from UserPromptSubmit hook stdin")
-    print("  nocrumbs capture-change      Pipe from PostToolUse hook stdin")
+    print("  nocrumbs event               Pipe any Claude Code hook event to app")
+    print("  nocrumbs capture-prompt      (legacy) Pipe from UserPromptSubmit hook")
+    print("  nocrumbs capture-change      (legacy) Pipe from PostToolUse hook")
     print("  nocrumbs annotate-commit     Annotate commit message (git hook)")
     print("  nocrumbs install             Install Claude Code hooks")
     print("  nocrumbs install-git-hooks   Install prepare-commit-msg git hook")
@@ -22,6 +23,8 @@ do {
     switch command {
     case "--version":
         print("nocrumbs \(version)")
+    case "event":
+        try CaptureEventCommand.run()
     case "capture-prompt":
         try CapturePromptCommand.run()
     case "capture-change":

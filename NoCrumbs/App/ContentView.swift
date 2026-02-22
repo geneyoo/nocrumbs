@@ -43,10 +43,10 @@ struct ContentView: View {
         }
     }
 
-    private func isLiveEvent(_ event: PromptEvent) -> Bool {
+    /// Only the most recent event in a session shows state indicators.
+    private func isLatestEvent(_ event: PromptEvent) -> Bool {
         let allEvents = database.eventsForSession(id: event.sessionID)
-        guard allEvents.first?.id == event.id else { return false }
-        return (database.fileChangesCache[event.id] ?? []).isEmpty
+        return allEvents.first?.id == event.id
     }
 
     private var flatItems: [SidebarItem] {
@@ -130,79 +130,85 @@ struct ContentView: View {
         }
     }
 
-    /// Row view — using `if/else` to return the SAME view type (VStack) for all cases.
-    /// This avoids _ConditionalContent which breaks tag resolution in List.
     private func row(for item: SidebarItem) -> some View {
         VStack(alignment: .leading, spacing: 2) {
             if item.kind == .session, let session = item.session {
-                let events = filteredEvents(for: session.id)
-                let eventCount = events.count
-                let firstPrompt = events.first?.promptText
-                let expanded = state.expandedSessions.contains(session.id)
-                HStack(spacing: 4) {
-                    Image(systemName: "chevron.right")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
-                        .rotationEffect(.degrees(expanded ? 90 : 0))
-                        .animation(.smooth(duration: 0.2), value: expanded)
-                        .frame(width: 16, height: 16)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            withAnimation(.smooth(duration: 0.25)) {
-                                if expanded {
-                                    state.expandedSessions.remove(session.id)
-                                } else {
-                                    state.expandedSessions.insert(session.id)
-                                }
-                            }
-                        }
-                    Image(systemName: "folder\(expanded ? ".fill" : "")")
-                        .foregroundStyle(.secondary)
-                        .frame(width: 16)
-                    VStack(alignment: .leading, spacing: 2) {
-                        HStack(spacing: 4) {
-                            Text((session.projectPath as NSString).lastPathComponent)
-                                .font(.callout.weight(.medium))
-                            if let firstPrompt {
-                                Text("·")
-                                    .foregroundStyle(.quaternary)
-                                Text(firstPrompt)
-                                    .lineLimit(1)
-                                    .foregroundStyle(.secondary)
-                            }
-                        }
-                        .font(.callout)
-                        Text("\(eventCount) prompt\(eventCount == 1 ? "" : "s") · \(session.startedAt, format: .relative(presentation: .named))")
-                            .font(.caption2)
-                            .foregroundStyle(.tertiary)
-                    }
-                }
+                sessionRow(session)
             } else if let event = item.event {
-                let fileCount = database.fileChangesCache[event.id]?.count ?? 0
-                let live = isLiveEvent(event)
-                Text(event.promptText ?? "(no prompt)")
-                    .lineLimit(2)
-                    .font(.callout)
-                HStack(spacing: 6) {
-                    if live {
-                        LiveDot()
-                        Text("Live")
-                            .font(.caption2.weight(.medium))
-                            .foregroundStyle(.green)
-                    } else {
-                        Text(event.timestamp, style: .time)
-                        if fileCount > 0 {
-                            Label("\(fileCount)", systemImage: "doc")
-                        }
-                    }
-                }
-                .font(.caption2)
-                .foregroundStyle(.secondary)
+                eventRow(event)
             }
         }
         .padding(.vertical, 2)
         .padding(.leading, item.kind == .event ? 20 : 0)
         .tag(item.id)
+    }
+
+    @ViewBuilder
+    private func sessionRow(_ session: Session) -> some View {
+        let events = filteredEvents(for: session.id)
+        let eventCount = events.count
+        let firstPrompt = events.first?.promptText
+        let expanded = state.expandedSessions.contains(session.id)
+        HStack(spacing: 4) {
+            Image(systemName: "chevron.right")
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
+                .rotationEffect(.degrees(expanded ? 90 : 0))
+                .animation(.smooth(duration: 0.2), value: expanded)
+                .frame(width: 16, height: 16)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation(.smooth(duration: 0.25)) {
+                        if expanded {
+                            state.expandedSessions.remove(session.id)
+                        } else {
+                            state.expandedSessions.insert(session.id)
+                        }
+                    }
+                }
+            Image(systemName: "folder\(expanded ? ".fill" : "")")
+                .foregroundStyle(.secondary)
+                .frame(width: 16)
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 4) {
+                    let sState = database.sessionState(for: session.id)
+                    if sState == .live {
+                        Circle().fill(.green).frame(width: 6, height: 6)
+                    } else if sState == .interrupted {
+                        Circle().fill(.orange).frame(width: 6, height: 6)
+                    }
+                    Text((session.projectPath as NSString).lastPathComponent)
+                        .font(.callout.weight(.medium))
+                    if let firstPrompt {
+                        Text("·").foregroundStyle(.quaternary)
+                        Text(firstPrompt).lineLimit(1).foregroundStyle(.secondary)
+                    }
+                }
+                .font(.callout)
+                Text("\(eventCount) prompt\(eventCount == 1 ? "" : "s") · \(session.startedAt, format: .relative(presentation: .named))")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func eventRow(_ event: PromptEvent) -> some View {
+        let fileCount = database.fileChangesCache[event.id]?.count ?? 0
+        let showState = isLatestEvent(event)
+        let sState = showState ? database.sessionState(for: event.sessionID) : .idle
+        Text(event.promptText ?? "(no prompt)")
+            .lineLimit(2)
+            .font(.callout)
+        HStack(spacing: 6) {
+            SessionStateIndicator(state: sState)
+            Text(event.timestamp, style: .time)
+            if fileCount > 0 {
+                Label("\(fileCount)", systemImage: "doc")
+            }
+        }
+        .font(.caption2)
+        .foregroundStyle(.secondary)
     }
 
     // MARK: - Detail
@@ -380,6 +386,38 @@ private struct EventDetailView: View {
             return String(path.dropFirst(event.projectPath.count + 1))
         }
         return (path as NSString).lastPathComponent
+    }
+}
+
+// MARK: - Session State Indicator
+
+private struct SessionStateIndicator: View {
+    let state: SessionState
+
+    var body: some View {
+        switch state {
+        case .live:
+            LiveDot()
+            Text("Live")
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.green)
+        case .interrupted:
+            Image(systemName: "pause.circle.fill")
+                .font(.caption2)
+                .foregroundStyle(.orange)
+            Text("Paused")
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.orange)
+        case .ended:
+            Image(systemName: "stop.circle.fill")
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            Text("Ended")
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.secondary)
+        case .idle:
+            EmptyView()
+        }
     }
 }
 

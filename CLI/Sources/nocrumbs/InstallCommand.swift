@@ -55,29 +55,24 @@ enum InstallCommand {
             settings = existing
         }
 
-        // Build hook config
-        let hooks: [String: Any] = [
-            "UserPromptSubmit": [
-                [
-                    "hooks": [
-                        [
-                            "type": "command",
-                            "command": "nocrumbs capture-prompt"
-                        ]
-                    ]
-                ]
-            ],
-            "PostToolUse": [
-                [
-                    "matcher": "Write|Edit",
-                    "hooks": [
-                        [
-                            "type": "command",
-                            "command": "nocrumbs capture-change"
-                        ]
+        // Build hook config — all events pipe through `nocrumbs event`
+        let hookEntry: [[String: Any]] = [
+            [
+                "hooks": [
+                    [
+                        "type": "command",
+                        "command": "nocrumbs event",
                     ]
                 ]
             ]
+        ]
+
+        let hooks: [String: Any] = [
+            "UserPromptSubmit": hookEntry,
+            "PostToolUse": hookEntry,
+            "Stop": hookEntry,
+            "SessionStart": hookEntry,
+            "SessionEnd": hookEntry,
         ]
 
         // Merge hooks into existing settings
@@ -98,7 +93,10 @@ enum InstallCommand {
         try data.write(to: URL(fileURLWithPath: settingsPath))
 
         print("✅ Hooks installed to \(settingsPath)")
-        print("   UserPromptSubmit → nocrumbs capture-prompt")
-        print("   PostToolUse (Write|Edit) → nocrumbs capture-change")
+        print("   UserPromptSubmit → nocrumbs event")
+        print("   PostToolUse      → nocrumbs event")
+        print("   Stop             → nocrumbs event")
+        print("   SessionStart     → nocrumbs event")
+        print("   SessionEnd       → nocrumbs event")
     }
 }

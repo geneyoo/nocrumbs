@@ -12,6 +12,7 @@ final class Database {
     private(set) var sessions: [Session] = []
     private(set) var recentEvents: [PromptEvent] = []
     private(set) var fileChangesCache: [UUID: [FileChange]] = [:]
+    private(set) var recentHookEvents: [HookEvent] = []
 
     private var db: OpaquePointer?
     private let dbPath: String
@@ -97,6 +98,25 @@ final class Database {
             exec("ALTER TABLE promptEvents ADD COLUMN baseCommitHash TEXT")
             setUserVersion(2)
             logger.info("🔄 [DB] Migrated to v2 (baseCommitHash)")
+        }
+
+        if version < 3 {
+            exec("""
+                CREATE TABLE IF NOT EXISTS hookEvents (
+                    id TEXT PRIMARY KEY,
+                    sessionID TEXT NOT NULL,
+                    hookEventName TEXT NOT NULL,
+                    projectPath TEXT NOT NULL,
+                    timestamp REAL NOT NULL,
+                    payload TEXT,
+                    FOREIGN KEY(sessionID) REFERENCES sessions(id) ON DELETE CASCADE
+                )
+                """)
+            exec("CREATE INDEX IF NOT EXISTS idx_hookEvents_sessionID ON hookEvents(sessionID)")
+            exec("CREATE INDEX IF NOT EXISTS idx_hookEvents_timestamp ON hookEvents(timestamp)")
+            exec("CREATE INDEX IF NOT EXISTS idx_hookEvents_hookEventName ON hookEvents(hookEventName)")
+            setUserVersion(3)
+            logger.info("🔄 [DB] Migrated to v3 (hookEvents)")
         }
     }
 
@@ -237,52 +257,11 @@ final class Database {
         )
     }
 
-    /// Backfill baseCommitHash for legacy events that have NULL.
-    /// Uses `git log --before=<timestamp>` to find what HEAD was at prompt time.
-    func backfillBaseCommitHashes() async {
-        let events: [PromptEvent] = await MainActor.run {
-            recentEvents.filter { $0.baseCommitHash == nil && $0.vcs == .git }
-        }
-        guard !events.isEmpty else { return }
-        logger.info("🔄 [DB] Backfilling baseCommitHash for \(events.count) events")
-
-        let provider = GitProvider()
-        // Cache per project to avoid redundant git calls for same timestamp range
-        var cache: [String: String] = [:]  // "projectPath|timestamp" → hash
-
-        for event in events {
-            let cacheKey = "\(event.projectPath)|\(Int(event.timestamp.timeIntervalSince1970))"
-            let hash: String?
-            if let cached = cache[cacheKey] {
-                hash = cached
-            } else {
-                hash = try? await provider.headBefore(event.timestamp, at: event.projectPath)
-                if let hash { cache[cacheKey] = hash }
-            }
-
-            logger.info("🔄 [DB] Backfill event \(event.id): timestamp=\(event.timestamp) hash=\(hash ?? "nil") project=\(event.projectPath)")
-
-            guard let hash else { continue }
-            await MainActor.run {
-                do {
-                    try updateBaseCommitHash(hash, forEventID: event.id)
-                } catch {
-                    logger.warning("🔄 [DB] Backfill failed for \(event.id): \(error.localizedDescription)")
-                }
-            }
-        }
-
-        // Reload cache to pick up backfilled values
-        await MainActor.run {
-            try? loadRecentEvents()
-            logger.info("🔄 [DB] Backfill complete")
-        }
-    }
-
     func deleteSession(id: String) throws {
         try execute("DELETE FROM sessions WHERE id = ?", bindings: [.text(id)])
         try loadSessions()
         try loadRecentEvents()
+        try loadRecentHookEvents()
         logger.info("✅ [DB] Deleted session \(id) (cascade)")
     }
 
@@ -292,6 +271,7 @@ final class Database {
         try loadSessions()
         try loadRecentEvents()
         try loadFileChanges()
+        try loadRecentHookEvents()
     }
 
     private func loadSessions() throws {
@@ -307,7 +287,7 @@ final class Database {
         }
     }
 
-    private func loadRecentEvents() throws {
+    fileprivate func loadRecentEvents() throws {
         recentEvents = try query(
             "SELECT id, sessionID, projectPath, promptText, timestamp, vcs, baseCommitHash FROM promptEvents ORDER BY timestamp DESC LIMIT 500"
         ) { stmt in
@@ -336,15 +316,30 @@ final class Database {
         fileChangesCache = cache
     }
 
+    fileprivate func loadRecentHookEvents() throws {
+        recentHookEvents = try query(
+            "SELECT id, sessionID, hookEventName, projectPath, timestamp, payload FROM hookEvents ORDER BY timestamp DESC LIMIT 200"
+        ) { stmt in
+            HookEvent(
+                id: UUID(uuidString: columnText(stmt, 0))!, // swiftlint:disable:this force_unwrapping
+                sessionID: columnText(stmt, 1),
+                hookEventName: columnText(stmt, 2),
+                projectPath: columnText(stmt, 3),
+                timestamp: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 4)),
+                payload: sqlite3_column_text(stmt, 5).map { String(cString: $0) }
+            )
+        }
+    }
+
     // MARK: - SQLite Helpers
 
-    private enum Binding {
+    fileprivate enum Binding {
         case text(String)
         case double(Double)
         case null
     }
 
-    private func execute(_ sql: String, bindings: [Binding] = []) throws {
+    fileprivate func execute(_ sql: String, bindings: [Binding] = []) throws {
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
             let msg = String(cString: sqlite3_errmsg(db))
@@ -370,7 +365,7 @@ final class Database {
         }
     }
 
-    private func query<T>(_ sql: String, bindings: [Binding] = [], map: (OpaquePointer) -> T) throws -> [T] {
+    fileprivate func query<T>(_ sql: String, bindings: [Binding] = [], map: (OpaquePointer) -> T) throws -> [T] {
         var stmt: OpaquePointer?
         guard sqlite3_prepare_v2(db, sql, -1, &stmt, nil) == SQLITE_OK else {
             let msg = String(cString: sqlite3_errmsg(db))
@@ -399,7 +394,7 @@ final class Database {
         sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK
     }
 
-    private func columnText(_ stmt: OpaquePointer?, _ idx: Int32) -> String {
+    fileprivate func columnText(_ stmt: OpaquePointer?, _ idx: Int32) -> String {
         String(cString: sqlite3_column_text(stmt, idx))
     }
 
@@ -424,6 +419,75 @@ enum DatabaseError: Error, LocalizedError {
         switch self {
         case .openFailed(let msg): "Database open failed: \(msg)"
         case .queryFailed(let msg): "Database query failed: \(msg)"
+        }
+    }
+}
+
+// MARK: - HookEvents & Backfill
+
+extension Database {
+    func insertHookEvent(_ event: HookEvent) throws {
+        let sql = """
+            INSERT OR REPLACE INTO hookEvents (id, sessionID, hookEventName, projectPath, timestamp, payload)
+            VALUES (?, ?, ?, ?, ?, ?)
+            """
+        try execute(sql, bindings: [
+            .text(event.id.uuidString),
+            .text(event.sessionID),
+            .text(event.hookEventName),
+            .text(event.projectPath),
+            .double(event.timestamp.timeIntervalSince1970),
+            event.payload.map { .text($0) } ?? .null,
+        ])
+        try loadRecentHookEvents()
+        logger.info("✅ [DB] Inserted hook event \(event.hookEventName) \(event.id.uuidString)")
+    }
+
+    func sessionState(for sessionID: String) -> SessionState {
+        guard let latest = recentHookEvents.first(where: { $0.sessionID == sessionID }) else {
+            guard let session = sessions.first(where: { $0.id == sessionID }) else { return .idle }
+            return session.lastActivityAt.timeIntervalSinceNow > -300 ? .live : .idle
+        }
+        switch latest.hookEventName {
+        case "SessionEnd": return .ended
+        case "Stop": return .interrupted
+        default: return latest.timestamp.timeIntervalSinceNow > -300 ? .live : .idle
+        }
+    }
+
+    func backfillBaseCommitHashes() async {
+        let events: [PromptEvent] = await MainActor.run {
+            recentEvents.filter { $0.baseCommitHash == nil && $0.vcs == .git }
+        }
+        guard !events.isEmpty else { return }
+        logger.info("🔄 [DB] Backfilling baseCommitHash for \(events.count) events")
+
+        let provider = GitProvider()
+        var cache: [String: String] = [:]
+
+        for event in events {
+            let cacheKey = "\(event.projectPath)|\(Int(event.timestamp.timeIntervalSince1970))"
+            let hash: String?
+            if let cached = cache[cacheKey] {
+                hash = cached
+            } else {
+                hash = try? await provider.headBefore(event.timestamp, at: event.projectPath)
+                if let hash { cache[cacheKey] = hash }
+            }
+
+            guard let hash else { continue }
+            await MainActor.run {
+                do {
+                    try updateBaseCommitHash(hash, forEventID: event.id)
+                } catch {
+                    logger.warning("🔄 [DB] Backfill failed for \(event.id): \(error.localizedDescription)")
+                }
+            }
+        }
+
+        await MainActor.run {
+            try? loadRecentEvents()
+            logger.info("🔄 [DB] Backfill complete")
         }
     }
 }

@@ -18,6 +18,7 @@
 		8A911B5B50873530D8061506 /* PromptEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 851939F6461B1C59CF8F1823 /* PromptEvent.swift */; };
 		C307CB874E94C03E8F8E63FD /* GitProvider.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3D069F5ACA9BB864C8B7AFA6 /* GitProvider.swift */; };
 		C6790B0751E4DA40828B609D /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = 127A4015EC6E11386657358E /* Session.swift */; };
+		AABB5566778899001122EEFF /* HookEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5566778899AABB001122EEFF /* HookEvent.swift */; };
 		D80D064DB9F6C9C9DF635713 /* NoCrumbsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 776872DA80B73BA9E09C28A3 /* NoCrumbsApp.swift */; };
 		E5439CA1FB677D97447268AE /* VCSDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37CE3F16F07E020EEDE309B8 /* VCSDetector.swift */; };
 		F1A2B3C4D5E6F7089AB0C1D2 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5C /* SettingsView.swift */; };
@@ -32,6 +33,10 @@
 		913317F929604861AE97FA87 /* DiffTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82DC92447C6446A1BF848CBC /* DiffTheme.swift */; };
 		A727F52251F34B02989F64F8 /* ThemeManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7429159932245388144C228 /* ThemeManager.swift */; };
 		E6538BB9AA424D58A373AFFF /* gruvbox-dark.json in Resources */ = {isa = PBXBuildFile; fileRef = 16CC5B04947142E6A122A17A /* gruvbox-dark.json */; };
+		AA1122334455667788990011 /* DiffParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB1122334455667788990011 /* DiffParserTests.swift */; };
+		AA2233445566778899001122 /* GitProviderTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB2233445566778899001122 /* GitProviderTests.swift */; };
+		AA3344556677889900112233 /* DiffViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB3344556677889900112233 /* DiffViewModelTests.swift */; };
+		AA4455667788990011223344 /* VCSDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB4455667788990011223344 /* VCSDetectorTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -54,6 +59,7 @@
 		7728FC471410616E9FED7A2D /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		776872DA80B73BA9E09C28A3 /* NoCrumbsApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoCrumbsApp.swift; sourceTree = "<group>"; };
 		851939F6461B1C59CF8F1823 /* PromptEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PromptEvent.swift; sourceTree = "<group>"; };
+		5566778899AABB001122EEFF /* HookEvent.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HookEvent.swift; sourceTree = "<group>"; };
 		98CDF552C67056A28C4819EA /* VCSProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VCSProvider.swift; sourceTree = "<group>"; };
 		A10564EE9AF457416465F62D /* FileChange.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileChange.swift; sourceTree = "<group>"; };
 		A77379228A89D5FF2E9A7E4C /* AppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppDelegate.swift; sourceTree = "<group>"; };
@@ -71,6 +77,10 @@
 		82DC92447C6446A1BF848CBC /* DiffTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffTheme.swift; sourceTree = "<group>"; };
 		F7429159932245388144C228 /* ThemeManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThemeManager.swift; sourceTree = "<group>"; };
 		16CC5B04947142E6A122A17A /* gruvbox-dark.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "gruvbox-dark.json"; sourceTree = "<group>"; };
+		BB1122334455667788990011 /* DiffParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffParserTests.swift; sourceTree = "<group>"; };
+		BB2233445566778899001122 /* GitProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitProviderTests.swift; sourceTree = "<group>"; };
+		BB3344556677889900112233 /* DiffViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffViewModelTests.swift; sourceTree = "<group>"; };
+		BB4455667788990011223344 /* VCSDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VCSDetectorTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -176,6 +186,7 @@
 			children = (
 				A10564EE9AF457416465F62D /* FileChange.swift */,
 				AA11BB22CC33DD44EE55FF66 /* FileDiff.swift */,
+				5566778899AABB001122EEFF /* HookEvent.swift */,
 				851939F6461B1C59CF8F1823 /* PromptEvent.swift */,
 				127A4015EC6E11386657358E /* Session.swift */,
 				BD9D8050C0B03F827872CC72 /* VCSType.swift */,
@@ -246,9 +257,13 @@
 		FCBEDC9D97CFEF4FEA1FD7AD /* Tests */ = {
 			isa = PBXGroup;
 			children = (
+				BB3344556677889900112233 /* DiffViewModelTests.swift */,
+				BB1122334455667788990011 /* DiffParserTests.swift */,
+				BB2233445566778899001122 /* GitProviderTests.swift */,
+				BB4455667788990011223344 /* VCSDetectorTests.swift */,
 			);
 			name = Tests;
-			path = NoCrumbs/Tests;
+			path = NoCrumbsTests;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -360,6 +375,7 @@
 				28E0137ED7D0A9DDC51A27A6 /* FileChange.swift in Sources */,
 				11AA22BB33CC44DD55EE66FF /* FileDiff.swift in Sources */,
 				C307CB874E94C03E8F8E63FD /* GitProvider.swift in Sources */,
+				AABB5566778899001122EEFF /* HookEvent.swift in Sources */,
 				D80D064DB9F6C9C9DF635713 /* NoCrumbsApp.swift in Sources */,
 				8A911B5B50873530D8061506 /* PromptEvent.swift in Sources */,
 				C6790B0751E4DA40828B609D /* Session.swift in Sources */,
@@ -378,6 +394,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AA1122334455667788990011 /* DiffParserTests.swift in Sources */,
+				AA2233445566778899001122 /* GitProviderTests.swift in Sources */,
+				AA3344556677889900112233 /* DiffViewModelTests.swift in Sources */,
+				AA4455667788990011223344 /* VCSDetectorTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
