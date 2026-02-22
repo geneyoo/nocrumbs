@@ -48,6 +48,7 @@ enum AnnotateCommitCommand {
         let sessionID = json["session_id"] as? String ?? ""
         let totalFiles = json["total_files"] as? Int ?? 0
         let templateBody = json["template"] as? String
+        let deepLinkEnabled = json["deep_link_enabled"] as? Bool ?? false
 
         // Build prompt data for rendering
         let promptData: [(text: String, fileCount: Int)] = prompts.compactMap { p in
@@ -56,23 +57,27 @@ enum AnnotateCommitCommand {
             return (text: text, fileCount: fc)
         }
 
+        let deepLink =
+            deepLinkEnabled && !sessionID.isEmpty
+            ? "nocrumbs://session/\(sessionID.prefix(8))" : ""
+
         // Render using custom template or fall back to built-in format
         let annotation: String
         if let templateBody {
-            annotation =
-                "\n"
-                + renderTemplate(
-                    templateBody,
-                    promptCount: prompts.count,
-                    totalFiles: totalFiles,
-                    sessionID: sessionID,
-                    prompts: promptData
-                ) + "\n"
+            let ctx = RenderContext(
+                promptCount: prompts.count,
+                totalFiles: totalFiles,
+                sessionID: sessionID,
+                prompts: promptData,
+                deepLink: deepLink
+            )
+            annotation = "\n" + renderTemplate(templateBody, context: ctx) + "\n"
         } else {
             annotation = buildDefaultAnnotation(
                 prompts: promptData,
                 totalFiles: totalFiles,
-                sessionID: sessionID
+                sessionID: sessionID,
+                deepLink: deepLink
             )
         }
 
@@ -88,13 +93,20 @@ enum AnnotateCommitCommand {
 
     // MARK: - Template Rendering (lightweight CLI-side copy)
 
-    private static func renderTemplate(
-        _ template: String,
-        promptCount: Int,
-        totalFiles: Int,
-        sessionID: String,
-        prompts: [(text: String, fileCount: Int)]
-    ) -> String {
+    private struct RenderContext {
+        let promptCount: Int
+        let totalFiles: Int
+        let sessionID: String
+        let prompts: [(text: String, fileCount: Int)]
+        let deepLink: String
+    }
+
+    private static func renderTemplate(_ template: String, context ctx: RenderContext) -> String {
+        let promptCount = ctx.promptCount
+        let totalFiles = ctx.totalFiles
+        let sessionID = ctx.sessionID
+        let prompts = ctx.prompts
+        let deepLink = ctx.deepLink
         var result = template
 
         let summaryLine =
@@ -106,6 +118,7 @@ enum AnnotateCommitCommand {
         result = result.replacingOccurrences(of: "{{total_files}}", with: "\(totalFiles)")
         result = result.replacingOccurrences(of: "{{session_id}}", with: String(sessionID.prefix(8)))
         result = result.replacingOccurrences(of: "{{summary_line}}", with: summaryLine)
+        result = result.replacingOccurrences(of: "{{deep_link}}", with: deepLink)
 
         // Handle {{#prompts}}...{{/prompts}} loop
         let openTag = "{{#prompts}}"
@@ -135,17 +148,20 @@ enum AnnotateCommitCommand {
     private static func buildDefaultAnnotation(
         prompts: [(text: String, fileCount: Int)],
         totalFiles: Int,
-        sessionID: String
+        sessionID: String,
+        deepLink: String
     ) -> String {
         // Filter noise: skip prompts with 0 files and short meta-commands
         let meaningful = prompts.filter { !isNoisePrompt($0) }
         let displayPrompts = meaningful.isEmpty ? prompts : meaningful
 
+        let deepLinkSuffix = deepLink.isEmpty ? "" : "\n\(deepLink)"
+
         // Single prompt — collapsed one-liner
         if displayPrompts.count == 1, let prompt = displayPrompts.first {
             let truncated = prompt.text.count > 72 ? String(prompt.text.prefix(69)) + "..." : prompt.text
             let files = "\(totalFiles) file\(totalFiles == 1 ? "" : "s")"
-            return "\n---\n🍞 \(truncated) · \(files) · \(sessionID.prefix(8))\n"
+            return "\n---\n🍞 \(truncated) · \(files) · \(sessionID.prefix(8))\(deepLinkSuffix)\n"
         }
 
         // Multi-prompt — expanded list
@@ -161,6 +177,10 @@ enum AnnotateCommitCommand {
 
         if displayPrompts.count > maxDisplay {
             annotation += "  + \(displayPrompts.count - maxDisplay) more\n"
+        }
+
+        if !deepLink.isEmpty {
+            annotation += "\n\(deepLink)\n"
         }
 
         return annotation

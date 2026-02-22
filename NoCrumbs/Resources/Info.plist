@@ -22,5 +22,16 @@
 	<true/>
 	<key>LSMinimumSystemVersion</key>
 	<string>$(MACOSX_DEPLOYMENT_TARGET)</string>
+	<key>CFBundleURLTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleURLName</key>
+			<string>com.geneyoo.nocrumbs</string>
+			<key>CFBundleURLSchemes</key>
+			<array>
+				<string>nocrumbs</string>
+			</array>
+		</dict>
+	</array>
 </dict>
 </plist>

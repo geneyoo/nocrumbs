@@ -7,6 +7,7 @@ struct NoCrumbsApp: App {
     @State private var themeManager = ThemeManager.shared
     @State private var appScale = AppScale.shared
     @State private var healthChecker = HookHealthChecker.shared
+    @State private var deepLinkRouter = DeepLinkRouter.shared
     @Environment(\.openWindow) private var openWindow
 
     var body: some Scene {
@@ -16,6 +17,7 @@ struct NoCrumbsApp: App {
                 .environment(themeManager)
                 .environment(appScale)
                 .environment(healthChecker)
+                .environment(deepLinkRouter)
                 .onAppear { themeManager.loadBundledThemes() }
         }
         .defaultSize(width: 1000, height: 700)

@@ -71,6 +71,8 @@
 		FA11BB22CC33DD44EE55FF02 /* SetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA11BB22CC33DD44EE55FF02 /* SetupView.swift */; };
 		R1A00001BB534E69B484BF01 /* RemoteURLParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = R1F00001947253F7B233B101 /* RemoteURLParser.swift */; };
 		R1A00002BB534E69B484BF02 /* RemoteURLParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = R1F00002947253F7B233B102 /* RemoteURLParserTests.swift */; };
+		M5A00001BB534E69B484BF01 /* SessionMarkdownFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = M5F00001947253F7B233B101 /* SessionMarkdownFormatter.swift */; };
+		M5A00002BB534E69B484BF02 /* DeepLinkRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = M5F00002947253F7B233B102 /* DeepLinkRouter.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -149,6 +151,8 @@
 		T2F00002947253F7B233B102 /* TemplateRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateRenderer.swift; sourceTree = "<group>"; };
 		R1F00001947253F7B233B101 /* RemoteURLParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteURLParser.swift; sourceTree = "<group>"; };
 		R1F00002947253F7B233B102 /* RemoteURLParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteURLParserTests.swift; sourceTree = "<group>"; };
+		M5F00001947253F7B233B101 /* SessionMarkdownFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionMarkdownFormatter.swift; sourceTree = "<group>"; };
+		M5F00002947253F7B233B102 /* DeepLinkRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkRouter.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -204,6 +208,8 @@
 			isa = PBXGroup;
 			children = (
 				EA11BB22CC33DD44EE55FF01 /* HookHealthChecker.swift */,
+				M5F00001947253F7B233B101 /* SessionMarkdownFormatter.swift */,
+				M5F00002947253F7B233B102 /* DeepLinkRouter.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -551,6 +557,8 @@
 				FA11BB22CC33DD44EE55FF02 /* SetupView.swift in Sources */,
 				T2A00001BB534E69B484BF01 /* CommitTemplate.swift in Sources */,
 				T2A00002BB534E69B484BF02 /* TemplateRenderer.swift in Sources */,
+				M5A00001BB534E69B484BF01 /* SessionMarkdownFormatter.swift in Sources */,
+				M5A00002BB534E69B484BF02 /* DeepLinkRouter.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

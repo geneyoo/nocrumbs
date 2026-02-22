@@ -21,6 +21,7 @@ enum TemplateRenderer {
         result = result.replacingOccurrences(of: "{{total_files}}", with: "\(context.totalFiles)")
         result = result.replacingOccurrences(of: "{{session_id}}", with: String(context.sessionID.prefix(8)))
         result = result.replacingOccurrences(of: "{{summary_line}}", with: summaryLine)
+        result = result.replacingOccurrences(of: "{{deep_link}}", with: "nocrumbs://session/\(context.sessionID.prefix(8))")
 
         // Handle {{#prompts}}...{{/prompts}} loop block
         if let loopRange = findLoopBlock(in: result, tag: "prompts") {

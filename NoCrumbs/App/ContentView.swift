@@ -63,6 +63,7 @@ enum TimePeriod: Int, CaseIterable {
 
 struct ContentView: View {
     @Environment(Database.self) private var database
+    @Environment(DeepLinkRouter.self) private var deepLinkRouter
     @State private var state = SidebarState()
 
     private func filteredEvents(for sessionID: String) -> [PromptEvent] {
@@ -142,6 +143,10 @@ struct ContentView: View {
         }
         .onAppear { installKeyMonitor() }
         .onDisappear { removeKeyMonitor() }
+        .onChange(of: deepLinkRouter.pendingSessionID) { _, newValue in
+            guard newValue != nil else { return }
+            navigateToDeepLink()
+        }
     }
 
     private func installKeyMonitor() {
@@ -324,6 +329,26 @@ struct ContentView: View {
             Text("Select a prompt")
                 .font(.title2)
                 .foregroundStyle(.secondary)
+        }
+    }
+
+    // MARK: - Deep Link Navigation
+
+    private func navigateToDeepLink() {
+        guard let (sessionIDPrefix, eventID) = deepLinkRouter.consume() else { return }
+
+        // Prefix match: annotations use truncated session IDs (8-char)
+        guard let session = database.sessions.first(where: { $0.id.hasPrefix(sessionIDPrefix) })
+        else { return }
+
+        guard let sessionUUID = UUID(uuidString: session.id) else { return }
+
+        state.expandedSessions.insert(session.id)
+
+        if let eventID {
+            state.selection = eventID
+        } else {
+            state.selection = sessionUUID
         }
     }
 

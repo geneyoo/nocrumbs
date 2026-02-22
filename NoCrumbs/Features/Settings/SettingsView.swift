@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
     @AppStorage("annotationEnabled") private var annotationEnabled = true
+    @AppStorage("deepLinkInAnnotation") private var deepLinkInAnnotation = false
     @Environment(ThemeManager.self) private var themeManager
     @State private var healthChecker = HookHealthChecker.shared
     private var database: Database { Database.shared }
@@ -38,6 +39,9 @@ struct SettingsView: View {
                     )
 
                 if annotationEnabled {
+                    Toggle("Include deep link in commit annotations", isOn: $deepLinkInAnnotation)
+                        .help("Appends a nocrumbs:// URL to annotations so you can click back to the session")
+
                     if database.commitTemplates.isEmpty {
                         Text("No custom templates. Use `nocrumbs template add` to create one.")
                             .foregroundStyle(.secondary)

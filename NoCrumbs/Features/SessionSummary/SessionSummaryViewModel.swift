@@ -190,6 +190,18 @@ final class SessionSummaryViewModel {
         }
     }
 
+    func markdownSummary(session: Session, events: [PromptEvent]) -> String {
+        SessionMarkdownFormatter.format(
+            .init(
+                session: session,
+                events: events,
+                promptDiffStats: promptDiffStats,
+                uniqueFiles: uniqueFiles,
+                aggregateAdditions: aggregateAdditions,
+                aggregateDeletions: aggregateDeletions
+            ))
+    }
+
     func invalidate() {
         currentSessionID = nil
         promptDiffStats = [:]

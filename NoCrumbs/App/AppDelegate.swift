@@ -10,7 +10,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var localMonitor: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        UserDefaults.standard.register(defaults: ["annotationEnabled": true])
+        UserDefaults.standard.register(defaults: ["annotationEnabled": true, "deepLinkInAnnotation": false])
+
+        // Register URL scheme handler
+        NSAppleEventManager.shared().setEventHandler(
+            self,
+            andSelector: #selector(handleURLEvent(_:withReply:)),
+            forEventClass: AEEventClass(kInternetEventClass),
+            andEventID: AEEventID(kAEGetURL)
+        )
 
         // Database
         do {
@@ -82,6 +90,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 NSApp.setActivationPolicy(.accessory)
             }
         }
+    }
+
+    @objc private func handleURLEvent(_ event: NSAppleEventDescriptor, withReply reply: NSAppleEventDescriptor) {
+        guard let urlString = event.paramDescriptor(forKeyword: keyDirectObject)?.stringValue,
+            let url = URL(string: urlString)
+        else { return }
+
+        Task { @MainActor in
+            DeepLinkRouter.shared.handle(url)
+        }
+
+        // Bring window to front
+        showMainWindow()
     }
 
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {

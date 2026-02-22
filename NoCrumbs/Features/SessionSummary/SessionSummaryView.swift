@@ -5,6 +5,7 @@ struct SessionSummaryView: View {
     @Environment(Database.self) private var database
     @Environment(AppScale.self) private var scale
     @State private var viewModel = SessionSummaryViewModel()
+    @State private var showCopiedFeedback = false
 
     private var events: [PromptEvent] {
         database.eventsForSession(id: session.id)
@@ -71,9 +72,43 @@ struct SessionSummaryView: View {
 
                 Spacer()
 
+                Button {
+                    let md = viewModel.markdownSummary(session: session, events: events)
+                    NSPasteboard.general.clearContents()
+                    NSPasteboard.general.setString(md, forType: .string)
+                    showCopiedFeedback = true
+                } label: {
+                    Image(systemName: "doc.on.doc")
+                }
+                .buttonStyle(.borderless)
+                .help("Copy session summary as Markdown")
+
+                Button {
+                    exportMarkdown()
+                } label: {
+                    Image(systemName: "square.and.arrow.up")
+                }
+                .buttonStyle(.borderless)
+                .help("Export session summary as .md file")
+
                 Text(formattedDuration)
                     .font(AppFonts.numeric(scale.level))
                     .foregroundStyle(.secondary)
+            }
+            .overlay(alignment: .trailing) {
+                if showCopiedFeedback {
+                    Text("Copied!")
+                        .font(.caption.bold())
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 6))
+                        .transition(.opacity)
+                        .onAppear {
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                                withAnimation { showCopiedFeedback = false }
+                            }
+                        }
+                }
             }
 
             // Full project path
@@ -130,6 +165,16 @@ struct SessionSummaryView: View {
                     .frame(height: 8)
             }
         }
+    }
+
+    private func exportMarkdown() {
+        let md = viewModel.markdownSummary(session: session, events: events)
+        let panel = NSSavePanel()
+        panel.nameFieldStringValue = "session-\(session.id.prefix(8)).md"
+        panel.allowedContentTypes = [.plainText]
+        panel.canCreateDirectories = true
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        try? md.write(to: url, atomically: true, encoding: .utf8)
     }
 
     private var formattedDuration: String {
