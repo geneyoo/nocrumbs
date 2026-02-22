@@ -59,8 +59,8 @@ const config = {
             label: 'Docs',
           },
           {
-            href: '#',
-            label: '\uD83D\uDD12 GitHub (Coming Soon)',
+            href: 'https://github.com/geneyoo/nocrumbs',
+            label: 'GitHub',
             position: 'right',
           },
         ],
