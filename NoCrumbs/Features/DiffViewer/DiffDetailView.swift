@@ -8,6 +8,9 @@ struct DiffDetailView: View {
     @State private var viewModel = DiffViewModel()
     @State private var scrollSync = DiffScrollSync()
     @State private var isFileListVisible = true
+    @State private var fileListWidth: CGFloat = LayoutGuide.fileListWidth
+    @GestureState private var dragOffset: CGFloat = 0
+    @State private var fileSearchQuery = ""
 
     private var theme: DiffTheme? {
         themeManager.currentTheme
@@ -17,8 +20,15 @@ struct DiffDetailView: View {
         database.fileChangesCache[event.id] ?? []
     }
 
+    private var sessionFirstPrompt: String {
+        let events = database.eventsForSession(id: event.sessionID)
+        return events.first?.promptText ?? "(no prompt)"
+    }
+
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: LayoutGuide.spacingNone) {
+            inlineTitle
+            Divider()
             header
             Divider()
             if viewModel.isLoading {
@@ -33,38 +43,43 @@ struct DiffDetailView: View {
         }
         .frame(minWidth: 600)
         .navigationTitle("")
-        .toolbarTitleDisplayMode(.inline)
-        .toolbarBackground(Color(nsColor: .windowBackgroundColor), for: .windowToolbar)
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                HStack(spacing: 6) {
-                    Text((event.projectPath as NSString).lastPathComponent)
-                        .font(.headline)
-                    Text("—")
-                        .font(.subheadline)
-                        .foregroundStyle(.tertiary)
-                    Text(event.promptText ?? "(no prompt)")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                .frame(height: 22)
-            }
+        .onChange(of: event) { _, _ in
+            fileSearchQuery = ""
+            reload()
         }
-        .onChange(of: event) { _, _ in reload() }
         .onChange(of: fileChanges) { _, _ in reload() }
         .onAppear { reload() }
+    }
+
+    // MARK: - Inline Title
+
+    @ViewBuilder
+    private var inlineTitle: some View {
+        HStack(spacing: LayoutGuide.spacingM) {
+            Text((event.projectPath as NSString).lastPathComponent)
+                .font(.headline)
+            Text("—")
+                .font(.subheadline)
+                .foregroundStyle(.tertiary)
+            Text(sessionFirstPrompt)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            Spacer()
+        }
+        .padding(.horizontal, LayoutGuide.paddingL)
+        .padding(.vertical, LayoutGuide.paddingS)
     }
 
     // MARK: - Header
 
     private var header: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: LayoutGuide.spacingS) {
             Text(event.promptText ?? "(no prompt text)")
                 .font(.headline)
                 .lineLimit(2)
                 .textSelection(.enabled)
-            HStack(spacing: 8) {
+            HStack(spacing: LayoutGuide.spacingL) {
                 Text(event.timestamp, style: .time)
                 Text("·")
                     .foregroundStyle(.quaternary)
@@ -74,54 +89,109 @@ struct DiffDetailView: View {
             .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 8)
+        .padding(.horizontal, LayoutGuide.paddingL)
+        .padding(.vertical, LayoutGuide.paddingM)
     }
 
     // MARK: - Diff Content
 
     private var diffContent: some View {
-        HStack(spacing: 0) {
+        HStack(spacing: LayoutGuide.spacingNone) {
             if isFileListVisible {
                 fileList
-                    .frame(width: 180)
+                    .frame(width: min(max(fileListWidth + dragOffset, 120), 400))
                     .transition(.move(edge: .leading).combined(with: .opacity))
-                Divider()
+                fileListResizeHandle
             }
             diffPanes
         }
         .animation(.smooth(duration: 0.2), value: isFileListVisible)
     }
 
+    private var fileListResizeHandle: some View {
+        Rectangle()
+            .fill(Color.clear)
+            .frame(width: 6)
+            .overlay(Divider(), alignment: .center)
+            .contentShape(Rectangle())
+            .onHover { hovering in
+                if hovering {
+                    NSCursor.resizeLeftRight.push()
+                } else {
+                    NSCursor.pop()
+                }
+            }
+            .gesture(
+                DragGesture(minimumDistance: 1)
+                    .updating($dragOffset) { value, state, _ in
+                        state = value.translation.width
+                    }
+                    .onEnded { value in
+                        fileListWidth = min(max(fileListWidth + value.translation.width, 120), 400)
+                    }
+            )
+    }
+
     // MARK: - File List
 
+    private var filteredFileDiffs: [FileDiff] {
+        guard !fileSearchQuery.isEmpty else { return viewModel.fileDiffs }
+        let query = fileSearchQuery.lowercased()
+        return viewModel.fileDiffs.filter { displayName(for: $0).lowercased().contains(query) }
+    }
+
     private var fileList: some View {
-        List(
-            selection: Binding(
-                get: { viewModel.selectedFileID ?? viewModel.fileDiffs.first?.id },
-                set: { if let id = $0 { viewModel.selectFile(id) } }
-            )
-        ) {
-            ForEach(viewModel.fileDiffs) { file in
-                HStack(spacing: 6) {
-                    statusIcon(for: file.status)
-                    Text(displayName(for: file))
-                        .font(AppFonts.filePath(scale.level))
-                        .lineLimit(1)
-                        .truncationMode(.middle)
+        VStack(spacing: LayoutGuide.spacingNone) {
+            HStack(spacing: LayoutGuide.spacingS) {
+                Image(systemName: "magnifyingglass")
+                    .foregroundStyle(.tertiary)
+                    .font(.caption)
+                TextField("Filter files", text: $fileSearchQuery)
+                    .textFieldStyle(.plain)
+                    .font(.caption)
+                if !fileSearchQuery.isEmpty {
+                    Button {
+                        fileSearchQuery = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .foregroundStyle(.tertiary)
+                            .font(.caption)
+                    }
+                    .buttonStyle(.borderless)
                 }
-                .tag(file.id)
             }
+            .padding(.horizontal, LayoutGuide.paddingM)
+            .padding(.vertical, LayoutGuide.paddingS)
+
+            Divider()
+
+            List(
+                selection: Binding(
+                    get: { viewModel.selectedFileID ?? viewModel.fileDiffs.first?.id },
+                    set: { if let id = $0 { viewModel.selectFile(id) } }
+                )
+            ) {
+                ForEach(filteredFileDiffs) { file in
+                    HStack(spacing: LayoutGuide.spacingM) {
+                        statusIcon(for: file.status)
+                        Text(displayName(for: file))
+                            .font(AppFonts.filePath(scale.level))
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                    }
+                    .tag(file.id)
+                }
+            }
+            .listStyle(.sidebar)
         }
-        .listStyle(.sidebar)
     }
 
     // MARK: - Diff Panes
 
     private var diffPanes: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: LayoutGuide.spacingNone) {
             // Column headers with file list toggle
-            HStack(spacing: 0) {
+            HStack(spacing: LayoutGuide.spacingNone) {
                 Button {
                     isFileListVisible.toggle()
                 } label: {
@@ -130,20 +200,20 @@ struct DiffDetailView: View {
                         .foregroundStyle(isFileListVisible ? .primary : .secondary)
                 }
                 .buttonStyle(.borderless)
-                .padding(.leading, 8)
+                .padding(.leading, LayoutGuide.paddingM)
                 .help(isFileListVisible ? "Hide file list" : "Show file list")
 
                 Text("Before")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 4)
-                Divider().frame(height: 20)
+                    .padding(.vertical, LayoutGuide.paddingS)
+                Divider().frame(height: LayoutGuide.spacingXXL)
                 Text("After")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity)
-                    .padding(.vertical, 4)
+                    .padding(.vertical, LayoutGuide.paddingS)
             }
             Divider()
 
@@ -155,7 +225,7 @@ struct DiffDetailView: View {
 
     @ViewBuilder
     private func diffPanesContent(for file: FileDiff) -> some View {
-        HStack(spacing: 0) {
+        HStack(spacing: LayoutGuide.spacingNone) {
             leftPane(for: file)
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
             Divider()
@@ -217,7 +287,7 @@ struct DiffDetailView: View {
     // MARK: - States
 
     private var loadingView: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: LayoutGuide.spacingL) {
             ProgressView()
             Text("Loading diff…")
                 .font(.callout)
@@ -227,7 +297,7 @@ struct DiffDetailView: View {
     }
 
     private func errorView(_ message: String) -> some View {
-        VStack(spacing: 8) {
+        VStack(spacing: LayoutGuide.spacingL) {
             Image(systemName: "exclamationmark.triangle")
                 .font(.title)
                 .foregroundStyle(.secondary)

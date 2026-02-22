@@ -242,8 +242,8 @@ struct ContentView: View {
             .font(.caption.weight(.bold))
             .foregroundStyle(.quaternary)
             .textCase(.uppercase)
-            .padding(.top, 12)
-            .padding(.bottom, 2)
+            .padding(.top, LayoutGuide.paddingS)
+            .padding(.bottom, LayoutGuide.paddingXS)
             .listRowSeparator(.hidden)
     }
 

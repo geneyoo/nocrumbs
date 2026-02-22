@@ -22,9 +22,15 @@ struct SessionSummaryView: View {
         return paths.count
     }
 
+    private var titleText: String {
+        let project = (session.projectPath as NSString).lastPathComponent
+        let prompt = events.first?.promptText ?? "(no prompt)"
+        return "\(project) — \(prompt)"
+    }
+
     var body: some View {
         ScrollView {
-            VStack(alignment: .leading, spacing: 20) {
+            VStack(alignment: .leading, spacing: LayoutGuide.spacingXXL) {
                 headerSection
                 if !events.isEmpty {
                     promptTimelineSection
@@ -33,32 +39,12 @@ struct SessionSummaryView: View {
                     allFilesSection
                 }
             }
-            .padding()
+            .padding(.horizontal)
+            .padding(.bottom)
+            .padding(.top, LayoutGuide.paddingS)
         }
         .frame(minWidth: 500)
-        .navigationTitle("")
-        .toolbarTitleDisplayMode(.inline)
-        .toolbarBackground(Color(nsColor: .windowBackgroundColor), for: .windowToolbar)
-        .toolbar {
-            ToolbarItem(placement: .navigation) {
-                HStack(spacing: 6) {
-                    let sState = database.sessionState(for: session.id)
-                    if sState == .live {
-                        SessionStateIndicator(state: sState)
-                    }
-                    Text((session.projectPath as NSString).lastPathComponent)
-                        .font(.headline)
-                    Text("—")
-                        .font(.subheadline)
-                        .foregroundStyle(.tertiary)
-                    Text(events.first?.promptText ?? "(no prompt)")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                }
-                .frame(height: 22)
-            }
-        }
+        .navigationTitle(titleText)
         .onAppear { reload() }
         .onChange(of: session.id) { _, _ in
             viewModel.invalidate()
@@ -81,11 +67,35 @@ struct SessionSummaryView: View {
         )
     }
 
+    // MARK: - Inline Title
+
+    @ViewBuilder
+    private var inlineTitle: some View {
+        HStack(spacing: LayoutGuide.spacingM) {
+            let sState = database.sessionState(for: session.id)
+            if sState == .live {
+                SessionStateIndicator(state: sState)
+            }
+            Text((session.projectPath as NSString).lastPathComponent)
+                .font(.headline)
+            Text("—")
+                .font(.subheadline)
+                .foregroundStyle(.tertiary)
+            Text(events.first?.promptText ?? "(no prompt)")
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+            Spacer()
+        }
+        .padding(.horizontal, LayoutGuide.paddingL)
+        .padding(.vertical, LayoutGuide.paddingS)
+    }
+
     // MARK: - Header
 
     @ViewBuilder
     private var headerSection: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: LayoutGuide.spacingL) {
             // Duration + actions
             HStack(alignment: .firstTextBaseline) {
                 // Full project path
@@ -122,9 +132,9 @@ struct SessionSummaryView: View {
                 if showCopiedFeedback {
                     Text("Copied!")
                         .font(.caption.bold())
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 6))
+                        .padding(.horizontal, LayoutGuide.paddingM)
+                        .padding(.vertical, LayoutGuide.paddingS)
+                        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: LayoutGuide.spacingM))
                         .transition(.opacity)
                         .onAppear {
                             DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
@@ -135,7 +145,7 @@ struct SessionSummaryView: View {
             }
 
             // Time range
-            HStack(spacing: 4) {
+            HStack(spacing: LayoutGuide.spacingS) {
                 Text(session.startedAt.formatted(date: .abbreviated, time: .shortened))
                 Text("\u{2192}")
                     .foregroundStyle(.tertiary)
@@ -157,8 +167,8 @@ struct SessionSummaryView: View {
         let dels = viewModel.aggregateDeletions
         let fileCount = viewModel.uniqueFiles.isEmpty ? totalFileChanges : viewModel.uniqueFiles.count
 
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(spacing: 12) {
+        VStack(alignment: .leading, spacing: LayoutGuide.spacingM) {
+            HStack(spacing: LayoutGuide.spacingXL) {
                 Label("\(events.count) prompt\(events.count == 1 ? "" : "s")", systemImage: "text.bubble")
                 Label("\(fileCount) file\(fileCount == 1 ? "" : "s")", systemImage: "doc")
 
@@ -180,7 +190,7 @@ struct SessionSummaryView: View {
 
             if adds > 0 || dels > 0 {
                 DiffStatBar(additions: adds, deletions: dels)
-                    .frame(height: 8)
+                    .frame(height: LayoutGuide.diffStatBarHeight)
             }
         }
     }
@@ -213,11 +223,11 @@ struct SessionSummaryView: View {
     @ViewBuilder
     private var promptTimelineSection: some View {
         GroupBox {
-            LazyVStack(alignment: .leading, spacing: 0) {
+            LazyVStack(alignment: .leading, spacing: LayoutGuide.spacingNone) {
                 ForEach(events) { event in
                     promptRow(event)
                     if event.id != events.last?.id {
-                        Divider().padding(.leading, 8)
+                        Divider().padding(.leading, LayoutGuide.paddingM)
                     }
                 }
             }
@@ -233,20 +243,20 @@ struct SessionSummaryView: View {
         let fileChanges = database.fileChangesCache[event.id] ?? []
         let hasError = viewModel.errors[event.id] != nil
 
-        HStack(spacing: 4) {
+        HStack(spacing: LayoutGuide.spacingS) {
             // Timestamp
             Text(event.timestamp, style: .time)
                 .font(AppFonts.numericSmall(scale.level))
                 .foregroundStyle(.secondary)
-                .frame(width: 58, alignment: .leading)
+                .frame(width: LayoutGuide.timestampWidth, alignment: .leading)
 
             // Prompt text
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: LayoutGuide.spacingXS) {
                 Text(event.promptText ?? "(no prompt)")
                     .lineLimit(2)
                     .font(.callout)
 
-                HStack(spacing: 8) {
+                HStack(spacing: LayoutGuide.spacingL) {
                     if let hash = event.baseCommitHash {
                         let short = String(hash.prefix(7))
                         if let url = viewModel.commitURL(for: hash) {
@@ -290,7 +300,7 @@ struct SessionSummaryView: View {
 
             Spacer()
         }
-        .padding(.vertical, 4)
+        .padding(.vertical, LayoutGuide.paddingS)
         .contentShape(Rectangle())
         .onTapGesture { onSelectEvent?(event) }
     }
@@ -302,7 +312,7 @@ struct SessionSummaryView: View {
         let files = viewModel.uniqueFiles
 
         GroupBox {
-            LazyVStack(alignment: .leading, spacing: 2) {
+            LazyVStack(alignment: .leading, spacing: LayoutGuide.spacingXS) {
                 ForEach(files) { file in
                     fileStatRow(
                         DiffStat(
@@ -325,9 +335,9 @@ struct SessionSummaryView: View {
     @ViewBuilder
     private func fileStatRow(_ stat: DiffStat) -> some View {
         VStack(alignment: .leading, spacing: 1) {
-            HStack(spacing: 6) {
+            HStack(spacing: LayoutGuide.spacingM) {
                 FileStatusBadge(status: stat.status)
-                    .frame(width: 18)
+                    .frame(width: LayoutGuide.badgeFrame)
 
                 Text(stat.filePath)
                     .font(AppFonts.filePath(scale.level))
@@ -356,7 +366,7 @@ struct SessionSummaryView: View {
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(2)
-                    .padding(.leading, 24)
+                    .padding(.leading, LayoutGuide.paddingSection)
             }
         }
         .padding(.vertical, 1)
@@ -392,7 +402,7 @@ struct DiffStatBar: View {
             let total = max(additions + deletions, 1)
             let addWidth = geo.size.width * CGFloat(additions) / CGFloat(total)
 
-            HStack(spacing: 0) {
+            HStack(spacing: LayoutGuide.spacingNone) {
                 RoundedRectangle(cornerRadius: 2)
                     .fill(AppColors.additionMuted)
                     .frame(width: addWidth)
@@ -420,7 +430,7 @@ struct DiffStatSquares: View {
             ForEach(0..<5, id: \.self) { i in
                 RoundedRectangle(cornerRadius: 1)
                     .fill(i < greenCount ? AppColors.additionSquare : AppColors.deletionSquare)
-                    .frame(width: 6, height: 6)
+                    .frame(width: LayoutGuide.diffStatSquareSize, height: LayoutGuide.diffStatSquareSize)
             }
         }
     }
