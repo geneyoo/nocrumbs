@@ -44,6 +44,7 @@
 		T1A00008AA424D58A373AF08 /* one-dark-pro.json in Resources */ = {isa = PBXBuildFile; fileRef = T1F00008947142E6A122A108 /* one-dark-pro.json */; };
 		T1A00009AA424D58A373AF09 /* monokai.json in Resources */ = {isa = PBXBuildFile; fileRef = T1F00009947142E6A122A109 /* monokai.json */; };
 		T1A0000AAA424D58A373AF0A /* ayu-dark.json in Resources */ = {isa = PBXBuildFile; fileRef = T1F0000A947142E6A122A10A /* ayu-dark.json */; };
+		A1C0BBBB1111222233334444 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1C0AAAA1111222233334444 /* Assets.xcassets */; };
 		T1A0000BAA424D58A373AF0B /* everforest-dark.json in Resources */ = {isa = PBXBuildFile; fileRef = T1F0000B947142E6A122A10B /* everforest-dark.json */; };
 		T1A0000CAA424D58A373AF0C /* nightfox.json in Resources */ = {isa = PBXBuildFile; fileRef = T1F0000C947142E6A122A10C /* nightfox.json */; };
 		T1A0000DAA424D58A373AF0D /* solarized-light.json in Resources */ = {isa = PBXBuildFile; fileRef = T1F0000D947142E6A122A10D /* solarized-light.json */; };
@@ -132,6 +133,7 @@
 		T1F0000F947142E6A122A10F /* catppuccin-latte.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "catppuccin-latte.json"; sourceTree = "<group>"; };
 		T1F00010947142E6A122A110 /* rose-pine-dawn.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "rose-pine-dawn.json"; sourceTree = "<group>"; };
 		T1F00011947142E6A122A111 /* github-light.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = "github-light.json"; sourceTree = "<group>"; };
+		A1C0AAAA1111222233334444 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		BB1122334455667788990011 /* DiffParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffParserTests.swift; sourceTree = "<group>"; };
 		BB2233445566778899001122 /* GitProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitProviderTests.swift; sourceTree = "<group>"; };
 		6C3D4E5F6A7B8C9D0E1F2A3B /* MercurialProviderTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MercurialProviderTests.swift; sourceTree = "<group>"; };
@@ -325,6 +327,7 @@
 		87622775A1FE4539B53BC1D2 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				A1C0AAAA1111222233334444 /* Assets.xcassets */,
 				0EF4D1AF682A44028B5883C4 /* Themes */,
 			);
 			name = Resources;
@@ -495,6 +498,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A1C0BBBB1111222233334444 /* Assets.xcassets in Resources */,
 				T1A0000AAA424D58A373AF0A /* ayu-dark.json in Resources */,
 				T1A0000FAA424D58A373AF0F /* catppuccin-latte.json in Resources */,
 				T1A00001AA424D58A373AF01 /* catppuccin-mocha.json in Resources */,
