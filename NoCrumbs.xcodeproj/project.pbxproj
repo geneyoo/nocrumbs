@@ -61,6 +61,7 @@
 		AA3344556677889900112233 /* DiffViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB3344556677889900112233 /* DiffViewModelTests.swift */; };
 		AA4455667788990011223344 /* VCSDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB4455667788990011223344 /* VCSDetectorTests.swift */; };
 		AA5566778899001122334455 /* DatabaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB5566778899001122334455 /* DatabaseTests.swift */; };
+		T3F00001TEMPLATE00TEST01 /* TemplateTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = T3F00002TEMPLATE00TEST02 /* TemplateTests.swift */; };
 		T2A00001BB534E69B484BF01 /* CommitTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = T2F00001947253F7B233B101 /* CommitTemplate.swift */; };
 		T2A00002BB534E69B484BF02 /* TemplateRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = T2F00002947253F7B233B102 /* TemplateRenderer.swift */; };
 		DA11AA22BB33CC44DD55EE01 /* AppColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA11AA22BB33CC44DD55EE01 /* AppColors.swift */; };
@@ -134,6 +135,7 @@
 		BB3344556677889900112233 /* DiffViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffViewModelTests.swift; sourceTree = "<group>"; };
 		BB4455667788990011223344 /* VCSDetectorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VCSDetectorTests.swift; sourceTree = "<group>"; };
 		BB5566778899001122334455 /* DatabaseTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DatabaseTests.swift; sourceTree = "<group>"; };
+		T3F00002TEMPLATE00TEST02 /* TemplateTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateTests.swift; sourceTree = "<group>"; };
 		BB55CC66DD77EE88FF990011 /* DiffStat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DiffStat.swift; sourceTree = "<group>"; };
 		BB66DD77EE88FF99AA001122 /* SessionSummaryViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionSummaryViewModel.swift; sourceTree = "<group>"; };
 		BB77EE88FF99AA00BB112233 /* SessionSummaryView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionSummaryView.swift; sourceTree = "<group>"; };
@@ -392,6 +394,7 @@
 				R1F00002947253F7B233B102 /* RemoteURLParserTests.swift */,
 				BB4455667788990011223344 /* VCSDetectorTests.swift */,
 				BB5566778899001122334455 /* DatabaseTests.swift */,
+				T3F00002TEMPLATE00TEST02 /* TemplateTests.swift */,
 			);
 			name = Tests;
 			path = NoCrumbsTests;
@@ -561,6 +564,7 @@
 				AA3344556677889900112233 /* DiffViewModelTests.swift in Sources */,
 				AA4455667788990011223344 /* VCSDetectorTests.swift in Sources */,
 				AA5566778899001122334455 /* DatabaseTests.swift in Sources */,
+				T3F00001TEMPLATE00TEST01 /* TemplateTests.swift in Sources */,
 				R1A00002BB534E69B484BF02 /* RemoteURLParserTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

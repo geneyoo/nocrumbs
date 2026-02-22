@@ -1,10 +1,12 @@
 ---
 name: verify
 description: Run automated E2E verification of the NoCrumbs pipeline (hooks → CLI → socket → DB → UI). Use when the user says "verify", "check pipeline", "e2e check", or uses /verify.
-version: 4.0.0
+version: 5.0.0
 ---
 
 # Verify NoCrumbs Pipeline
+
+> Last synced with codebase at commit: `d7b9ddf` (2026-02-22)
 
 ## Argument Handling
 
@@ -71,7 +73,7 @@ swift build -c release --package-path CLI/ 2>&1 | tail -3
 which nocrumbs && nocrumbs --version
 ```
 
-- ✅ `CLI: nocrumbs 0.2.0`
+- ✅ `CLI: nocrumbs 0.3.0`
 - ❌ `CLI: not found in PATH` — tell user to run `swift build -c release --package-path CLI/ && cp CLI/.build/release/nocrumbs /usr/local/bin/`
 
 ### 4. Claude Code hooks installed
@@ -81,8 +83,8 @@ cat ~/.claude/settings.json
 ```
 
 Parse JSON. Confirm both hooks exist:
-- `hooks.UserPromptSubmit` contains `nocrumbs capture-prompt`
-- `hooks.PostToolUse` contains matcher `Write|Edit` and `nocrumbs capture-change`
+- `hooks.UserPromptSubmit` contains `nocrumbs capture-prompt` or `nocrumbs event`
+- `hooks.PostToolUse` contains matcher `Write|Edit` and `nocrumbs capture-change` or `nocrumbs event`
 
 - ✅ `Hooks: UserPromptSubmit + PostToolUse (Write|Edit)`
 - ❌ `Hooks: missing [which ones]` — tell user to run `nocrumbs install`
@@ -124,11 +126,17 @@ ls -la ~/Library/Application\ Support/NoCrumbs/nocrumbs.sock
 ### 7. Database accessible
 
 ```bash
-sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite "SELECT COUNT(*) FROM sessions; SELECT COUNT(*) FROM promptEvents;"
+sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite "SELECT COUNT(*) FROM sessions; SELECT COUNT(*) FROM promptEvents; SELECT COUNT(*) FROM commitTemplates;"
 ```
 
-- ✅ `Database: N sessions, M events`
+Also verify schema version:
+```bash
+sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite "PRAGMA user_version;"
+```
+
+- ✅ `Database: N sessions, M events, K templates (schema v6)`
 - ❌ `Database: not found or query failed`
+- ⚠️ `Database: schema version < 6 — restart app to trigger migration`
 
 ### 8. Live capture test
 
@@ -275,11 +283,11 @@ sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite "DELETE FROM ses
 ```
 ✅ Build (app): succeeded
 ✅ Build (CLI): succeeded
-✅ CLI: nocrumbs 0.2.0
+✅ CLI: nocrumbs 0.3.0
 ✅ Hooks: UserPromptSubmit + PostToolUse (Write|Edit)
 ✅ App: running (PID 12345), window open
 ✅ Socket: nocrumbs.sock present
-✅ Database: 3 sessions, 16 events
+✅ Database: 3 sessions, 16 events, 0 templates (schema v6)
 ✅ Live capture: test prompt stored and verified
 ✅ Git hooks: prepare-commit-msg installed
 ✅ UI: session selectable, Option+Right expands (+3 rows), Option+Left collapses (-3 rows)
