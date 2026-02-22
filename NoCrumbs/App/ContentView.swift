@@ -36,6 +36,7 @@ private final class SidebarState {
     var selection: UUID?
     var expandedSessions: Set<String> = []
     var hideEmptyEvents = false
+    var collapsedProjects: Set<String> = []
     var keyMonitor: Any?
     var renamingSessionID: String?
     var renameText = ""
@@ -122,6 +123,7 @@ struct ContentView: View {
                 let hasVisibleSessions = sessions.contains { !filteredEvents(for: $0.id).isEmpty }
                 guard hasVisibleSessions else { continue }
                 items.append(.projectHeader(projectName))
+                guard !state.collapsedProjects.contains(projectName) else { continue }
                 for session in sessions {
                     let events = filteredEvents(for: session.id)
                     guard !events.isEmpty else { continue }
@@ -271,13 +273,32 @@ struct ContentView: View {
 
     @ViewBuilder
     private func projectHeaderRow(_ name: String) -> some View {
-        Text(name)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(.secondary)
-            .textCase(.uppercase)
-            .padding(.top, 8)
-            .padding(.bottom, 2)
-            .listRowSeparator(.hidden)
+        let collapsed = state.collapsedProjects.contains(name)
+        HStack(spacing: 4) {
+            Image(systemName: "chevron.right")
+                .font(.system(size: 8, weight: .bold))
+                .foregroundStyle(.quaternary)
+                .rotationEffect(.degrees(collapsed ? 0 : 90))
+                .animation(.smooth(duration: 0.2), value: collapsed)
+                .frame(width: 12)
+            Text(name)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .textCase(.uppercase)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(.smooth(duration: 0.25)) {
+                if collapsed {
+                    state.collapsedProjects.remove(name)
+                } else {
+                    state.collapsedProjects.insert(name)
+                }
+            }
+        }
+        .padding(.top, 8)
+        .padding(.bottom, 2)
+        .listRowSeparator(.hidden)
     }
 
     @ViewBuilder
