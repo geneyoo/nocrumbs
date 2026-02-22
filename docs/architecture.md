@@ -43,6 +43,8 @@ NoCrumbs/
 │   │                           #   SidebarState (@Observable class), NSEvent key monitor for Option+Arrow
 │   │                           #   SessionDetailView, EventDetailView (private structs)
 │   └── NoCrumbsApp.swift       # @main entry, Window + Settings + MenuBarExtra scenes
+│                               #   Injects Database, ThemeManager, AppScale via .environment()
+│                               #   Cmd+/- zoom commands
 │
 ├── Core/
 │   ├── Database/
@@ -71,17 +73,43 @@ NoCrumbs/
 │   │   ├── DiffTextView.swift       # NSViewRepresentable wrapping NSTextView (TextKit 1)
 │   │   ├── DiffScrollSync.swift     # Syncs scroll position between left + right panes
 │   │   └── SyntaxHighlighter.swift  # Regex-based syntax highlighting for 20+ languages
+│   ├── SessionSummary/
+│   │   ├── SessionSummaryView.swift       # Rich summary: prompt timeline, diffstat bars, file changes
+│   │   └── SessionSummaryViewModel.swift  # Aggregates session data for summary display
 │   └── Settings/
-│       └── SettingsView.swift  # @AppStorage toggle for commit annotation (annotationEnabled)
+│       └── SettingsView.swift  # General settings + Diff Theme picker with inline color swatches
 │
 ├── Resources/
-│   └── Themes/
-│       └── gruvbox-dark.json   # Default color theme (bundled JSON)
+│   └── Themes/                 # 18 bundled JSON color themes
+│       ├── ayu-dark.json
+│       ├── catppuccin-latte.json
+│       ├── catppuccin-mocha.json
+│       ├── dracula.json
+│       ├── everforest-dark.json
+│       ├── github-light.json
+│       ├── gruvbox-dark.json
+│       ├── kanagawa.json
+│       ├── monokai.json
+│       ├── nightfox.json
+│       ├── nord.json
+│       ├── one-dark-pro.json
+│       ├── one-light.json
+│       ├── rose-pine.json
+│       ├── rose-pine-dawn.json
+│       ├── solarized-dark.json
+│       ├── solarized-light.json
+│       └── tokyo-night.json
 │
 ├── UI/
+│   ├── Components/
+│   │   └── SessionStateIndicator.swift  # Live/paused/stale session status indicator
+│   ├── StyleGuide/
+│   │   ├── AppColors.swift     # Semantic color tokens (addition, deletion, modified, muted variants)
+│   │   ├── AppFonts.swift      # Semantic font tokens (filePath, numeric, sectionHeader, diffEditor)
+│   │   └── AppScale.swift      # @Observable singleton — Cmd+/- zoom (0.6–2.0×), persisted to UserDefaults
 │   └── Themes/
 │       ├── DiffTheme.swift     # Codable color palette (diff + syntax colors, hex→NSColor)
-│       └── ThemeManager.swift  # @Observable singleton — loads bundled JSON themes
+│       └── ThemeManager.swift  # @Observable singleton — loads bundled JSON themes, persists selection
 │
 NoCrumbsTests/                      # Test target (hosted by app)
 ├── DiffParserTests.swift           # 10 tests — pure unit, parses diff strings
@@ -188,15 +216,26 @@ On startup, `Database.backfillBaseCommitHashes()` runs async:
 struct NoCrumbsApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var database = Database.shared
+    @State private var themeManager = ThemeManager.shared
+    @State private var appScale = AppScale.shared
 
     var body: some Scene {
         Window("NoCrumbs", id: "main") {
             ContentView()
                 .environment(database)
+                .environment(themeManager)
+                .environment(appScale)
+                .onAppear { themeManager.loadBundledThemes() }
+        }
+        .commands {
+            CommandGroup(after: .toolbar) {
+                // Cmd+/- zoom, Cmd+0 reset
+            }
         }
 
         Settings {
             SettingsView()
+                .environment(themeManager)
         }
 
         MenuBarExtra("NoCrumbs", systemImage: "doc.text.magnifyingglass") {
@@ -475,14 +514,21 @@ DiffDetailView
 
 JSON-based color themes loaded from `Resources/Themes/` at runtime.
 
-**`DiffTheme`** (Codable struct): Defines all colors for diff rendering and syntax highlighting:
-- Diff colors: background, foreground, addedBackground, removedBackground, contextBackground, lineNumber
+**`DiffTheme`** (Codable struct): 17-key schema defining all colors for diff rendering and syntax highlighting:
+- Diff colors: background, foreground, addedLine, removedLine, addedBackground, removedBackground, contextBackground, emptyLineBackground, lineNumber, hunkHeader
 - Syntax colors: comment, string, keyword, type, number, preprocessor, property
 - Hex strings → `NSColor` via computed properties
 
-**`ThemeManager`** (@Observable singleton): Loads bundled `.json` theme files, exposes `currentTheme` and `availableThemes`.
+**`ThemeManager`** (@Observable singleton):
+- Loads all bundled `.json` theme files, sorted alphabetically
+- Persists selected theme name to `UserDefaults` (`selectedDiffTheme` key)
+- Restores saved selection on launch (fallback to first theme)
 
-**Default theme**: Gruvbox Dark — warm, low-contrast palette optimized for code reading.
+**18 bundled themes** (12 dark, 6 light):
+- Dark: Ayu Dark, Catppuccin Mocha, Dracula, Everforest Dark, Gruvbox Dark, Kanagawa, Monokai, Nightfox, Nord, One Dark Pro, Rosé Pine, Solarized Dark, Tokyo Night
+- Light: Catppuccin Latte, GitHub Light, One Light, Rosé Pine Dawn, Solarized Light
+
+**Settings picker**: `SettingsView` → "Diff Theme" section with `Picker` and inline `ThemeSwatch` (bg square + green/red dots).
 
 ## Test Infrastructure (M3.5)
 
@@ -515,11 +561,20 @@ xcodebuild test -project NoCrumbs.xcodeproj -scheme NoCrumbs -sdk macosx -derive
 
 ## Settings
 
+Two sections in the Settings form:
+
+**General:**
 - **Annotation toggle** (`annotationEnabled`): Controls whether `nocrumbs annotate-commit` appends prompt context to commit messages
 - Stored in `UserDefaults` via `@AppStorage`
 - Registered with default `true` in `AppDelegate.applicationDidFinishLaunching`
 - Read by `SocketServer.handleQueryPrompts` and included in response to CLI
-- Accessible via native Settings scene (`Cmd+,`) or menu bar "Settings..."
+
+**Diff Theme:**
+- `Picker` listing all 18 available themes with inline color swatches
+- Selection persisted via `ThemeManager.selectTheme(named:)` → `UserDefaults`
+- Changes apply immediately to diff viewer (ThemeManager is @Observable, injected via environment)
+
+Accessible via native Settings scene (`Cmd+,`) or menu bar "Settings..."
 
 ## SwiftUI + AppKit Hybrid
 
@@ -531,6 +586,8 @@ xcodebuild test -project NoCrumbs.xcodeproj -scheme NoCrumbs -sdk macosx -derive
 | Key monitoring | `NSEvent.addLocalMonitorForEvents` | Intercepts Option+Arrow before NSOutlineView |
 | Menu bar | `MenuBarExtra` | Native Mac menu bar pattern |
 | Settings | SwiftUI `Settings` scene | Native Cmd+, integration |
+| Zoom scaling | `AppScale` (@Observable) | Cmd+/- zoom (0.6–2.0×), persisted to UserDefaults |
+| Design tokens | `AppColors`, `AppFonts` | Semantic color/font constants, scale-aware |
 | Diff panes | `NSTextView` (`NSViewRepresentable`) | TextKit 1 — battle-tested, no TextKit 2 scrolling bugs |
 | Scroll sync | `DiffScrollSync` (NSView bounds observation) | Syncs left/right panes via boundsDidChangeNotification |
 | Line numbers | Custom `DiffNSTextView.draw()` override | Draws gutter numbers in TextKit 1 coordinate space |
