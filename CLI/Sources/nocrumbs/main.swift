@@ -1,6 +1,6 @@
 import Foundation
 
-let version = "0.3.0"
+let version = "0.4.0"
 let args = CommandLine.arguments
 
 guard args.count >= 2 else {
