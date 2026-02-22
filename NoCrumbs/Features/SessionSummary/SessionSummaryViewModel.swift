@@ -192,11 +192,9 @@ final class SessionSummaryViewModel {
         }
 
         let projectPath = event.projectPath
-        let relativePaths = fileChanges.map { change -> String in
-            if change.filePath.hasPrefix(projectPath + "/") {
-                return String(change.filePath.dropFirst(projectPath.count + 1))
-            }
-            return change.filePath
+        let relativePaths = fileChanges.compactMap { change -> String? in
+            guard change.filePath.hasPrefix(projectPath + "/") else { return nil }
+            return String(change.filePath.dropFirst(projectPath.count + 1))
         }
 
         let isValid = try await provider.isValidCommit(baseHash, at: projectPath)

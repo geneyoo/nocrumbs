@@ -98,6 +98,20 @@ swift build -c release --package-path CLI/
 
 Use `/run` skill to build + launch in one step. Always verify builds before confirming fixes.
 
+## Tests
+
+```bash
+# Run all tests
+xcodebuild test -project NoCrumbs.xcodeproj -scheme NoCrumbs -sdk macosx -derivedDataPath build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
+```
+
+- **Test target:** `NoCrumbsTests` (hosted by app, `TEST_HOST` set)
+- **Test files live in:** `NoCrumbsTests/`
+- **Run tests after any change** to VCS, DiffParser, DiffViewModel, or VCSDetector code
+- `DiffViewModel` accepts `any VCSProvider` via init — use `MockVCSProvider` in tests
+- `GitProviderTests` use real temp git repos via `GitTestRepo` helper
+- When adding new test files, register them in `project.pbxproj` (PBXFileReference + PBXBuildFile in test target's Sources build phase `39DB1C349AA47E01F3AE7896`)
+
 ## Key Design Decisions
 
 1. **Don't store diffs** — derive from git/hg on demand. DB stays <1MB forever.

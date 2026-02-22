@@ -45,15 +45,24 @@ final class DiffViewModel {
         isLoading = true
         error = nil
 
-        let absolutePaths = fileChanges.map(\.filePath)
         let projectPath = event.projectPath
 
-        // Convert to relative paths for git commands
-        let relativePaths = absolutePaths.map { path -> String in
-            if path.hasPrefix(projectPath + "/") {
-                return String(path.dropFirst(projectPath.count + 1))
+        // Convert to relative paths for git commands, filtering out paths outside the repo
+        let relativePaths = fileChanges.compactMap { change -> String? in
+            let path = change.filePath
+            guard path.hasPrefix(projectPath + "/") else {
+                logger.info("skipping out-of-repo path: \(path)")
+                return nil
             }
-            return path
+            return String(path.dropFirst(projectPath.count + 1))
+        }
+
+        guard !relativePaths.isEmpty else {
+            fileDiffs = []
+            linePairs = []
+            isLoading = false
+            logger.info("load: all file paths outside repo for event \(event.id)")
+            return
         }
 
         let eventID = event.id
@@ -61,7 +70,7 @@ final class DiffViewModel {
 
         logger.info("load: event=\(eventID) baseHash=\(baseHash ?? "nil") files=\(relativePaths.count) projectPath=\(projectPath)")
         for (i, rp) in relativePaths.enumerated() {
-            logger.info("  file[\(i)]: \(rp) (abs: \(absolutePaths[i]))")
+            logger.info("  file[\(i)]: \(rp)")
         }
 
         Task { [weak self] in

@@ -62,19 +62,32 @@ NoCrumbs/
 │       ├── DiffParser.swift    # Parses unified git diff output → [FileDiff]
 │       ├── GitProvider.swift   # VCSProvider impl — shells out to /usr/bin/git via Process
 │       ├── VCSDetector.swift   # Static: walk up directory tree checking for .git/.hg
-│       └── VCSProvider.swift   # Protocol: currentBranch, isValidCommit, diff, uncommittedDiff, diffForFiles, diffFromBase, currentHead
+│       └── VCSProvider.swift   # Protocol: currentBranch, isValidCommit, diff, diffFromBase, currentHead, headBefore, untrackedFiles
 │
 ├── Features/
 │   ├── DiffViewer/
-│   │   ├── DiffDetailView.swift   # Main diff layout: header + collapsible file list + side-by-side panes
-│   │   ├── DiffViewModel.swift    # @Observable: loads diffs via baseCommitHash, builds side-by-side line pairs
-│   │   ├── DiffTextView.swift     # NSViewRepresentable wrapping NSTextView (TextKit 1)
-│   │   └── DiffScrollSync.swift   # Syncs scroll position between left + right panes
+│   │   ├── DiffDetailView.swift     # Main diff layout: header + collapsible file list + side-by-side panes
+│   │   ├── DiffViewModel.swift      # @Observable: loads diffs via injected VCSProvider, builds side-by-side line pairs
+│   │   ├── DiffTextView.swift       # NSViewRepresentable wrapping NSTextView (TextKit 1)
+│   │   ├── DiffScrollSync.swift     # Syncs scroll position between left + right panes
+│   │   └── SyntaxHighlighter.swift  # Regex-based syntax highlighting for 20+ languages
 │   └── Settings/
 │       └── SettingsView.swift  # @AppStorage toggle for commit annotation (annotationEnabled)
 │
-├── UI/                         # (empty — Components, StyleGuide planned)
-└── Tests/                      # (empty — planned)
+├── Resources/
+│   └── Themes/
+│       └── gruvbox-dark.json   # Default color theme (bundled JSON)
+│
+├── UI/
+│   └── Themes/
+│       ├── DiffTheme.swift     # Codable color palette (diff + syntax colors, hex→NSColor)
+│       └── ThemeManager.swift  # @Observable singleton — loads bundled JSON themes
+│
+NoCrumbsTests/                      # Test target (hosted by app)
+├── DiffParserTests.swift           # 10 tests — pure unit, parses diff strings
+├── DiffViewModelTests.swift        # 7 tests — MockVCSProvider injection
+├── GitProviderTests.swift          # 8 tests — real temp git repos via GitTestRepo helper
+└── VCSDetectorTests.swift          # 5 tests — filesystem with temp VCS markers
 
 CLI/
 ├── Package.swift               # Swift 5.9, macOS 14+, zero dependencies
@@ -311,8 +324,12 @@ protocol VCSProvider: Sendable {
     func uncommittedDiff(at path: String) async throws -> String
     func diffForFiles(_ filePaths: [String], at path: String) async throws -> String
     func diffFromBase(_ baseHash: String, filePaths: [String], at path: String) async throws -> String
+    func headBefore(_ date: Date, at path: String) async throws -> String?
+    func untrackedFiles(_ filePaths: [String], at path: String) async throws -> Set<String>
 }
 ```
+
+**Testability:** `DiffViewModel` accepts `any VCSProvider` via init (defaults to `GitProvider()`), enabling `MockVCSProvider` injection in tests.
 
 **Implementations:**
 - `GitProvider` — shells out to `/usr/bin/git` via `Process` with async wrapper
@@ -445,6 +462,48 @@ DiffDetailView
 
 **Reactivity:** `onChange(of: event)` watches the full PromptEvent struct (not just `.id`) so backfill updates to `baseCommitHash` trigger a reload.
 
+### Syntax Highlighting
+
+`SyntaxHighlighter` — regex-based, per-line highlighting applied as `NSAttributedString` foreground colors on top of existing diff background colors.
+
+- **20+ languages**: Swift, Python, JS/TS, Go, Rust, C/C++, Java, Ruby, JSON, YAML, Markdown, Shell, CSS, HTML, SQL, TOML
+- **Rule priority**: First match wins per character position. Comments and strings match first so keywords inside them aren't colored.
+- **Grammar structure**: Each language is a `Grammar` with ordered `[(NSRegularExpression, NSColor)]` rules
+- **Integration**: Called by `DiffTextView` after building the base attributed string, before setting on NSTextView
+
+### Theme System
+
+JSON-based color themes loaded from `Resources/Themes/` at runtime.
+
+**`DiffTheme`** (Codable struct): Defines all colors for diff rendering and syntax highlighting:
+- Diff colors: background, foreground, addedBackground, removedBackground, contextBackground, lineNumber
+- Syntax colors: comment, string, keyword, type, number, preprocessor, property
+- Hex strings → `NSColor` via computed properties
+
+**`ThemeManager`** (@Observable singleton): Loads bundled `.json` theme files, exposes `currentTheme` and `availableThemes`.
+
+**Default theme**: Gruvbox Dark — warm, low-contrast palette optimized for code reading.
+
+## Test Infrastructure (M3.5)
+
+30 tests across 4 files, all in `NoCrumbsTests/` (hosted test target).
+
+```bash
+xcodebuild test -project NoCrumbs.xcodeproj -scheme NoCrumbs -sdk macosx -derivedDataPath build \
+  CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
+```
+
+| Suite | Tests | Type | Coverage |
+|-------|-------|------|----------|
+| `DiffParserTests` | 10 | Pure unit | Parser edge cases: empty, add, delete, modify, multi-file, multi-hunk, line numbers, binary, no-newline-at-EOF |
+| `DiffViewModelTests` | 7 | Unit (mock) | All load() paths: no VCS, no files, nil base hash, invalid commit, valid diff, git failure, untracked files |
+| `GitProviderTests` | 8 | Integration | Real temp git repos: currentHead, isValidCommit (valid/invalid/after-reset), diffFromBase, headBefore, untrackedFiles |
+| `VCSDetectorTests` | 5 | Filesystem | Temp dirs with .git/.hg markers: detect git/hg/none, nested repos, repoRoot |
+
+**Key test utilities:**
+- `MockVCSProvider` — configurable stub conforming to `VCSProvider` protocol
+- `GitTestRepo` — creates temp git repo, provides `commit(file:content:)` and cleanup
+
 ## Menu Bar Behavior
 
 - `LSUIElement`-style: starts as `.accessory` (no Dock icon), shows in Dock only when window is open
@@ -513,10 +572,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 **CLI:** Zero dependencies (standalone SPM binary).
 
-**Planned (not yet added):**
-| Package | Purpose |
-|---------|---------|
-| Neon | TreeSitter syntax highlighting in diff panes |
+**Syntax highlighting:** Regex-based (no external dependency). Replaced planned TreeSitter/Neon approach with built-in `SyntaxHighlighter` — simpler, zero dependencies, covers 20+ languages adequately for diff viewing.
 
 ## Debugging
 
