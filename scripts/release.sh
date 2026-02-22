@@ -75,10 +75,11 @@ xcodebuild -project "${PROJECT_DIR}/NoCrumbs.xcodeproj" \
     -configuration Release \
     -sdk macosx \
     -derivedDataPath "${BUILD_DIR}" \
-    -arch arm64 -arch x86_64 \
+    ARCHS="arm64 x86_64" \
     DEVELOPMENT_TEAM="${TEAM_ID}" \
     CODE_SIGN_IDENTITY="Developer ID Application" \
     CODE_SIGN_STYLE="Manual" \
+    CODE_SIGN_INJECT_BASE_ENTITLEMENTS=NO \
     OTHER_CODE_SIGN_FLAGS="--timestamp --options runtime" \
     clean build 2>&1 | tail -5
 
@@ -89,19 +90,48 @@ if [[ ! -d "$APP_PATH" ]]; then
 fi
 echo "✓ Built: ${APP_PATH}"
 
-# Step 3: Verify code signing
+# Step 3: Re-sign Sparkle embedded binaries with Developer ID + timestamp
+echo "→ Re-signing Sparkle framework binaries..."
+SIGN_ID="Developer ID Application: Gene Yoo (${TEAM_ID})"
+find "$APP_PATH/Contents/Frameworks/Sparkle.framework" -type f -perm +111 | while read -r binary; do
+    codesign --force --sign "$SIGN_ID" --timestamp --options runtime "$binary" 2>/dev/null || true
+done
+# Re-sign XPC services and nested apps
+find "$APP_PATH/Contents/Frameworks/Sparkle.framework" -name "*.xpc" -o -name "*.app" | while read -r bundle; do
+    codesign --force --deep --sign "$SIGN_ID" --timestamp --options runtime "$bundle"
+done
+# Re-sign the framework itself
+codesign --force --sign "$SIGN_ID" --timestamp --options runtime \
+    "$APP_PATH/Contents/Frameworks/Sparkle.framework"
+echo "✓ Sparkle binaries re-signed"
+
+# Step 4: Re-sign the main app (picks up re-signed framework)
+echo "→ Re-signing app bundle..."
+codesign --force --sign "$SIGN_ID" --timestamp --options runtime \
+    --entitlements "${PROJECT_DIR}/NoCrumbs/Resources/NoCrumbs.entitlements" \
+    "$APP_PATH"
+echo "✓ App re-signed"
+
+# Step 5: Verify code signing
 echo "→ Verifying code signature..."
 codesign -dv --verbose=2 "$APP_PATH" 2>&1 | grep -E "(Authority|Runtime|Identifier)"
-codesign --verify --strict "$APP_PATH"
+codesign --verify --strict --deep "$APP_PATH"
 echo "✓ Code signature valid"
 
-# Step 4: Create zip for notarization
+# Verify no get-task-allow (Apple rejects this)
+if codesign -d --entitlements - "$APP_PATH" 2>&1 | grep -q "get-task-allow"; then
+    echo "❌ get-task-allow entitlement found — notarization will fail"
+    exit 1
+fi
+echo "✓ No debug entitlements"
+
+# Step 6: Create zip for notarization
 echo "→ Creating zip for notarization..."
 ZIP_PATH="${BUILD_DIR}/${APP_NAME}-${VERSION}.zip"
 ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
 echo "✓ Zip created: ${ZIP_PATH}"
 
-# Step 5: Notarize
+# Step 7: Notarize
 echo "→ Submitting for notarization (this may take a few minutes)..."
 xcrun notarytool submit "$ZIP_PATH" \
     --keychain-profile "${KEYCHAIN_PROFILE}" \
@@ -114,19 +144,19 @@ if ! grep -q "status: Accepted" "${BUILD_DIR}/notarization.log"; then
 fi
 echo "✓ Notarization accepted"
 
-# Step 6: Staple
+# Step 8: Staple
 echo "→ Stapling notarization ticket..."
 xcrun stapler staple "$APP_PATH"
 echo "✓ Stapled"
 
-# Step 7: Re-zip after stapling (final distributable)
+# Step 9: Re-zip after stapling (final distributable)
 echo "→ Creating final distributable zip..."
 rm -f "$ZIP_PATH"
 ditto -c -k --keepParent "$APP_PATH" "$ZIP_PATH"
 ZIP_SIZE=$(stat -f%z "$ZIP_PATH")
 echo "✓ Final zip: ${ZIP_PATH} ($(( ZIP_SIZE / 1048576 )) MB)"
 
-# Step 8: Sign zip with Sparkle EdDSA
+# Step 10: Sign zip with Sparkle EdDSA
 if [[ -n "$SPARKLE_BIN" && -x "${SPARKLE_BIN}/sign_update" ]]; then
     echo "→ Signing zip with Sparkle EdDSA..."
     EDDSA_SIG=$("${SPARKLE_BIN}/sign_update" "$ZIP_PATH")
@@ -138,7 +168,7 @@ else
     EDDSA_SIG="(manual signing required)"
 fi
 
-# Step 9: Generate appcast
+# Step 11: Generate appcast
 APPCAST_DIR="${BUILD_DIR}/appcast"
 mkdir -p "$APPCAST_DIR"
 cp "$ZIP_PATH" "$APPCAST_DIR/"
