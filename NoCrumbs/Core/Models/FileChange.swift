@@ -6,4 +6,5 @@ struct FileChange: Identifiable, Codable, Equatable, Sendable {
     let filePath: String
     let toolName: String
     let timestamp: Date
+    var description: String?
 }

@@ -73,7 +73,7 @@ struct SessionSummaryView: View {
                 Spacer()
 
                 Button {
-                    let md = viewModel.markdownSummary(session: session, events: events)
+                    let md = viewModel.markdownSummary(session: session, events: events, fileChangesCache: database.fileChangesCache)
                     NSPasteboard.general.clearContents()
                     NSPasteboard.general.setString(md, forType: .string)
                     showCopiedFeedback = true
@@ -168,7 +168,7 @@ struct SessionSummaryView: View {
     }
 
     private func exportMarkdown() {
-        let md = viewModel.markdownSummary(session: session, events: events)
+        let md = viewModel.markdownSummary(session: session, events: events, fileChangesCache: database.fileChangesCache)
         let panel = NSSavePanel()
         panel.nameFieldStringValue = "session-\(session.id.prefix(8)).md"
         panel.allowedContentTypes = [.plainText]
@@ -338,32 +338,53 @@ struct SessionSummaryView: View {
 
     @ViewBuilder
     private func fileStatRow(_ stat: DiffStat) -> some View {
-        HStack(spacing: 6) {
-            FileStatusBadge(status: stat.status)
-                .frame(width: 18)
+        VStack(alignment: .leading, spacing: 1) {
+            HStack(spacing: 6) {
+                FileStatusBadge(status: stat.status)
+                    .frame(width: 18)
 
-            Text(stat.filePath)
-                .font(AppFonts.filePath(scale.level))
-                .lineLimit(1)
-                .truncationMode(.middle)
+                Text(stat.filePath)
+                    .font(AppFonts.filePath(scale.level))
+                    .lineLimit(1)
+                    .truncationMode(.middle)
 
-            Spacer()
+                Spacer()
 
-            if stat.additions > 0 {
-                Text("+\(stat.additions)")
-                    .font(AppFonts.numeric(scale.level))
-                    .foregroundStyle(AppColors.addition)
+                if stat.additions > 0 {
+                    Text("+\(stat.additions)")
+                        .font(AppFonts.numeric(scale.level))
+                        .foregroundStyle(AppColors.addition)
+                }
+
+                if stat.deletions > 0 {
+                    Text("-\(stat.deletions)")
+                        .font(AppFonts.numeric(scale.level))
+                        .foregroundStyle(AppColors.deletion)
+                }
+
+                DiffStatSquares(additions: stat.additions, deletions: stat.deletions)
             }
 
-            if stat.deletions > 0 {
-                Text("-\(stat.deletions)")
-                    .font(AppFonts.numeric(scale.level))
-                    .foregroundStyle(AppColors.deletion)
+            if let desc = descriptionForFile(stat.filePath) {
+                Text(desc)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .padding(.leading, 24)
             }
-
-            DiffStatSquares(additions: stat.additions, deletions: stat.deletions)
         }
         .padding(.vertical, 1)
+    }
+
+    private func descriptionForFile(_ filePath: String) -> String? {
+        for event in events {
+            if let changes = database.fileChangesCache[event.id] {
+                if let match = changes.first(where: { $0.filePath.hasSuffix(filePath) || filePath.hasSuffix($0.filePath) }) {
+                    if let desc = match.description { return desc }
+                }
+            }
+        }
+        return nil
     }
 
     private func relativePath(_ path: String) -> String {

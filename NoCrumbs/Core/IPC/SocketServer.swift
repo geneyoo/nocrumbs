@@ -127,6 +127,9 @@ actor SocketServer {
         case "change":
             close(clientFD)
             await handleChange(json, db: db)
+        case "file-descriptions":
+            close(clientFD)
+            await handleFileDescriptions(json, db: db)
         case "query-prompts":
             await handleQueryPrompts(json, db: db, clientFD: clientFD)
         case "template":
@@ -315,6 +318,30 @@ actor SocketServer {
                 logger.error("[NC:Socket] Bridge change error: \(error.localizedDescription)")
             }
         }
+    }
+
+    private func handleFileDescriptions(_ json: [String: Any], db: Database) async {
+        guard let sessionID = json["session_id"] as? String,
+            let descriptions = json["descriptions"] as? [[String: Any]]
+        else {
+            logger.warning("[NC:Socket] Malformed file-descriptions message")
+            return
+        }
+
+        await MainActor.run {
+            for desc in descriptions {
+                guard let filePath = desc["file_path"] as? String,
+                    let description = desc["description"] as? String
+                else { continue }
+                do {
+                    try db.updateFileDescription(description, sessionID: sessionID, filePath: filePath)
+                } catch {
+                    logger.error("[NC:Socket] Failed to update description for \(filePath): \(error.localizedDescription)")
+                }
+            }
+        }
+
+        logger.info("[NC:Socket] Updated \(descriptions.count) file descriptions for session \(sessionID.prefix(8))")
     }
 
     private func handleQueryPrompts(_ json: [String: Any], db: Database, clientFD: Int32) async {

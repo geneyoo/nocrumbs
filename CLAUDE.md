@@ -123,3 +123,9 @@ xcodebuild test -project NoCrumbs.xcodeproj -scheme NoCrumbs -sdk macosx -derive
 ## Workflow
 
 After completing a milestone, run `/sync-docs` to update `docs/architecture.md` with current codebase state.
+
+### File Descriptions
+After completing file changes, describe what changed in each file:
+```bash
+echo '{"session_id":"$SESSION_ID","descriptions":[{"file_path":"/abs/path/to/File.swift","description":"what changed"}]}' | nocrumbs describe
+```

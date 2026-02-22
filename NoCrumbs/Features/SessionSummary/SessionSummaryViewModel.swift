@@ -190,15 +190,24 @@ final class SessionSummaryViewModel {
         }
     }
 
-    func markdownSummary(session: Session, events: [PromptEvent]) -> String {
-        SessionMarkdownFormatter.format(
+    func markdownSummary(session: Session, events: [PromptEvent], fileChangesCache: [UUID: [FileChange]] = [:]) -> String {
+        var descriptions: [String: String] = [:]
+        for event in events {
+            for change in fileChangesCache[event.id] ?? [] {
+                if let desc = change.description {
+                    descriptions[change.filePath] = desc
+                }
+            }
+        }
+        return SessionMarkdownFormatter.format(
             .init(
                 session: session,
                 events: events,
                 promptDiffStats: promptDiffStats,
                 uniqueFiles: uniqueFiles,
                 aggregateAdditions: aggregateAdditions,
-                aggregateDeletions: aggregateDeletions
+                aggregateDeletions: aggregateDeletions,
+                fileDescriptions: descriptions
             ))
     }
 

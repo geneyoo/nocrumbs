@@ -207,6 +207,12 @@ final class Database {
             setUserVersion(6)
             logger.info("🔄 [DB] Migrated to v6 (commitTemplates)")
         }
+
+        if version < 7 {
+            exec("ALTER TABLE fileChanges ADD COLUMN description TEXT")
+            setUserVersion(7)
+            logger.info("🔄 [DB] Migrated to v7 (fileChange descriptions)")
+        }
     }
 
     // MARK: - CRUD: Sessions
@@ -255,8 +261,8 @@ final class Database {
 
     func insertFileChange(_ change: FileChange) throws {
         let sql = """
-            INSERT INTO fileChanges (id, eventID, filePath, toolName, timestamp)
-            VALUES (?, ?, ?, ?, ?)
+            INSERT INTO fileChanges (id, eventID, filePath, toolName, timestamp, description)
+            VALUES (?, ?, ?, ?, ?, ?)
             ON CONFLICT(eventID, filePath) DO UPDATE SET
                 toolName = excluded.toolName,
                 timestamp = excluded.timestamp
@@ -269,6 +275,7 @@ final class Database {
                 .text(change.filePath),
                 .text(change.toolName),
                 .double(change.timestamp.timeIntervalSince1970),
+                change.description.map { .text($0) } ?? .null,
             ])
         // Update cache: replace existing entry for same filePath, or append
         var entries = fileChangesCache[change.eventID, default: []]
@@ -290,7 +297,7 @@ final class Database {
     }
 
     func fileChanges(forEventID eventID: UUID) throws -> [FileChange] {
-        let sql = "SELECT id, eventID, filePath, toolName, timestamp FROM fileChanges WHERE eventID = ? ORDER BY timestamp"
+        let sql = "SELECT id, eventID, filePath, toolName, timestamp, description FROM fileChanges WHERE eventID = ? ORDER BY timestamp"
         // swiftlint:disable force_unwrapping
         return try query(sql, bindings: [.text(eventID.uuidString)]) { stmt in
             FileChange(
@@ -298,7 +305,8 @@ final class Database {
                 eventID: UUID(uuidString: columnText(stmt, 1))!,
                 filePath: columnText(stmt, 2),
                 toolName: columnText(stmt, 3),
-                timestamp: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 4))
+                timestamp: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 4)),
+                description: sqlite3_column_text(stmt, 5).map { String(cString: $0) }
             )
         }
         // swiftlint:enable force_unwrapping
@@ -373,6 +381,26 @@ final class Database {
         )
         try loadRecentEvents()
         logger.info("✅ [DB] Backfilled prompt text for \(eventID.uuidString)")
+    }
+
+    /// Update description on a fileChange matched by sessionID + filePath.
+    func updateFileDescription(_ description: String, sessionID: String, filePath: String) throws {
+        let sql = """
+            UPDATE fileChanges SET description = ? WHERE eventID IN (
+                SELECT pe.id FROM promptEvents pe WHERE pe.sessionID = ?
+            ) AND filePath = ?
+            """
+        try execute(sql, bindings: [.text(description), .text(sessionID), .text(filePath)])
+
+        // Update cache — find matching entries
+        for (eventID, changes) in fileChangesCache {
+            if let idx = changes.firstIndex(where: { $0.filePath == filePath }) {
+                var updated = changes[idx]
+                updated.description = description
+                fileChangesCache[eventID]?[idx] = updated
+            }
+        }
+        logger.info("✅ [DB] Updated description for \(filePath)")
     }
 
     func deleteSession(id: String) throws {

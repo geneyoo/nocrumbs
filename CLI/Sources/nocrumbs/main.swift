@@ -13,6 +13,7 @@ guard args.count >= 2 else {
     print("  nocrumbs annotate-commit     Annotate commit message (git hook)")
     print("  nocrumbs install             Install Claude Code hooks")
     print("  nocrumbs install-git-hooks   Install prepare-commit-msg git hook")
+    print("  nocrumbs describe            Pipe per-file change descriptions to app")
     print("  nocrumbs template            Manage commit annotation templates")
     print("  nocrumbs --version           Show version")
     exit(0)
@@ -36,6 +37,8 @@ do {
         try InstallCommand.run()
     case "install-git-hooks":
         try InstallGitHooksCommand.run()
+    case "describe":
+        try DescribeCommand.run()
     case "template":
         try TemplateCommand.run()
     default:

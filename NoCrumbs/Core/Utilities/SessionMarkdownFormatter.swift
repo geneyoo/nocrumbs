@@ -8,6 +8,7 @@ enum SessionMarkdownFormatter {
         let uniqueFiles: [AggregatedFileStat]
         let aggregateAdditions: Int
         let aggregateDeletions: Int
+        var fileDescriptions: [String: String] = [:]  // filePath → description
     }
 
     static func format(_ input: Input) -> String {
@@ -60,6 +61,9 @@ enum SessionMarkdownFormatter {
                 var entry = "- \(file.filePath)"
                 if file.totalAdditions > 0 || file.totalDeletions > 0 {
                     entry += " (+\(file.totalAdditions) / -\(file.totalDeletions))"
+                }
+                if let desc = input.fileDescriptions[file.filePath] {
+                    entry += " — \(desc)"
                 }
                 lines.append(entry)
             }
