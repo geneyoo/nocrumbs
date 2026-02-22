@@ -42,12 +42,10 @@ function HeroSection() {
             Get Started
           </Link>
           <Link
-            className="button button--secondary button--lg hero__btn-locked"
-            href="#"
-            onClick={(e) => e.preventDefault()}
+            className="button button--secondary button--lg"
+            href="https://github.com/geneyoo/nocrumbs"
           >
             GitHub
-            <span className="hero__btn-soon">Coming Soon</span>
           </Link>
         </div>
       </div>
