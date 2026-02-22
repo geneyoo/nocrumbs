@@ -217,6 +217,20 @@ struct SessionSummaryView: View {
                         .font(.callout)
 
                     HStack(spacing: 8) {
+                        if let hash = event.baseCommitHash {
+                            let short = String(hash.prefix(7))
+                            if let url = viewModel.commitURL(for: hash) {
+                                Text(short)
+                                    .font(.caption.monospaced())
+                                    .foregroundStyle(.blue)
+                                    .onTapGesture { NSWorkspace.shared.open(url) }
+                                    .help("Open commit on remote")
+                            } else {
+                                Text(short)
+                                    .font(.caption.monospaced())
+                                    .foregroundStyle(.tertiary)
+                            }
+                        }
                         let fileCount = stat?.totalFiles ?? fileChanges.count
                         if fileCount > 0 {
                             Text("\(fileCount) file\(fileCount == 1 ? "" : "s")")

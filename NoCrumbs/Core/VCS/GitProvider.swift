@@ -60,6 +60,16 @@ struct GitProvider: VCSProvider {
         return Set(output.split(separator: "\n").map(String.init))
     }
 
+    /// Returns the remote origin URL, or nil if no remote is configured.
+    func remoteURL(at path: String) async throws -> String? {
+        do {
+            let result = try await run("git", args: ["config", "--get", "remote.origin.url"], at: path)
+            return result.isEmpty ? nil : result
+        } catch {
+            return nil
+        }
+    }
+
     /// Returns set of file paths that have no uncommitted changes (clean/committed).
     func cleanFiles(_ filePaths: [String], at path: String) async throws -> Set<String> {
         var args = ["status", "--porcelain", "--"]

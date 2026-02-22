@@ -66,6 +66,8 @@
 		DA11AA22BB33CC44DD55EE03 /* AppScale.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA11AA22BB33CC44DD55EE03 /* AppScale.swift */; };
 		FA11BB22CC33DD44EE55FF01 /* HookHealthChecker.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA11BB22CC33DD44EE55FF01 /* HookHealthChecker.swift */; };
 		FA11BB22CC33DD44EE55FF02 /* SetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA11BB22CC33DD44EE55FF02 /* SetupView.swift */; };
+		R1A00001BB534E69B484BF01 /* RemoteURLParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = R1F00001947253F7B233B101 /* RemoteURLParser.swift */; };
+		R1A00002BB534E69B484BF02 /* RemoteURLParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = R1F00002947253F7B233B102 /* RemoteURLParserTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -139,6 +141,8 @@
 		CA11AA22BB33CC44DD55EE03 /* AppScale.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppScale.swift; sourceTree = "<group>"; };
 		EA11BB22CC33DD44EE55FF01 /* HookHealthChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HookHealthChecker.swift; sourceTree = "<group>"; };
 		EA11BB22CC33DD44EE55FF02 /* SetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupView.swift; sourceTree = "<group>"; };
+		R1F00001947253F7B233B101 /* RemoteURLParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteURLParser.swift; sourceTree = "<group>"; };
+		R1F00002947253F7B233B102 /* RemoteURLParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteURLParserTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -217,6 +221,7 @@
 				BB22CC33DD44EE55FF661122 /* DiffParser.swift */,
 				3D069F5ACA9BB864C8B7AFA6 /* GitProvider.swift */,
 				4A1B2C3D4E5F6A7B8C9D0E1F /* MercurialProvider.swift */,
+				R1F00001947253F7B233B101 /* RemoteURLParser.swift */,
 				37CE3F16F07E020EEDE309B8 /* VCSDetector.swift */,
 				98CDF552C67056A28C4819EA /* VCSProvider.swift */,
 			);
@@ -378,6 +383,7 @@
 				BB1122334455667788990011 /* DiffParserTests.swift */,
 				BB2233445566778899001122 /* GitProviderTests.swift */,
 				6C3D4E5F6A7B8C9D0E1F2A3B /* MercurialProviderTests.swift */,
+				R1F00002947253F7B233B102 /* RemoteURLParserTests.swift */,
 				BB4455667788990011223344 /* VCSDetectorTests.swift */,
 				BB5566778899001122334455 /* DatabaseTests.swift */,
 			);
@@ -512,6 +518,7 @@
 				11AA22BB33CC44DD55EE66FF /* FileDiff.swift in Sources */,
 				C307CB874E94C03E8F8E63FD /* GitProvider.swift in Sources */,
 				5B2C3D4E5F6A7B8C9D0E1F2A /* MercurialProvider.swift in Sources */,
+				R1A00001BB534E69B484BF01 /* RemoteURLParser.swift in Sources */,
 				AABB5566778899001122EEFF /* HookEvent.swift in Sources */,
 				D80D064DB9F6C9C9DF635713 /* NoCrumbsApp.swift in Sources */,
 				8A911B5B50873530D8061506 /* PromptEvent.swift in Sources */,
@@ -546,6 +553,7 @@
 				AA3344556677889900112233 /* DiffViewModelTests.swift in Sources */,
 				AA4455667788990011223344 /* VCSDetectorTests.swift in Sources */,
 				AA5566778899001122334455 /* DatabaseTests.swift in Sources */,
+				R1A00002BB534E69B484BF02 /* RemoteURLParserTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -9,6 +9,7 @@ final class SessionSummaryViewModel {
     private(set) var isLoading = false
     private(set) var loadingProgress: (completed: Int, total: Int) = (0, 0)
     private(set) var errors: [UUID: String] = [:]
+    private(set) var remoteURL: String?
 
     private var currentSessionID: String?
     private let provider: any VCSProvider
@@ -65,6 +66,11 @@ final class SessionSummaryViewModel {
         .sorted { $0.totalChanges != $1.totalChanges ? $0.totalChanges > $1.totalChanges : $0.filePath < $1.filePath }
     }
 
+    func commitURL(for hash: String) -> URL? {
+        guard let remote = remoteURL else { return nil }
+        return RemoteURLParser.commitURL(remoteURL: remote, hash: hash)
+    }
+
     // MARK: - Load
 
     func load(session: Session, events: [PromptEvent], fileChangesCache: [UUID: [FileChange]]) {
@@ -72,7 +78,15 @@ final class SessionSummaryViewModel {
         currentSessionID = session.id
         promptDiffStats = [:]
         errors = [:]
+        remoteURL = nil
         isLoading = true
+
+        // Fetch remote URL once per session (Git only)
+        if events.first?.vcs == .git, let projectPath = events.first?.projectPath {
+            Task {
+                self.remoteURL = try? await GitProvider().remoteURL(at: projectPath)
+            }
+        }
 
         let eventsWithChanges = events.filter { event in
             event.vcs != nil
@@ -180,6 +194,7 @@ final class SessionSummaryViewModel {
         currentSessionID = nil
         promptDiffStats = [:]
         errors = [:]
+        remoteURL = nil
         isLoading = false
     }
 
