@@ -129,6 +129,8 @@ actor SocketServer {
             await handleChange(json, db: db)
         case "query-prompts":
             await handleQueryPrompts(json, db: db, clientFD: clientFD)
+        case "template":
+            await handleTemplate(json, db: db, clientFD: clientFD)
         default:
             logger.warning("[NC:Socket] Unknown type: \(type)")
             close(clientFD)
@@ -328,18 +330,23 @@ actor SocketServer {
                 let totalFiles = try db.totalFileCount(forProject: cwd, since: since)
                 let sessionID = events.first?.sessionID ?? ""
 
-                let prompts: [[String: Any]] = events.compactMap { event in
+                // Chronological order (oldest first) — intent-setting prompts surface to top
+                let prompts: [[String: Any]] = events.reversed().compactMap { event in
                     guard let text = event.promptText else { return nil }
                     let fileCount = (try? db.fileChangeCount(forEventID: event.id)) ?? 0
                     return ["text": text, "file_count": fileCount]
                 }
 
-                return [
+                var response: [String: Any] = [
                     "prompts": prompts,
                     "session_id": sessionID,
                     "total_files": totalFiles,
                     "annotation_enabled": UserDefaults.standard.bool(forKey: "annotationEnabled"),
                 ]
+                if let activeBody = db.activeTemplate?.body {
+                    response["template"] = activeBody
+                }
+                return response
             } catch {
                 logger.error("[NC:Socket] Query failed: \(error.localizedDescription)")
                 return ["prompts": [] as [Any], "session_id": "", "total_files": 0]
@@ -348,6 +355,112 @@ actor SocketServer {
 
         if let responseData = try? JSONSerialization.data(withJSONObject: response) {
             _ = responseData.withUnsafeBytes { buf in
+                // swiftlint:disable:next force_unwrapping
+                write(clientFD, buf.baseAddress!, buf.count)
+            }
+        }
+        close(clientFD)
+    }
+
+    private func handleTemplate(_ json: [String: Any], db: Database, clientFD: Int32) async {
+        guard let action = json["action"] as? String else {
+            sendJSON(["error": "missing action"], to: clientFD)
+            return
+        }
+
+        let response: [String: Any]
+
+        switch action {
+        case "add":
+            guard let name = json["name"] as? String,
+                let body = json["body"] as? String
+            else {
+                sendJSON(["error": "missing name or body"], to: clientFD)
+                return
+            }
+            response = await MainActor.run {
+                do {
+                    try db.saveCommitTemplate(name: name, body: body)
+                    return ["ok": true] as [String: Any]
+                } catch {
+                    return ["error": error.localizedDescription] as [String: Any]
+                }
+            }
+
+        case "list":
+            let templates: [[String: Any]] = await MainActor.run {
+                db.commitTemplates.map { t in
+                    ["name": t.name, "body": t.body, "is_active": t.isActive] as [String: Any]
+                }
+            }
+            response = ["templates": templates]
+
+        case "set":
+            guard let name = json["name"] as? String else {
+                sendJSON(["error": "missing name"], to: clientFD)
+                return
+            }
+            response = await MainActor.run {
+                do {
+                    try db.setActiveTemplate(name: name)
+                    return ["ok": true] as [String: Any]
+                } catch {
+                    return ["error": error.localizedDescription] as [String: Any]
+                }
+            }
+
+        case "remove":
+            guard let name = json["name"] as? String else {
+                sendJSON(["error": "missing name"], to: clientFD)
+                return
+            }
+            response = await MainActor.run {
+                do {
+                    try db.deleteCommitTemplate(name: name)
+                    return ["ok": true] as [String: Any]
+                } catch {
+                    return ["error": error.localizedDescription] as [String: Any]
+                }
+            }
+
+        case "preview":
+            let rendered: String = await MainActor.run {
+                let templateBody = db.activeTemplate?.body ?? "---\n{{summary_line}}"
+                let since = Date().addingTimeInterval(-3600)
+                let cwd = json["cwd"] as? String ?? ""
+
+                guard let events = try? db.recentEvents(forProject: cwd, since: since) else {
+                    return "(no prompt data)"
+                }
+
+                let totalFiles = (try? db.totalFileCount(forProject: cwd, since: since)) ?? 0
+                let sessionID = events.first?.sessionID ?? ""
+                let prompts: [(text: String, fileCount: Int)] = events.compactMap { event in
+                    guard let text = event.promptText else { return nil }
+                    let fc = (try? db.fileChangeCount(forEventID: event.id)) ?? 0
+                    return (text: text, fileCount: fc)
+                }
+
+                let context = TemplateContext(
+                    promptCount: prompts.count,
+                    totalFiles: totalFiles,
+                    sessionID: sessionID,
+                    prompts: prompts
+                )
+                return TemplateRenderer.render(templateBody, context: context)
+            }
+            response = ["preview": rendered]
+
+        default:
+            response = ["error": "unknown action: \(action)"]
+        }
+
+        sendJSON(response, to: clientFD)
+    }
+
+    private nonisolated func sendJSON(_ object: [String: Any], to clientFD: Int32) {
+        if let data = try? JSONSerialization.data(withJSONObject: object) {
+            _ = data.withUnsafeBytes { buf in
                 // swiftlint:disable:next force_unwrapping
                 write(clientFD, buf.baseAddress!, buf.count)
             }

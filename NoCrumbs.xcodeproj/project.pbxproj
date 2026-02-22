@@ -61,6 +61,8 @@
 		AA3344556677889900112233 /* DiffViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB3344556677889900112233 /* DiffViewModelTests.swift */; };
 		AA4455667788990011223344 /* VCSDetectorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB4455667788990011223344 /* VCSDetectorTests.swift */; };
 		AA5566778899001122334455 /* DatabaseTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB5566778899001122334455 /* DatabaseTests.swift */; };
+		T2A00001BB534E69B484BF01 /* CommitTemplate.swift in Sources */ = {isa = PBXBuildFile; fileRef = T2F00001947253F7B233B101 /* CommitTemplate.swift */; };
+		T2A00002BB534E69B484BF02 /* TemplateRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = T2F00002947253F7B233B102 /* TemplateRenderer.swift */; };
 		DA11AA22BB33CC44DD55EE01 /* AppColors.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA11AA22BB33CC44DD55EE01 /* AppColors.swift */; };
 		DA11AA22BB33CC44DD55EE02 /* AppFonts.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA11AA22BB33CC44DD55EE02 /* AppFonts.swift */; };
 		DA11AA22BB33CC44DD55EE03 /* AppScale.swift in Sources */ = {isa = PBXBuildFile; fileRef = CA11AA22BB33CC44DD55EE03 /* AppScale.swift */; };
@@ -141,6 +143,8 @@
 		CA11AA22BB33CC44DD55EE03 /* AppScale.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppScale.swift; sourceTree = "<group>"; };
 		EA11BB22CC33DD44EE55FF01 /* HookHealthChecker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HookHealthChecker.swift; sourceTree = "<group>"; };
 		EA11BB22CC33DD44EE55FF02 /* SetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SetupView.swift; sourceTree = "<group>"; };
+		T2F00001947253F7B233B101 /* CommitTemplate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommitTemplate.swift; sourceTree = "<group>"; };
+		T2F00002947253F7B233B102 /* TemplateRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TemplateRenderer.swift; sourceTree = "<group>"; };
 		R1F00001947253F7B233B101 /* RemoteURLParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteURLParser.swift; sourceTree = "<group>"; };
 		R1F00002947253F7B233B102 /* RemoteURLParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteURLParserTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -269,12 +273,14 @@
 		CB242500DFFB780C2EEBD47A /* Models */ = {
 			isa = PBXGroup;
 			children = (
+				T2F00001947253F7B233B101 /* CommitTemplate.swift */,
 				BB55CC66DD77EE88FF990011 /* DiffStat.swift */,
 				A10564EE9AF457416465F62D /* FileChange.swift */,
 				AA11BB22CC33DD44EE55FF66 /* FileDiff.swift */,
 				5566778899AABB001122EEFF /* HookEvent.swift */,
 				851939F6461B1C59CF8F1823 /* PromptEvent.swift */,
 				127A4015EC6E11386657358E /* Session.swift */,
+				T2F00002947253F7B233B102 /* TemplateRenderer.swift */,
 				BD9D8050C0B03F827872CC72 /* VCSType.swift */,
 			);
 			path = Models;
@@ -540,6 +546,8 @@
 				DA11AA22BB33CC44DD55EE03 /* AppScale.swift in Sources */,
 				FA11BB22CC33DD44EE55FF01 /* HookHealthChecker.swift in Sources */,
 				FA11BB22CC33DD44EE55FF02 /* SetupView.swift in Sources */,
+				T2A00001BB534E69B484BF01 /* CommitTemplate.swift in Sources */,
+				T2A00002BB534E69B484BF02 /* TemplateRenderer.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

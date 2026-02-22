@@ -5,10 +5,10 @@
 ## Data Flow
 
 ```
-Claude Code hooks (dual-hook design)
-    ↓ UserPromptSubmit         ↓ PostToolUse (Write|Edit)
-nocrumbs capture-prompt    nocrumbs capture-change
-    ↓ stdin JSON parsing       ↓ stdin JSON parsing
+Claude Code hooks (unified event + legacy dual-hook)
+    ↓ Any hook event              ↓ Legacy: UserPromptSubmit / PostToolUse
+nocrumbs event                nocrumbs capture-prompt / capture-change
+    ↓ stdin JSON parsing         ↓ stdin JSON parsing
     ↓ session_id links prompts to file changes
     └──────────┬───────────────┘
                ↓ JSON via Unix domain socket
@@ -16,20 +16,28 @@ nocrumbs capture-prompt    nocrumbs capture-change
                ↓
     Database.shared (raw SQLite3 C API, WAL mode)
                ↓ @Observable properties (in-memory cache)
-    SwiftUI Views (sidebar session tree, diff detail view)
+    SwiftUI Views (time-grouped sidebar, diff detail, session summary)
                ↓ on-demand
-    git CLI via Process (derive diffs, never store them)
+    git/hg CLI via Process (derive diffs, never store them)
                ↓
     DiffParser → [FileDiff] → side-by-side line pairs
                ↓
     DiffTextView (NSTextView via NSViewRepresentable)
 
-Commit annotation (M2):
+Commit annotation:
     git prepare-commit-msg hook
         → nocrumbs annotate-commit $1
             → query-prompts via socket (request/response)
-            → append prompt summary to commit message
+            → if active template: render with TemplateRenderer
+            → else: use built-in default format
+            → append to commit message
             → respects annotation_enabled setting from app
+
+Template management:
+    nocrumbs template add/list/set/remove/preview
+        → socket request/response to app
+        → app stores templates in commitTemplates table
+        → Settings UI shows templates, click to activate, right-click to delete
 ```
 
 ## Directory Structure
@@ -39,32 +47,41 @@ NoCrumbs/
 ├── App/
 │   ├── AppDelegate.swift       # NSApplicationDelegate — owns SocketServer + Database lifecycle
 │   │                           #   Global hotkey (Cmd+Shift+N), launch at login, activation policy
-│   ├── ContentView.swift       # NavigationSplitView — flat sidebar with session/event tree
-│   │                           #   SidebarState (@Observable class), NSEvent key monitor for Option+Arrow
-│   │                           #   SessionDetailView, EventDetailView (private structs)
+│   ├── ContentView.swift       # NavigationSplitView — time-grouped sidebar with session/event tree
+│   │                           #   SidebarItem (.timePeriodHeader, .projectHeader, .session, .event)
+│   │                           #   NSEvent key monitor for Option+Arrow
 │   └── NoCrumbsApp.swift       # @main entry, Window + Settings + MenuBarExtra scenes
-│                               #   Injects Database, ThemeManager, AppScale via .environment()
+│                               #   Injects Database, ThemeManager, AppScale, HookHealthChecker
 │                               #   Cmd+/- zoom commands
 │
 ├── Core/
 │   ├── Database/
-│   │   └── Database.swift      # @Observable @MainActor singleton, raw SQLite3, WAL, migrations, CRUD
-│   │                           #   fileChangesCache: [UUID: [FileChange]] — in-memory join cache
+│   │   └── Database.swift      # @Observable @MainActor singleton, raw SQLite3, WAL, migrations v1-v6
+│   │                           #   In-memory caches: sessions, recentEvents, fileChangesCache,
+│   │                           #   recentHookEvents, commitTemplates
 │   ├── IPC/
 │   │   ├── SocketClient.swift  # Connect + write JSON to Unix socket (app-side, also has makeUnixAddr helper)
 │   │   └── SocketServer.swift  # POSIX socket actor: accept loop, parse JSON, dispatch to Database
-│   │                           #   Handles: "prompt", "change", "query-prompts" (request/response)
+│   │                           #   Handles: "event", "prompt", "change", "query-prompts", "template"
 │   ├── Models/
-│   │   ├── FileDiff.swift      # FileDiff, DiffHunk, DiffLine — diff parsing output models
-│   │   ├── FileChange.swift    # id, eventID, filePath, toolName, timestamp
-│   │   ├── PromptEvent.swift   # id, sessionID, projectPath, promptText?, timestamp, vcs?, baseCommitHash?
-│   │   ├── Session.swift       # id, projectPath, startedAt, lastActivityAt
-│   │   └── VCSType.swift       # enum: .git, .mercurial
+│   │   ├── CommitTemplate.swift   # name (PK), body, isActive, createdAt
+│   │   ├── DiffStat.swift         # Per-file, per-prompt, and aggregated diff statistics
+│   │   ├── FileChange.swift       # id, eventID, filePath, toolName, timestamp
+│   │   ├── FileDiff.swift         # FileDiff, DiffHunk, DiffLine — diff parsing output models
+│   │   ├── HookEvent.swift        # id, sessionID, hookEventName, projectPath, timestamp, payload (JSON)
+│   │   ├── PromptEvent.swift      # id, sessionID, projectPath, promptText?, timestamp, vcs?, baseCommitHash?
+│   │   ├── Session.swift          # id, projectPath, startedAt, lastActivityAt
+│   │   ├── TemplateRenderer.swift # Renders {{placeholder}} templates with TemplateContext data
+│   │   └── VCSType.swift          # enum: .git, .mercurial
+│   ├── Utilities/
+│   │   └── HookHealthChecker.swift # @Observable: checks CLI installed, hooks configured, socket active
 │   └── VCS/
-│       ├── DiffParser.swift    # Parses unified git diff output → [FileDiff]
-│       ├── GitProvider.swift   # VCSProvider impl — shells out to /usr/bin/git via Process
-│       ├── VCSDetector.swift   # Static: walk up directory tree checking for .git/.hg
-│       └── VCSProvider.swift   # Protocol: currentBranch, isValidCommit, diff, diffFromBase, currentHead, headBefore, untrackedFiles
+│       ├── DiffParser.swift       # Parses unified git/hg diff output → [FileDiff]
+│       ├── GitProvider.swift      # VCSProvider impl — shells out to /usr/bin/git via Process
+│       ├── MercurialProvider.swift # VCSProvider impl — shells out to hg via /usr/bin/env
+│       ├── RemoteURLParser.swift  # Parses git remote URLs (SSH/HTTPS) → web commit URLs
+│       ├── VCSDetector.swift      # Static: walk up directory tree checking for .git/.hg
+│       └── VCSProvider.swift      # Protocol + makeProvider(for:) factory
 │
 ├── Features/
 │   ├── DiffViewer/
@@ -74,31 +91,24 @@ NoCrumbs/
 │   │   ├── DiffScrollSync.swift     # Syncs scroll position between left + right panes
 │   │   └── SyntaxHighlighter.swift  # Regex-based syntax highlighting for 20+ languages
 │   ├── SessionSummary/
-│   │   ├── SessionSummaryView.swift       # Rich summary: prompt timeline, diffstat bars, file changes
-│   │   └── SessionSummaryViewModel.swift  # Aggregates session data for summary display
-│   └── Settings/
-│       └── SettingsView.swift  # General settings + Diff Theme picker with inline color swatches
+│   │   ├── SessionSummaryView.swift       # Rich summary: prompt timeline with clickable commit SHAs, diffstat bars
+│   │   └── SessionSummaryViewModel.swift  # Aggregates session data, resolves commit SHAs via git log
+│   ├── Settings/
+│   │   └── SettingsView.swift  # Hook status, annotation toggle + template list, diff theme picker
+│   └── Setup/
+│       └── SetupView.swift     # First-run guide: install CLI, configure hooks, verify socket
 │
 ├── Resources/
 │   └── Themes/                 # 18 bundled JSON color themes
-│       ├── ayu-dark.json
-│       ├── catppuccin-latte.json
-│       ├── catppuccin-mocha.json
-│       ├── dracula.json
-│       ├── everforest-dark.json
-│       ├── github-light.json
-│       ├── gruvbox-dark.json
-│       ├── kanagawa.json
-│       ├── monokai.json
-│       ├── nightfox.json
-│       ├── nord.json
-│       ├── one-dark-pro.json
-│       ├── one-light.json
-│       ├── rose-pine.json
-│       ├── rose-pine-dawn.json
-│       ├── solarized-dark.json
-│       ├── solarized-light.json
-│       └── tokyo-night.json
+│       ├── ayu-dark.json       ├── catppuccin-latte.json
+│       ├── catppuccin-mocha.json ├── dracula.json
+│       ├── everforest-dark.json ├── github-light.json
+│       ├── gruvbox-dark.json   ├── kanagawa.json
+│       ├── monokai.json        ├── nightfox.json
+│       ├── nord.json           ├── one-dark-pro.json
+│       ├── one-light.json      ├── rose-pine.json
+│       ├── rose-pine-dawn.json ├── solarized-dark.json
+│       ├── solarized-light.json └── tokyo-night.json
 │
 ├── UI/
 │   ├── Components/
@@ -112,28 +122,33 @@ NoCrumbs/
 │       └── ThemeManager.swift  # @Observable singleton — loads bundled JSON themes, persists selection
 │
 NoCrumbsTests/                      # Test target (hosted by app)
-├── DiffParserTests.swift           # 10 tests — pure unit, parses diff strings
-├── DiffViewModelTests.swift        # 7 tests — MockVCSProvider injection
-├── GitProviderTests.swift          # 8 tests — real temp git repos via GitTestRepo helper
-└── VCSDetectorTests.swift          # 5 tests — filesystem with temp VCS markers
+├── DatabaseTests.swift            # DB CRUD, migrations, cascade delete
+├── DiffParserTests.swift          # 10 tests — pure unit, parses diff strings
+├── DiffViewModelTests.swift       # 7 tests — MockVCSProvider injection
+├── GitProviderTests.swift         # 8 tests — real temp git repos via GitTestRepo helper
+├── MercurialProviderTests.swift   # hg provider unit tests with mock process
+├── RemoteURLParserTests.swift     # SSH/HTTPS remote URL → commit URL parsing
+└── VCSDetectorTests.swift         # 5 tests — filesystem with temp VCS markers
 
 CLI/
 ├── Package.swift               # Swift 5.9, macOS 14+, zero dependencies
 └── Sources/nocrumbs/
-    ├── main.swift              # Subcommand dispatch: capture-prompt, capture-change, annotate-commit, install, install-git-hooks
-    ├── CapturePromptCommand.swift  # Parse UserPromptSubmit stdin → JSON to socket
-    ├── CaptureChangeCommand.swift  # Parse PostToolUse stdin → JSON to socket
-    ├── AnnotateCommitCommand.swift # Query prompts via socket → append to commit message
-    ├── InstallCommand.swift    # Write dual-hook config to ~/.claude/settings.json + install git hooks
-    ├── Models.swift            # Minimal Codable structs (duplicated — CLI can't link app target)
-    └── SocketClient.swift      # Connect + write/read to Unix socket (CLI-side, includes sendAndReceive)
+    ├── main.swift              # Subcommand dispatch: event, capture-*, annotate-commit, install*, template
+    ├── CaptureEventCommand.swift  # Unified hook event → JSON to socket (v3+)
+    ├── CapturePromptCommand.swift # (legacy) Parse UserPromptSubmit stdin → JSON to socket
+    ├── CaptureChangeCommand.swift # (legacy) Parse PostToolUse stdin → JSON to socket
+    ├── AnnotateCommitCommand.swift # Query prompts via socket → render template → append to commit message
+    ├── TemplateCommand.swift      # nocrumbs template add/list/set/remove/preview
+    ├── InstallCommand.swift       # Write hook config to ~/.claude/settings.json + install git hooks
+    ├── Models.swift               # Minimal Codable structs (duplicated — CLI can't link app target)
+    └── SocketClient.swift         # Connect + write/read to Unix socket (CLI-side, includes sendAndReceive)
 ```
 
 ## Database Schema
 
 **Storage:** `~/Library/Application Support/NoCrumbs/nocrumbs.sqlite`
 **Engine:** Raw SQLite3 C API (no ORM) — WAL journal mode, foreign keys ON
-**Schema version:** 2 (tracked via `PRAGMA user_version`)
+**Schema version:** 6 (tracked via `PRAGMA user_version`)
 
 ```sql
 CREATE TABLE sessions (
@@ -160,7 +175,25 @@ CREATE TABLE fileChanges (
     filePath TEXT NOT NULL,
     toolName TEXT NOT NULL,       -- "Write" or "Edit"
     timestamp REAL NOT NULL,
-    FOREIGN KEY(eventID) REFERENCES promptEvents(id) ON DELETE CASCADE
+    FOREIGN KEY(eventID) REFERENCES promptEvents(id) ON DELETE CASCADE,
+    UNIQUE(eventID, filePath)     -- [v4] deduplication constraint
+);
+
+CREATE TABLE hookEvents (         -- [v3] raw hook event storage
+    id TEXT PRIMARY KEY,
+    sessionID TEXT NOT NULL,
+    hookEventName TEXT NOT NULL,   -- e.g. "UserPromptSubmit", "PostToolUse", "SessionEnd", "Stop"
+    projectPath TEXT NOT NULL,
+    timestamp REAL NOT NULL,
+    payload TEXT,                  -- JSON: prompt, tool_name, tool_input, agent_id, etc.
+    FOREIGN KEY(sessionID) REFERENCES sessions(id) ON DELETE CASCADE
+);
+
+CREATE TABLE commitTemplates (    -- [v6] customizable commit annotation templates
+    name TEXT PRIMARY KEY,
+    body TEXT NOT NULL,            -- Template body with {{placeholder}} syntax
+    isActive INTEGER NOT NULL DEFAULT 0,
+    createdAt REAL NOT NULL
 );
 
 -- Indexes
@@ -168,11 +201,14 @@ CREATE INDEX idx_promptEvents_sessionID ON promptEvents(sessionID);
 CREATE INDEX idx_promptEvents_timestamp ON promptEvents(timestamp);
 CREATE INDEX idx_fileChanges_eventID ON fileChanges(eventID);
 CREATE INDEX idx_fileChanges_filePath ON fileChanges(filePath);
+CREATE INDEX idx_hookEvents_sessionID ON hookEvents(sessionID);
+CREATE INDEX idx_hookEvents_timestamp ON hookEvents(timestamp);
+CREATE INDEX idx_hookEvents_hookEventName ON hookEvents(hookEventName);
 ```
 
 **Design decision:** `fileChanges` is a separate table (not a JSON array) so a single prompt that touches 100+ files scales with indexed queries. Enables "show all prompts that touched file X" lookups.
 
-Foreign key cascade: deleting a session cascades to its promptEvents, which cascades to their fileChanges.
+Foreign key cascade: deleting a session cascades to its promptEvents, which cascades to their fileChanges. Also cascades hookEvents.
 
 ## Database Singleton
 
@@ -185,10 +221,17 @@ final class Database {
     private(set) var sessions: [Session] = []
     private(set) var recentEvents: [PromptEvent] = []       // Last 500, desc by timestamp
     private(set) var fileChangesCache: [UUID: [FileChange]]  // In-memory join cache
+    private(set) var recentHookEvents: [HookEvent] = []     // Last 200
+    private(set) var commitTemplates: [CommitTemplate] = []  // All templates, ordered by createdAt
+
+    var activeTemplate: CommitTemplate? {                    // Computed from cache
+        commitTemplates.first(where: \.isActive)
+    }
 
     // Raw SQLite3 via OpaquePointer
     // WAL journal mode, foreign keys enabled
     // CRUD: upsertSession, insertPromptEvent, insertFileChange(s), deleteSession
+    //       insertHookEvent, saveCommitTemplate, deleteCommitTemplate, setActiveTemplate
     // Queries: eventsForSession, recentEvents(forProject:since:), fileChangeCount, totalFileCount
     // Cache refreshed after each write
     // backfillBaseCommitHashes() — async, fills NULL baseCommitHash via git log --before
@@ -199,6 +242,10 @@ final class Database {
 
 - **v1**: Initial schema (sessions, promptEvents, fileChanges with indexes)
 - **v2**: `ALTER TABLE promptEvents ADD COLUMN baseCommitHash TEXT`
+- **v3**: `hookEvents` table for raw Claude Code hook event storage
+- **v4**: Deduplicate fileChanges — `UNIQUE(eventID, filePath)` constraint, table rebuild
+- **v5**: Merge orphan prompt events (promptText IS NULL) into next real prompt in same session
+- **v6**: `commitTemplates` table for customizable commit annotation templates
 
 ### Backfill
 
@@ -207,7 +254,6 @@ On startup, `Database.backfillBaseCommitHashes()` runs async:
 - Uses `git log --before=<timestamp> -1 --format=%H` to find what HEAD was at prompt time
 - Updates each event with the resolved hash
 - Caches by `projectPath|timestamp` to avoid redundant git calls
-```
 
 ### Injection Pattern
 
@@ -259,6 +305,10 @@ try database.insertPromptEvent(event)
 try database.insertFileChange(change)
 try database.insertFileChanges(changes)  // Batch insert in single transaction
 try database.deleteSession(id: sessionID)  // Cascade deletes events + file changes
+try database.insertHookEvent(event)
+try database.saveCommitTemplate(name: name, body: body)  // Upsert
+try database.setActiveTemplate(name: name)  // Sets one active, clears others
+try database.deleteCommitTemplate(name: name)
 ```
 
 ## IPC: Unix Domain Socket
@@ -270,27 +320,41 @@ Socket path: ~/Library/Application Support/NoCrumbs/nocrumbs.sock
 **Server** (`SocketServer`): Swift actor, POSIX `socket()/bind()/listen()/accept()`.
 - Accepts connections in a detached Task loop
 - Reads full message, parses JSON, dispatches by `"type"` field
-- `"prompt"` → captures `git rev-parse HEAD` as baseCommitHash, upserts session + inserts PromptEvent (fire-and-forget)
-- `"change"` → finds most recent event for session, attaches FileChange (or creates orphan event with baseCommitHash)
-- `"query-prompts"` → returns recent prompts + file counts + annotation_enabled flag (request/response)
+- `"event"` → unified hook event handler; stores HookEvent, bridges to legacy prompt/change tables (fire-and-forget)
+- `"prompt"` → (legacy) captures `git rev-parse HEAD` as baseCommitHash, upserts session + inserts PromptEvent
+- `"change"` → (legacy) finds most recent event for session, attaches FileChange (or creates orphan event)
+- `"query-prompts"` → returns recent prompts + file counts + annotation_enabled flag + active template body (request/response)
+- `"template"` → CRUD for commit annotation templates: add, list, set, remove, preview (request/response)
 
 **Client** (`SocketClient`):
 - App-side: `send(_ data: Data)` — fire-and-forget
-- CLI-side: `send(_ data: Data)` + `sendAndReceive(_ data: Data)` — the latter used for query-prompts
+- CLI-side: `send(_ data: Data)` + `sendAndReceive(_ data: Data)` — the latter used for query-prompts + template
 - Both use POSIX `socket()/connect()/write()/close()`
 
 **Protocol:**
 ```json
-// Prompt message (fire-and-forget)
+// Unified event (fire-and-forget) — v3+
+{"type": "event", "session_id": "abc", "hook_event_name": "UserPromptSubmit", "cwd": "/path",
+ "prompt": "...", "tool_name": "Write", "tool_input": {...}}
+
+// Legacy prompt (fire-and-forget)
 {"type": "prompt", "session_id": "abc", "prompt": "...", "cwd": "/path"}
 
-// Change message (fire-and-forget)
+// Legacy change (fire-and-forget)
 {"type": "change", "session_id": "abc", "file_path": "/path/file.swift", "tool_name": "Write", "cwd": "/path"}
 
 // Query prompts (request/response)
 {"type": "query-prompts", "cwd": "/path"}
 // Response:
-{"prompts": [{"text": "...", "file_count": 3}], "session_id": "abc", "total_files": 12, "annotation_enabled": true}
+{"prompts": [{"text": "...", "file_count": 3}], "session_id": "abc", "total_files": 12,
+ "annotation_enabled": true, "template": "---\n{{summary_line}}"}
+
+// Template management (request/response)
+{"type": "template", "action": "add", "name": "my-template", "body": "---\n{{summary_line}}"}
+{"type": "template", "action": "list"}
+{"type": "template", "action": "set", "name": "my-template"}
+{"type": "template", "action": "remove", "name": "my-template"}
+{"type": "template", "action": "preview", "cwd": "/path"}
 ```
 
 - Fire-and-forget: CLI exits 0 even on failure (never blocks Claude Code)
@@ -298,15 +362,16 @@ Socket path: ~/Library/Application Support/NoCrumbs/nocrumbs.sock
 
 ## CLI Hook Integration
 
-The `nocrumbs` CLI (v0.2.0) is invoked by Claude Code hooks. Dual-hook design:
+The `nocrumbs` CLI (v0.3.0) is invoked by Claude Code hooks.
 
-**`UserPromptSubmit` hook** → `nocrumbs capture-prompt`
-- Reads stdin JSON: `{session_id, prompt, cwd}`
-- Sends `type: "prompt"` to socket
+**`nocrumbs event`** (preferred, v3+) — unified hook event handler:
+- Reads stdin JSON from any Claude Code hook
+- Sends `type: "event"` with full payload to socket
+- App-side bridges to legacy prompt/change tables automatically
 
-**`PostToolUse` hook** (matcher: `Write|Edit`) → `nocrumbs capture-change`
-- Reads stdin JSON: `{session_id, tool_name, tool_input: {file_path}, cwd}`
-- Sends `type: "change"` to socket
+**Legacy commands** (still supported):
+- `nocrumbs capture-prompt` — `UserPromptSubmit` hook
+- `nocrumbs capture-change` — `PostToolUse` hook (matcher: Write|Edit)
 
 **`nocrumbs install`** writes hook config to `~/.claude/settings.json`, merging with existing settings.
 
@@ -314,32 +379,53 @@ The `nocrumbs` CLI (v0.2.0) is invoked by Claude Code hooks. Dual-hook design:
 
 **`nocrumbs annotate-commit <msg-file> [source]`** — called by git `prepare-commit-msg` hook:
 - Queries app via `query-prompts` socket message
+- If response includes `"template"` key, renders it via CLI-side template renderer
+- Otherwise, uses built-in default format (summary line + top 3 prompts)
 - Respects `annotation_enabled` setting from app
 - Skips merge/squash commits
-- Appends prompt summary block (up to 3 prompts, truncated to 72 chars)
-- Won't double-annotate (checks for existing marker)
+- Won't double-annotate (checks for existing 🍞 marker)
 
-Session ID links prompts to their file changes across the two hooks.
+**`nocrumbs template <action>`** — manage commit annotation templates:
+- `add --name <name> --body <template>` — create or update a template
+- `list` — show all templates (name, active status, body preview)
+- `set --name <name>` — set active template
+- `remove --name <name>` — delete a template
+- `preview` — render active template with recent prompt data
+
+Session ID links prompts to their file changes across hooks.
+
+### Template Format
+
+Simple `{{placeholder}}` syntax for commit annotation templates:
+
+| Placeholder | Value |
+|-------------|-------|
+| `{{prompt_count}}` | Number of prompts |
+| `{{total_files}}` | Total unique files changed |
+| `{{session_id}}` | Session UUID (8-char prefix) |
+| `{{summary_line}}` | Pre-built: `🍞 3 prompts · 12 files · abc12345` |
+| `{{#prompts}}...{{/prompts}}` | Loop over prompts |
+| `{{index}}` | 1-based prompt index (inside loop) |
+| `{{text}}` | Prompt text, truncated to 72 chars (inside loop) |
+| `{{file_count}}` | Files changed by this prompt (inside loop) |
+
+Rendering is implemented in both `TemplateRenderer` (app-side) and as a lightweight copy in `AnnotateCommitCommand` (CLI can't link app code).
 
 ## Sidebar Architecture
 
 The sidebar uses a **flat list** pattern — no `Section` or `DisclosureGroup` (both break `List(selection:)` tag propagation on macOS).
 
 ```swift
-@MainActor @Observable
-private final class SidebarState {
-    var selection: UUID?
-    var expandedSessions: Set<String> = []
-    var keyMonitor: Any?  // NSEvent local monitor
-}
-
 private struct SidebarItem: Identifiable {
-    let id: UUID           // Same type as List selection binding
-    let kind: Kind         // .session or .event
+    let id: UUID
+    let kind: Kind         // .timePeriodHeader, .projectHeader, .session, .event
     let session: Session?
     let event: PromptEvent?
+    let projectName: String?
 }
 ```
+
+**Time-grouped structure:** Sessions are grouped by time period (Today, Yesterday, This Week, etc.) with section headers and project sub-headers.
 
 **Key design decisions:**
 - `UUID` as selection type (not String, not custom enum — avoids compiler overload issues)
@@ -366,6 +452,8 @@ protocol VCSProvider: Sendable {
     func headBefore(_ date: Date, at path: String) async throws -> String?
     func untrackedFiles(_ filePaths: [String], at path: String) async throws -> Set<String>
 }
+
+func makeProvider(for vcs: VCSType) -> any VCSProvider
 ```
 
 **Testability:** `DiffViewModel` accepts `any VCSProvider` via init (defaults to `GitProvider()`), enabling `MockVCSProvider` injection in tests.
@@ -378,10 +466,16 @@ protocol VCSProvider: Sendable {
   - `headBefore` → `git log --before=<iso> -1 --format=%H` (for backfill)
   - `untrackedFiles` → `git ls-files --others --exclude-standard -- <files>`
   - `cleanFiles` → `git status --porcelain -- <files>` (identifies committed files)
-- `MercurialProvider` — not yet implemented
+- `MercurialProvider` — shells out to `hg` via `/usr/bin/env` with async wrapper
+  - `currentHead` → `hg log -r . -T {node}`
+  - `diffFromBase` → `hg diff --git -r <baseHash> <files>`
+  - `headBefore` → `hg log -r "date('<iso>')" -l 1 -T {node}`
+  - All commands produce `--git` format diffs for DiffParser compatibility
 
 **Detection:** `VCSDetector.detect(at:)` walks up from a path checking for `.git` or `.hg` directories.
 `VCSDetector.repoRoot(at:for:)` returns the root directory of the detected VCS repo.
+
+**Remote URL Parsing:** `RemoteURLParser.commitURL(remoteURL:hash:)` converts git SSH/HTTPS remote URLs to web commit URLs. Used for clickable commit SHA links in the prompt timeline.
 
 ## Diff Viewer (M3)
 
@@ -440,6 +534,26 @@ struct DiffLine: Identifiable, Equatable {
     let text: String
     let oldLineNumber: Int? // nil for additions
     let newLineNumber: Int? // nil for deletions
+}
+
+struct DiffStat: Equatable, Sendable {
+    let filePath: String
+    let status: FileDiff.FileStatus
+    let additions: Int
+    let deletions: Int
+}
+
+struct PromptDiffStat: Equatable, Sendable {
+    let eventID: UUID
+    let fileStats: [DiffStat]
+}
+
+struct AggregatedFileStat: Identifiable, Equatable {
+    let filePath: String
+    let status: FileDiff.FileStatus
+    let totalAdditions: Int
+    let totalDeletions: Int
+    let promptCount: Int
 }
 ```
 
@@ -530,9 +644,9 @@ JSON-based color themes loaded from `Resources/Themes/` at runtime.
 
 **Settings picker**: `SettingsView` → "Diff Theme" section with `Picker` and inline `ThemeSwatch` (bg square + green/red dots).
 
-## Test Infrastructure (M3.5)
+## Test Infrastructure
 
-30 tests across 4 files, all in `NoCrumbsTests/` (hosted test target).
+53 tests across 7 files, all in `NoCrumbsTests/` (hosted test target).
 
 ```bash
 xcodebuild test -project NoCrumbs.xcodeproj -scheme NoCrumbs -sdk macosx -derivedDataPath build \
@@ -541,9 +655,12 @@ xcodebuild test -project NoCrumbs.xcodeproj -scheme NoCrumbs -sdk macosx -derive
 
 | Suite | Tests | Type | Coverage |
 |-------|-------|------|----------|
+| `DatabaseTests` | — | Unit | CRUD operations, migrations, cascade delete |
 | `DiffParserTests` | 10 | Pure unit | Parser edge cases: empty, add, delete, modify, multi-file, multi-hunk, line numbers, binary, no-newline-at-EOF |
 | `DiffViewModelTests` | 7 | Unit (mock) | All load() paths: no VCS, no files, nil base hash, invalid commit, valid diff, git failure, untracked files |
 | `GitProviderTests` | 8 | Integration | Real temp git repos: currentHead, isValidCommit (valid/invalid/after-reset), diffFromBase, headBefore, untrackedFiles |
+| `MercurialProviderTests` | — | Unit | Mercurial provider command construction and output parsing |
+| `RemoteURLParserTests` | 12 | Pure unit | SSH/HTTPS URL parsing, edge cases, whitespace handling |
 | `VCSDetectorTests` | 5 | Filesystem | Temp dirs with .git/.hg markers: detect git/hg/none, nested repos, repoRoot |
 
 **Key test utilities:**
@@ -561,10 +678,15 @@ xcodebuild test -project NoCrumbs.xcodeproj -scheme NoCrumbs -sdk macosx -derive
 
 ## Settings
 
-Two sections in the Settings form:
+Three sections in the Settings form:
+
+**Hook Status:**
+- CLI installed, Hooks configured, Socket active — green/red status indicators
+- Read-only, refreshes on appear via `HookHealthChecker`
 
 **General:**
 - **Annotation toggle** (`annotationEnabled`): Controls whether `nocrumbs annotate-commit` appends prompt context to commit messages
+- **Commit Templates**: Lists custom templates when annotation is enabled. Click to activate, right-click to delete. Shows hint to use `nocrumbs template add` when empty.
 - Stored in `UserDefaults` via `@AppStorage`
 - Registered with default `true` in `AppDelegate.applicationDidFinishLaunching`
 - Read by `SocketServer.handleQueryPrompts` and included in response to CLI
@@ -601,7 +723,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_:) {
         UserDefaults.standard.register(defaults: ["annotationEnabled": true])
-        try Database.shared.open()     // SQLite + migrations (v1→v2) + cache load
+        try Database.shared.open()     // SQLite + migrations (v1→v6) + cache load
         Task { await Database.shared.backfillBaseCommitHashes() }  // Async backfill for legacy events
         try await socketServer.start() // POSIX socket bind + listen (with 1s retry)
         try SMAppService.mainApp.register() // Launch at login
@@ -639,6 +761,8 @@ sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite ".schema"
 sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite "SELECT * FROM sessions;"
 sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite "SELECT * FROM promptEvents;"
 sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite "SELECT * FROM fileChanges;"
+sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite "SELECT * FROM hookEvents;"
+sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite "SELECT * FROM commitTemplates;"
 sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite "PRAGMA user_version;"
 ```
 
@@ -653,11 +777,12 @@ echo '{"session_id":"test","tool_name":"Write","tool_input":{"file_path":"test.s
 
 **Console Logs (OSLog categories):**
 - `[NC:App]` — App lifecycle (Database open, SocketServer start, hotkey, activation policy)
-- `[NC:Socket]` — IPC operations (message received, dispatch, query-prompts)
+- `[NC:Socket]` — IPC operations (message received, dispatch, query-prompts, template)
 - `📦 [DB]` — Database operations (open, migration, close)
 - `✅ [DB]` — Successful writes (upsert, insert, delete)
 - `❌ [DB]` — Database errors
 - `[NC:Git]` — Git subprocess operations
+- `[NC:Hg]` — Mercurial subprocess operations
 - `[DiffVM]` — Diff loading, parsing, baseCommitHash resolution
 
 **Build:**

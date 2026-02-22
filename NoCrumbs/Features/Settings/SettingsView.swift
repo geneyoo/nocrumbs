@@ -4,6 +4,7 @@ struct SettingsView: View {
     @AppStorage("annotationEnabled") private var annotationEnabled = true
     @Environment(ThemeManager.self) private var themeManager
     @State private var healthChecker = HookHealthChecker.shared
+    private var database: Database { Database.shared }
 
     private var selectedThemeName: Binding<String> {
         Binding(
@@ -35,6 +36,36 @@ struct SettingsView: View {
                     .help(
                         "Appends a summary of recent prompts to git commit messages via prepare-commit-msg hook"
                     )
+
+                if annotationEnabled {
+                    if database.commitTemplates.isEmpty {
+                        Text("No custom templates. Use `nocrumbs template add` to create one.")
+                            .foregroundStyle(.secondary)
+                            .font(.caption)
+                    } else {
+                        ForEach(database.commitTemplates) { template in
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text(template.name).font(.body)
+                                    Text(String(template.body.prefix(80)))
+                                        .font(.caption.monospaced())
+                                        .foregroundStyle(.secondary)
+                                        .lineLimit(1)
+                                }
+                                Spacer()
+                                if template.isActive {
+                                    Image(systemName: "checkmark.circle.fill")
+                                        .foregroundStyle(.green)
+                                }
+                            }
+                            .contentShape(Rectangle())
+                            .onTapGesture { try? database.setActiveTemplate(name: template.name) }
+                            .contextMenu {
+                                Button("Delete") { try? database.deleteCommitTemplate(name: template.name) }
+                            }
+                        }
+                    }
+                }
             }
 
             Section("Diff Theme") {

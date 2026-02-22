@@ -13,6 +13,11 @@ final class Database {
     private(set) var recentEvents: [PromptEvent] = []
     private(set) var fileChangesCache: [UUID: [FileChange]] = [:]
     private(set) var recentHookEvents: [HookEvent] = []
+    private(set) var commitTemplates: [CommitTemplate] = []
+
+    var activeTemplate: CommitTemplate? {
+        commitTemplates.first(where: \.isActive)
+    }
 
     private var db: OpaquePointer?
     private let dbPath: String
@@ -187,6 +192,20 @@ final class Database {
             exec("DELETE FROM promptEvents WHERE promptText IS NULL")
             setUserVersion(5)
             logger.info("🔄 [DB] Migrated to v5 (merge orphan prompt events)")
+        }
+
+        if version < 6 {
+            exec(
+                """
+                CREATE TABLE IF NOT EXISTS commitTemplates (
+                    name TEXT PRIMARY KEY,
+                    body TEXT NOT NULL,
+                    isActive INTEGER NOT NULL DEFAULT 0,
+                    createdAt REAL NOT NULL
+                )
+                """)
+            setUserVersion(6)
+            logger.info("🔄 [DB] Migrated to v6 (commitTemplates)")
         }
     }
 
@@ -397,6 +416,36 @@ final class Database {
         }
     }
 
+    // MARK: - CRUD: CommitTemplates
+
+    func saveCommitTemplate(name: String, body: String) throws {
+        let sql = """
+            INSERT INTO commitTemplates (name, body, isActive, createdAt)
+            VALUES (?, ?, 0, ?)
+            ON CONFLICT(name) DO UPDATE SET body = excluded.body
+            """
+        try execute(sql, bindings: [.text(name), .text(body), .double(Date().timeIntervalSince1970)])
+        try loadCommitTemplates()
+        logger.info("✅ [DB] Saved commit template '\(name)'")
+    }
+
+    func deleteCommitTemplate(name: String) throws {
+        let wasActive = commitTemplates.first(where: { $0.name == name })?.isActive ?? false
+        try execute("DELETE FROM commitTemplates WHERE name = ?", bindings: [.text(name)])
+        if wasActive {
+            // No active template — falls back to built-in default
+        }
+        try loadCommitTemplates()
+        logger.info("✅ [DB] Deleted commit template '\(name)'")
+    }
+
+    func setActiveTemplate(name: String) throws {
+        exec("UPDATE commitTemplates SET isActive = 0")
+        try execute("UPDATE commitTemplates SET isActive = 1 WHERE name = ?", bindings: [.text(name)])
+        try loadCommitTemplates()
+        logger.info("✅ [DB] Set active template '\(name)'")
+    }
+
     /// Backfill baseCommitHash for legacy events that have NULL.
     func backfillBaseCommitHashes() async {
         let events: [PromptEvent] = await MainActor.run {
@@ -441,6 +490,7 @@ final class Database {
         try loadRecentEvents()
         try loadFileChanges()
         try loadRecentHookEvents()
+        try loadCommitTemplates()
     }
 
     private func loadSessions() throws {
@@ -496,6 +546,19 @@ final class Database {
                 projectPath: columnText(stmt, 3),
                 timestamp: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 4)),
                 payload: sqlite3_column_text(stmt, 5).map { String(cString: $0) }
+            )
+        }
+    }
+
+    private func loadCommitTemplates() throws {
+        commitTemplates = try query(
+            "SELECT name, body, isActive, createdAt FROM commitTemplates ORDER BY createdAt"
+        ) { stmt in
+            CommitTemplate(
+                name: columnText(stmt, 0),
+                body: columnText(stmt, 1),
+                isActive: sqlite3_column_int(stmt, 2) != 0,
+                createdAt: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 3))
             )
         }
     }
