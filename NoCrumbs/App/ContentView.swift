@@ -22,8 +22,8 @@ private struct SidebarItem: Identifiable {
     }
 
     static func session(_ s: Session) -> SidebarItem {
-        // swiftlint:disable:next force_unwrapping
-        SidebarItem(id: UUID(uuidString: s.id)!, kind: .session, session: s, event: nil, projectName: nil)
+        let uuid = UUID(uuidString: s.id) ?? UUID()
+        return SidebarItem(id: uuid, kind: .session, session: s, event: nil, projectName: nil)
     }
 
     static func event(_ e: PromptEvent) -> SidebarItem {
@@ -37,6 +37,8 @@ private final class SidebarState {
     var expandedSessions: Set<String> = []
     var hideEmptyEvents = false
     var keyMonitor: Any?
+    var renamingSessionID: String?
+    var renameText = ""
 }
 
 enum TimePeriod: Int, CaseIterable {
@@ -194,6 +196,26 @@ struct ContentView: View {
                 }
             }
             .listStyle(.sidebar)
+            .alert(
+                "Rename Session",
+                isPresented: Binding(
+                    get: { state.renamingSessionID != nil },
+                    set: { if !$0 { state.renamingSessionID = nil } }
+                )
+            ) {
+                TextField("Session name", text: $state.renameText)
+                Button("Rename") {
+                    guard let sessionID = state.renamingSessionID else { return }
+                    let name = state.renameText.trimmingCharacters(in: .whitespacesAndNewlines)
+                    try? database.updateSessionName(name.isEmpty ? nil : name, sessionID: sessionID)
+                    state.renamingSessionID = nil
+                }
+                Button("Cancel", role: .cancel) {
+                    state.renamingSessionID = nil
+                }
+            } message: {
+                Text("Enter a custom name for this session, or leave empty to use the first prompt.")
+            }
             .toolbar {
                 ToolbarItem(placement: .automatic) {
                     Button {
@@ -263,6 +285,7 @@ struct ContentView: View {
         let events = filteredEvents(for: session.id)
         let eventCount = events.count
         let firstPrompt = events.first?.promptText
+        let displayTitle = session.customName ?? firstPrompt ?? "(no prompt)"
         let expanded = state.expandedSessions.contains(session.id)
         let sState = database.sessionState(for: session.id)
         HStack(spacing: 4) {
@@ -289,13 +312,24 @@ struct ContentView: View {
                     } else if sState == .interrupted {
                         Circle().fill(AppColors.paused).frame(width: 6, height: 6)
                     }
-                    Text(firstPrompt ?? "(no prompt)")
+                    Text(displayTitle)
                         .font(.callout)
                         .lineLimit(1)
                 }
                 Text("\(eventCount) prompt\(eventCount == 1 ? "" : "s") · \(session.startedAt, format: .relative(presentation: .named))")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
+            }
+        }
+        .contextMenu {
+            Button("Rename…") {
+                state.renameText = session.customName ?? ""
+                state.renamingSessionID = session.id
+            }
+            if session.customName != nil {
+                Button("Clear Name") {
+                    try? database.updateSessionName(nil, sessionID: session.id)
+                }
             }
         }
     }

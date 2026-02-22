@@ -11,6 +11,7 @@ struct DiffDetailView: View {
     @State private var fileListWidth: CGFloat = LayoutGuide.fileListWidth
     @GestureState private var dragOffset: CGFloat = 0
     @State private var fileSearchQuery = ""
+    @State private var reloadTask: Task<Void, Never>?
 
     private var theme: DiffTheme? {
         themeManager.currentTheme
@@ -21,6 +22,11 @@ struct DiffDetailView: View {
     }
 
     private var sessionFirstPrompt: String {
+        if let session = database.sessions.first(where: { $0.id == event.sessionID }),
+            let name = session.customName
+        {
+            return name
+        }
         let events = database.eventsForSession(id: event.sessionID)
         let text = events.last?.promptText ?? "(no prompt)"
         return text.replacingOccurrences(of: "\n", with: " ")
@@ -71,7 +77,7 @@ struct DiffDetailView: View {
             .foregroundStyle(.secondary)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, LayoutGuide.paddingL)
+        .padding(.horizontal, LayoutGuide.paddingXXL)
         .padding(.vertical, LayoutGuide.paddingM)
     }
 
@@ -302,7 +308,13 @@ struct DiffDetailView: View {
     private func reload() {
         scrollSync.detach()
         scrollSync = DiffScrollSync()
-        viewModel.load(event: event, fileChanges: fileChanges)
+        reloadTask?.cancel()
+        reloadTask = Task {
+            // 150ms debounce: prevents N concurrent git processes when holding arrow key
+            try? await Task.sleep(nanoseconds: 150_000_000)
+            guard !Task.isCancelled else { return }
+            viewModel.load(event: event, fileChanges: fileChanges)
+        }
     }
 
     private func statusIcon(for status: FileDiff.FileStatus) -> some View {
