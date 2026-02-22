@@ -6,7 +6,7 @@ version: 5.0.0
 
 # Verify NoCrumbs Pipeline
 
-> Last synced with codebase at commit: `d7b9ddf` (2026-02-22)
+> Last synced with codebase at commit: `e5a3675` (2026-02-22)
 
 ## Argument Handling
 
@@ -26,16 +26,16 @@ options:
   - label: "Git hooks"
     description: "Check 9: prepare-commit-msg hook"
   - label: "UI interaction"
-    description: "Check 10: AppleScript session selection, Option+Arrow expand/collapse"
+    description: "Checks 10-12: sidebar selection, expand/collapse, window title consistency"
 ```
 
 Map selections to check numbers:
 - "Build (app + CLI)" → checks 1, 2
 - "Pipeline (CLI, hooks, socket, DB)" → checks 3, 4, 5, 6, 7, 8
 - "Git hooks" → check 9
-- "UI interaction" → check 10
+- "UI interaction" → checks 10, 11, 12
 
-Always run **check 11 (cleanup)** if check 8 was included.
+Always run **check 13 (cleanup)** if check 8 was included.
 
 **`/verify <specific args>`** — If the user passes other args (e.g., "build", "ui", "pipeline"), interpret them as check group names and skip the prompt.
 
@@ -270,7 +270,115 @@ Record this as `rowsAfterCollapse`. If `rowsAfterCollapse < rowsAfterExpand`, co
 **If AppleScript fails with accessibility error:**
 - ❌ `UI: accessibility permission denied — grant Accessibility access to your terminal in System Settings → Privacy & Security → Accessibility`
 
-### 11. Cleanup
+### 11. Window title consistency — 3 scenarios
+
+**This check verifies that `.navigationTitle` and `.navigationSubtitle` are identical across SessionSummaryView and DiffDetailView.**
+
+macOS joins `.navigationTitle` + `.navigationSubtitle` into the `AXTitle` attribute as `"{title} – {subtitle}"`.
+
+**Requires:** At least one session with 2+ events in the database. If not enough data, skip with ⚠️.
+
+**Step A: Select session row → read AXTitle**
+
+```bash
+osascript -e '
+tell application "System Events" to tell process "NoCrumbs"
+    set theOutline to outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 1
+    -- Find first session row (skip time period + project headers)
+    select row 3 of theOutline
+    delay 0.5
+    return title of window 1
+end tell'
+```
+
+Record as `titleSession`. This is the SessionSummaryView title.
+
+**Step B: Expand session, select first child event → read AXTitle**
+
+```bash
+osascript -e '
+tell application "System Events" to tell process "NoCrumbs"
+    set theOutline to outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 1
+    select row 3 of theOutline
+    delay 0.3
+    key code 124 using {option down}
+    delay 0.5
+    select row 4 of theOutline
+    delay 0.5
+    return title of window 1
+end tell'
+```
+
+Record as `titleEvent1`. This is DiffDetailView for the first event.
+
+**Step C: Select a different child event → read AXTitle**
+
+```bash
+osascript -e '
+tell application "System Events" to tell process "NoCrumbs"
+    set theOutline to outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 1
+    select row 5 of theOutline
+    delay 0.5
+    return title of window 1
+end tell'
+```
+
+Record as `titleEvent2`. This is DiffDetailView for a different event.
+
+**Step D: Collapse back (cleanup)**
+
+```bash
+osascript -e '
+tell application "System Events" to tell process "NoCrumbs"
+    set theOutline to outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 1
+    select row 3 of theOutline
+    delay 0.3
+    key code 123 using {option down}
+    delay 0.3
+end tell'
+```
+
+**Validation:**
+
+1. All three titles must be **identical**: `titleSession == titleEvent1 == titleEvent2`
+2. Title must contain " – " (the macOS separator between title and subtitle)
+3. The part before " – " must be a non-empty project name (not "NoCrumbs" the app name)
+4. The part after " – " must be non-empty (the session's first prompt)
+
+- ✅ `Window title: consistent across 3 scenarios — "{projectName} – {firstPrompt truncated to 40 chars}..."`
+- ❌ `Window title: MISMATCH — session="{titleSession}", event1="{titleEvent1}", event2="{titleEvent2}"`
+- ❌ `Window title: missing separator " – " — got "{title}"`
+- ❌ `Window title: empty project name or subtitle`
+- ⚠️ `Window title: skipped — need session with 2+ events`
+
+### 12. Window title format validation
+
+**This check runs after check 11 and validates the title content against the database.**
+
+```bash
+sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite "
+    SELECT s.projectPath, pe.promptText
+    FROM sessions s
+    JOIN promptEvents pe ON pe.sessionID = s.id
+    ORDER BY s.lastActivityAt DESC, pe.timestamp ASC
+    LIMIT 1;
+"
+```
+
+This returns the most recent session's **oldest** prompt (the session's first prompt).
+
+- Extract `projectName` = last path component of `projectPath`
+- Extract `firstPrompt` = the prompt text (newlines replaced with spaces)
+
+Compare against the AXTitle from check 11:
+- AXTitle should start with `projectName`
+- AXTitle after " – " should start with the first ~50 chars of `firstPrompt`
+
+- ✅ `Window title content: matches DB — project="{projectName}", subtitle starts with "{first 40 chars}..."`
+- ❌ `Window title content: project name mismatch — expected "{dbProject}", got "{axProject}"`
+- ❌ `Window title content: subtitle mismatch — expected "{dbPrompt first 40}...", got "{axSubtitle first 40}..."`
+
+### 13. Cleanup
 
 ```bash
 sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite "DELETE FROM sessions WHERE id = 'verify-test'; DELETE FROM promptEvents WHERE sessionID = 'verify-test';"
@@ -291,12 +399,14 @@ sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite "DELETE FROM ses
 ✅ Live capture: test prompt stored and verified
 ✅ Git hooks: prepare-commit-msg installed
 ✅ UI: session selectable, Option+Right expands (+3 rows), Option+Left collapses (-3 rows)
+✅ Window title: consistent across 3 scenarios — "nocrumbs – lets make One Dark Pro the defa..."
+✅ Window title content: matches DB — project="nocrumbs", subtitle starts with "lets make One Dark Pro..."
 🧹 Cleanup: test session removed
 
-10/10 passed
+12/12 passed
 ```
 
-Count only the checks that were selected for the pass/fail summary (not cleanup). Show the full block at the end, not incrementally.
+Count only the checks that were selected for the pass/fail summary (not cleanup). Show the full block at the end, not incrementally. Checks 11-12 depend on check 10 completing first (they reuse the sidebar state).
 
 ## Important Notes
 

@@ -22,12 +22,8 @@ struct DiffDetailView: View {
 
     private var sessionFirstPrompt: String {
         let events = database.eventsForSession(id: event.sessionID)
-        return events.last?.promptText ?? "(no prompt)"
-    }
-
-    private var titleText: String {
-        let project = (event.projectPath as NSString).lastPathComponent
-        return "\(project) — \(sessionFirstPrompt)"
+        let text = events.last?.promptText ?? "(no prompt)"
+        return text.replacingOccurrences(of: "\n", with: " ")
     }
 
     var body: some View {
@@ -45,7 +41,9 @@ struct DiffDetailView: View {
             }
         }
         .frame(minWidth: 600)
-        .navigationTitle(titleText)
+        .toolbarTitleDisplayMode(.inline)
+        .navigationTitle((event.projectPath as NSString).lastPathComponent)
+        .navigationSubtitle(sessionFirstPrompt)
         .onChange(of: event) { _, _ in
             fileSearchQuery = ""
             reload()
@@ -58,9 +56,10 @@ struct DiffDetailView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: LayoutGuide.spacingS) {
-            Text(event.promptText ?? "(no prompt text)")
+            Text(event.promptText?.replacingOccurrences(of: "\n", with: " ") ?? "(no prompt text)")
                 .font(.headline)
-                .lineLimit(2)
+                .lineLimit(1)
+                .truncationMode(.tail)
                 .textSelection(.enabled)
             HStack(spacing: LayoutGuide.spacingL) {
                 Text(event.timestamp, style: .time)

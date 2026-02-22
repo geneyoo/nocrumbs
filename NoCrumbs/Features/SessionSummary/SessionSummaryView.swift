@@ -22,10 +22,9 @@ struct SessionSummaryView: View {
         return paths.count
     }
 
-    private var titleText: String {
-        let project = (session.projectPath as NSString).lastPathComponent
-        let prompt = events.last?.promptText ?? "(no prompt)"
-        return "\(project) — \(prompt)"
+    private var sessionFirstPrompt: String {
+        let text = events.last?.promptText ?? "(no prompt)"
+        return text.replacingOccurrences(of: "\n", with: " ")
     }
 
     var body: some View {
@@ -44,7 +43,8 @@ struct SessionSummaryView: View {
             .padding(.top, LayoutGuide.paddingS)
         }
         .frame(minWidth: 500)
-        .navigationTitle(titleText)
+        .navigationTitle((session.projectPath as NSString).lastPathComponent)
+        .navigationSubtitle(sessionFirstPrompt)
         .onAppear { reload() }
         .onChange(of: session.id) { _, _ in
             viewModel.invalidate()
