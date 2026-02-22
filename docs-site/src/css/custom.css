@@ -131,6 +131,9 @@
 .hero .button--lg {
   min-width: 160px;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .hero .button--primary {
@@ -157,6 +160,22 @@
 .hero .button--secondary:hover {
   border-color: rgba(168, 197, 181, 0.7);
   color: #fff;
+}
+
+.hero__btn-locked {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  line-height: 1.2;
+  cursor: default;
+}
+
+.hero__btn-soon {
+  font-size: 0.55rem;
+  font-weight: 400;
+  opacity: 0.6;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
 }
 
 /* Install hint */
