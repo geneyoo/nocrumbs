@@ -10,7 +10,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var localMonitor: Any?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        UserDefaults.standard.register(defaults: ["annotationEnabled": true, "deepLinkInAnnotation": false])
+        UserDefaults.standard.register(defaults: [
+            "annotationEnabled": true,
+            "deepLinkInAnnotation": true,
+            "showPromptList": true,
+            "showFileCountPerPrompt": true,
+            "showSessionID": true,
+        ])
 
         // Register URL scheme handler
         NSAppleEventManager.shared().setEventHandler(

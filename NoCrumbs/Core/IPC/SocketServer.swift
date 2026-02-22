@@ -370,6 +370,9 @@ actor SocketServer {
                     "total_files": totalFiles,
                     "annotation_enabled": UserDefaults.standard.bool(forKey: "annotationEnabled"),
                     "deep_link_enabled": UserDefaults.standard.bool(forKey: "deepLinkInAnnotation"),
+                    "show_prompt_list": UserDefaults.standard.bool(forKey: "showPromptList"),
+                    "show_file_count_per_prompt": UserDefaults.standard.bool(forKey: "showFileCountPerPrompt"),
+                    "show_session_id": UserDefaults.standard.bool(forKey: "showSessionID"),
                 ]
                 if let activeBody = db.activeTemplate?.body {
                     response["template"] = activeBody

@@ -2,7 +2,10 @@ import SwiftUI
 
 struct SettingsView: View {
     @AppStorage("annotationEnabled") private var annotationEnabled = true
-    @AppStorage("deepLinkInAnnotation") private var deepLinkInAnnotation = false
+    @AppStorage("deepLinkInAnnotation") private var deepLinkInAnnotation = true
+    @AppStorage("showPromptList") private var showPromptList = true
+    @AppStorage("showFileCountPerPrompt") private var showFileCountPerPrompt = true
+    @AppStorage("showSessionID") private var showSessionID = true
     @Environment(ThemeManager.self) private var themeManager
     @State private var healthChecker = HookHealthChecker.shared
     private var database: Database { Database.shared }
@@ -11,6 +14,18 @@ struct SettingsView: View {
         Binding(
             get: { themeManager.currentTheme?.name ?? "" },
             set: { themeManager.selectTheme(named: $0) }
+        )
+    }
+
+    private var includeAllDetails: Binding<Bool> {
+        Binding(
+            get: { showPromptList && showFileCountPerPrompt && showSessionID && deepLinkInAnnotation },
+            set: { newValue in
+                showPromptList = newValue
+                showFileCountPerPrompt = newValue
+                showSessionID = newValue
+                deepLinkInAnnotation = newValue
+            }
         )
     }
 
@@ -39,8 +54,24 @@ struct SettingsView: View {
                     )
 
                 if annotationEnabled {
-                    Toggle("Include deep link in commit annotations", isOn: $deepLinkInAnnotation)
+                    Toggle("Include all details", isOn: includeAllDetails)
+                        .help("Toggle all annotation content at once")
+
+                    Toggle("Prompt list", isOn: $showPromptList)
+                        .help("Show numbered prompt lines in multi-prompt annotations")
+                        .padding(.leading, 16)
+
+                    Toggle("File count per prompt", isOn: $showFileCountPerPrompt)
+                        .help("Show file count suffix on prompt lines")
+                        .padding(.leading, 16)
+
+                    Toggle("Session ID", isOn: $showSessionID)
+                        .help("Show 8-char session prefix in summary line")
+                        .padding(.leading, 16)
+
+                    Toggle("Deep link", isOn: $deepLinkInAnnotation)
                         .help("Appends a nocrumbs:// URL to annotations so you can click back to the session")
+                        .padding(.leading, 16)
 
                     if database.commitTemplates.isEmpty {
                         Text("No custom templates. Use `nocrumbs template add` to create one.")
