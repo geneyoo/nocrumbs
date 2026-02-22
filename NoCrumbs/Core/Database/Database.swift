@@ -6,13 +6,14 @@ private let logger = Logger(subsystem: "com.geneyoo.nocrumbs", category: "DB")
 
 @Observable
 @MainActor
-final class Database {
+final class Database {  // swiftlint:disable:this type_body_length
     static let shared = Database()
 
     private(set) var sessions: [Session] = []
     private(set) var recentEvents: [PromptEvent] = []
     private(set) var fileChangesCache: [UUID: [FileChange]] = [:]
     private(set) var recentHookEvents: [HookEvent] = []
+    private(set) var sessionStateCache: [String: SessionState] = [:]
     private(set) var commitTemplates: [CommitTemplate] = []
 
     var activeTemplate: CommitTemplate? {
@@ -231,7 +232,16 @@ final class Database {
                 .double(session.startedAt.timeIntervalSince1970),
                 .double(session.lastActivityAt.timeIntervalSince1970),
             ])
-        try loadSessions()
+        // Inline cache update instead of full reload
+        if let idx = sessions.firstIndex(where: { $0.id == session.id }) {
+            sessions[idx] = Session(
+                id: session.id, projectPath: session.projectPath,
+                startedAt: sessions[idx].startedAt,
+                lastActivityAt: session.lastActivityAt
+            )
+        } else {
+            sessions.insert(session, at: 0)
+        }
         logger.info("✅ [DB] Upserted session \(session.id)")
     }
 
@@ -253,7 +263,13 @@ final class Database {
                 event.vcs.map { .text($0.rawValue) } ?? .null,
                 event.baseCommitHash.map { .text($0) } ?? .null,
             ])
-        try loadRecentEvents()
+        // Inline cache update: prepend (most recent first) and cap at 500
+        if let idx = recentEvents.firstIndex(where: { $0.id == event.id }) {
+            recentEvents[idx] = event
+        } else {
+            recentEvents.insert(event, at: 0)
+            if recentEvents.count > 500 { recentEvents.removeLast() }
+        }
         logger.info("✅ [DB] Inserted event \(event.id.uuidString)")
     }
 
@@ -379,7 +395,15 @@ final class Database {
             "UPDATE promptEvents SET promptText = ? WHERE id = ?",
             bindings: [.text(text), .text(eventID.uuidString)]
         )
-        try loadRecentEvents()
+        // Inline cache update instead of full reload
+        if let idx = recentEvents.firstIndex(where: { $0.id == eventID }) {
+            let old = recentEvents[idx]
+            recentEvents[idx] = PromptEvent(
+                id: old.id, sessionID: old.sessionID, projectPath: old.projectPath,
+                promptText: text, timestamp: old.timestamp,
+                vcs: old.vcs, baseCommitHash: old.baseCommitHash
+            )
+        }
         logger.info("✅ [DB] Backfilled prompt text for \(eventID.uuidString)")
     }
 
@@ -405,9 +429,12 @@ final class Database {
 
     func deleteSession(id: String) throws {
         try execute("DELETE FROM sessions WHERE id = ?", bindings: [.text(id)])
+        // Full reload needed — cascade deletes events + file changes + hook events
         try loadSessions()
         try loadRecentEvents()
+        try loadFileChanges()
         try loadRecentHookEvents()
+        sessionStateCache.removeValue(forKey: id)
         logger.info("✅ [DB] Deleted session \(id) (cascade)")
     }
 
@@ -428,19 +455,43 @@ final class Database {
                 .double(event.timestamp.timeIntervalSince1970),
                 event.payload.map { .text($0) } ?? .null,
             ])
-        try loadRecentHookEvents()
+        // Inline cache update: prepend and cap at 200
+        if let idx = recentHookEvents.firstIndex(where: { $0.id == event.id }) {
+            recentHookEvents[idx] = event
+        } else {
+            recentHookEvents.insert(event, at: 0)
+            if recentHookEvents.count > 200 { recentHookEvents.removeLast() }
+        }
+        // Update session state cache
+        rebuildSessionStateCache(for: event.sessionID)
         logger.info("✅ [DB] Inserted hook event \(event.hookEventName) \(event.id.uuidString)")
     }
 
     func sessionState(for sessionID: String) -> SessionState {
+        sessionStateCache[sessionID] ?? .idle
+    }
+
+    private func rebuildSessionStateCache(for sessionID: String) {
         guard let latest = recentHookEvents.first(where: { $0.sessionID == sessionID }) else {
-            guard let session = sessions.first(where: { $0.id == sessionID }) else { return .idle }
-            return session.lastActivityAt.timeIntervalSinceNow > -300 ? .live : .idle
+            if let session = sessions.first(where: { $0.id == sessionID }) {
+                sessionStateCache[sessionID] = session.lastActivityAt.timeIntervalSinceNow > -300 ? .live : .idle
+            } else {
+                sessionStateCache[sessionID] = .idle
+            }
+            return
         }
         switch latest.hookEventName {
-        case "SessionEnd": return .ended
-        case "Stop": return .interrupted
-        default: return latest.timestamp.timeIntervalSinceNow > -300 ? .live : .idle
+        case "SessionEnd": sessionStateCache[sessionID] = .ended
+        case "Stop": sessionStateCache[sessionID] = .interrupted
+        default: sessionStateCache[sessionID] = latest.timestamp.timeIntervalSinceNow > -300 ? .live : .idle
+        }
+    }
+
+    private func rebuildAllSessionStates() {
+        sessionStateCache.removeAll()
+        let sessionIDs = Set(sessions.map(\.id))
+        for id in sessionIDs {
+            rebuildSessionStateCache(for: id)
         }
     }
 
@@ -506,7 +557,21 @@ final class Database {
         }
 
         await MainActor.run {
-            try? loadRecentEvents()
+            // Inline update: patch baseCommitHash on cached events instead of full reload
+            for event in events {
+                if let idx = recentEvents.firstIndex(where: { $0.id == event.id }),
+                    recentEvents[idx].baseCommitHash == nil
+                {
+                    let old = recentEvents[idx]
+                    if let hash = cache["\(old.projectPath)|\(Int(old.timestamp.timeIntervalSince1970))"] {
+                        recentEvents[idx] = PromptEvent(
+                            id: old.id, sessionID: old.sessionID, projectPath: old.projectPath,
+                            promptText: old.promptText, timestamp: old.timestamp,
+                            vcs: old.vcs, baseCommitHash: hash
+                        )
+                    }
+                }
+            }
             logger.info("🔄 [DB] Backfill complete")
         }
     }
@@ -519,6 +584,7 @@ final class Database {
         try loadFileChanges()
         try loadRecentHookEvents()
         try loadCommitTemplates()
+        rebuildAllSessionStates()
     }
 
     private func loadSessions() throws {
@@ -552,13 +618,29 @@ final class Database {
     }
 
     private func loadFileChanges() throws {
-        let eventIDs = recentEvents.map { $0.id }
+        // Single batch query instead of N+1 per-event queries
+        let sql = """
+            SELECT fc.id, fc.eventID, fc.filePath, fc.toolName, fc.timestamp, fc.description
+            FROM fileChanges fc
+            JOIN promptEvents pe ON fc.eventID = pe.id
+            ORDER BY pe.timestamp DESC, fc.timestamp ASC
+            LIMIT 5000
+            """
+        // swiftlint:disable force_unwrapping
+        let allChanges: [FileChange] = try query(sql) { stmt in
+            FileChange(
+                id: UUID(uuidString: columnText(stmt, 0))!,
+                eventID: UUID(uuidString: columnText(stmt, 1))!,
+                filePath: columnText(stmt, 2),
+                toolName: columnText(stmt, 3),
+                timestamp: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 4)),
+                description: sqlite3_column_text(stmt, 5).map { String(cString: $0) }
+            )
+        }
+        // swiftlint:enable force_unwrapping
         var cache: [UUID: [FileChange]] = [:]
-        for eventID in eventIDs {
-            let changes = try fileChanges(forEventID: eventID)
-            if !changes.isEmpty {
-                cache[eventID] = changes
-            }
+        for change in allChanges {
+            cache[change.eventID, default: []].append(change)
         }
         fileChangesCache = cache
     }

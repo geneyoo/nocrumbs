@@ -28,10 +28,28 @@ Commit annotation:
     git prepare-commit-msg hook
         → nocrumbs annotate-commit $1
             → query-prompts via socket (request/response)
+            → response includes content toggles (show_prompt_list, show_file_count_per_prompt,
+              show_session_id, deep_link_enabled) read from UserDefaults
             → if active template: render with TemplateRenderer
             → else: use built-in default format
             → append to commit message
-            → respects annotation_enabled setting from app
+            → respects annotation_enabled + granular content toggles from app
+
+File descriptions:
+    nocrumbs describe (stdin JSON: session_id + [{file_path, description}])
+        → socket fire-and-forget to app
+        → app updates fileChanges.description column for matching session + path
+
+Deep links:
+    nocrumbs://session/{8-char-id}[/event/{uuid}]
+        → registered via CFBundleURLTypes in Info.plist
+        → AppDelegate handles Apple URL event → DeepLinkRouter.shared
+        → ContentView consumes pending navigation on appear
+
+Session export:
+    SessionSummaryView → copy to clipboard (markdown)
+        → SessionMarkdownFormatter builds structured markdown
+        → includes per-file descriptions when available
 
 Template management:
     nocrumbs template add/list/set/remove/preview
@@ -62,11 +80,12 @@ NoCrumbs/
 │   ├── IPC/
 │   │   ├── SocketClient.swift  # Connect + write JSON to Unix socket (app-side, also has makeUnixAddr helper)
 │   │   └── SocketServer.swift  # POSIX socket actor: accept loop, parse JSON, dispatch to Database
-│   │                           #   Handles: "event", "prompt", "change", "query-prompts", "template"
+│   │                           #   Handles: "event", "prompt", "change", "file-descriptions",
+│   │                           #            "query-prompts", "template"
 │   ├── Models/
 │   │   ├── CommitTemplate.swift   # name (PK), body, isActive, createdAt
 │   │   ├── DiffStat.swift         # Per-file, per-prompt, and aggregated diff statistics
-│   │   ├── FileChange.swift       # id, eventID, filePath, toolName, timestamp
+│   │   ├── FileChange.swift       # id, eventID, filePath, toolName, timestamp, description?
 │   │   ├── FileDiff.swift         # FileDiff, DiffHunk, DiffLine — diff parsing output models
 │   │   ├── HookEvent.swift        # id, sessionID, hookEventName, projectPath, timestamp, payload (JSON)
 │   │   ├── PromptEvent.swift      # id, sessionID, projectPath, promptText?, timestamp, vcs?, baseCommitHash?
@@ -74,7 +93,9 @@ NoCrumbs/
 │   │   ├── TemplateRenderer.swift # Renders {{placeholder}} templates with TemplateContext data
 │   │   └── VCSType.swift          # enum: .git, .mercurial
 │   ├── Utilities/
-│   │   └── HookHealthChecker.swift # @Observable: checks CLI installed, hooks configured, socket active
+│   │   ├── DeepLinkRouter.swift    # @Observable @MainActor: handles nocrumbs:// URLs, pending navigation
+│   │   ├── HookHealthChecker.swift # @Observable: checks CLI installed, hooks configured, socket active
+│   │   └── SessionMarkdownFormatter.swift # Formats session data as markdown for clipboard export
 │   └── VCS/
 │       ├── DiffParser.swift       # Parses unified git/hg diff output → [FileDiff]
 │       ├── GitProvider.swift      # VCSProvider impl — shells out to /usr/bin/git via Process
@@ -94,11 +115,12 @@ NoCrumbs/
 │   │   ├── SessionSummaryView.swift       # Rich summary: prompt timeline with clickable commit SHAs, diffstat bars
 │   │   └── SessionSummaryViewModel.swift  # Aggregates session data, resolves commit SHAs via git log
 │   ├── Settings/
-│   │   └── SettingsView.swift  # Hook status, annotation toggle + template list, diff theme picker
+│   │   └── SettingsView.swift  # Hook status, annotation toggle + content sub-toggles + template list, diff theme picker
 │   └── Setup/
 │       └── SetupView.swift     # First-run guide: install CLI, configure hooks, verify socket
 │
 ├── Resources/
+│   ├── Info.plist              # CFBundleURLTypes for nocrumbs:// URL scheme, LSUIElement
 │   └── Themes/                 # 18 bundled JSON color themes
 │       ├── ayu-dark.json       ├── catppuccin-latte.json
 │       ├── catppuccin-mocha.json ├── dracula.json
@@ -133,11 +155,13 @@ NoCrumbsTests/                      # Test target (hosted by app)
 CLI/
 ├── Package.swift               # Swift 5.9, macOS 14+, zero dependencies
 └── Sources/nocrumbs/
-    ├── main.swift              # Subcommand dispatch: event, capture-*, annotate-commit, install*, template
+    ├── main.swift              # Subcommand dispatch: event, capture-*, annotate-commit, install*, describe, template
     ├── CaptureEventCommand.swift  # Unified hook event → JSON to socket (v3+)
     ├── CapturePromptCommand.swift # (legacy) Parse UserPromptSubmit stdin → JSON to socket
     ├── CaptureChangeCommand.swift # (legacy) Parse PostToolUse stdin → JSON to socket
     ├── AnnotateCommitCommand.swift # Query prompts via socket → render template → append to commit message
+    │                              #   ContentFlags: showPromptList, showFileCountPerPrompt, showSessionID
+    ├── DescribeCommand.swift      # Pipe per-file change descriptions to app via socket
     ├── TemplateCommand.swift      # nocrumbs template add/list/set/remove/preview
     ├── InstallCommand.swift       # Write hook config to ~/.claude/settings.json + install git hooks
     ├── Models.swift               # Minimal Codable structs (duplicated — CLI can't link app target)
@@ -232,6 +256,7 @@ final class Database {
     // WAL journal mode, foreign keys enabled
     // CRUD: upsertSession, insertPromptEvent, insertFileChange(s), deleteSession
     //       insertHookEvent, saveCommitTemplate, deleteCommitTemplate, setActiveTemplate
+    //       updateFileDescription(_:sessionID:filePath:)
     // Queries: eventsForSession, recentEvents(forProject:since:), fileChangeCount, totalFileCount
     // Cache refreshed after each write
     // backfillBaseCommitHashes() — async, fills NULL baseCommitHash via git log --before
@@ -264,6 +289,8 @@ struct NoCrumbsApp: App {
     @State private var database = Database.shared
     @State private var themeManager = ThemeManager.shared
     @State private var appScale = AppScale.shared
+    @State private var healthChecker = HookHealthChecker.shared
+    @State private var deepLinkRouter = DeepLinkRouter.shared
 
     var body: some Scene {
         Window("NoCrumbs", id: "main") {
@@ -271,6 +298,8 @@ struct NoCrumbsApp: App {
                 .environment(database)
                 .environment(themeManager)
                 .environment(appScale)
+                .environment(healthChecker)
+                .environment(deepLinkRouter)
                 .onAppear { themeManager.loadBundledThemes() }
         }
         .commands {
@@ -309,6 +338,7 @@ try database.insertHookEvent(event)
 try database.saveCommitTemplate(name: name, body: body)  // Upsert
 try database.setActiveTemplate(name: name)  // Sets one active, clears others
 try database.deleteCommitTemplate(name: name)
+try database.updateFileDescription("what changed", sessionID: id, filePath: path)
 ```
 
 ## IPC: Unix Domain Socket
@@ -323,7 +353,8 @@ Socket path: ~/Library/Application Support/NoCrumbs/nocrumbs.sock
 - `"event"` → unified hook event handler; stores HookEvent, bridges to legacy prompt/change tables (fire-and-forget)
 - `"prompt"` → (legacy) captures `git rev-parse HEAD` as baseCommitHash, upserts session + inserts PromptEvent
 - `"change"` → (legacy) finds most recent event for session, attaches FileChange (or creates orphan event)
-- `"query-prompts"` → returns recent prompts + file counts + annotation_enabled flag + active template body (request/response)
+- `"file-descriptions"` → updates `description` column on fileChanges matching session + path (fire-and-forget)
+- `"query-prompts"` → returns recent prompts + file counts + annotation/content toggle flags + active template body (request/response)
 - `"template"` → CRUD for commit annotation templates: add, list, set, remove, preview (request/response)
 
 **Client** (`SocketClient`):
@@ -343,11 +374,17 @@ Socket path: ~/Library/Application Support/NoCrumbs/nocrumbs.sock
 // Legacy change (fire-and-forget)
 {"type": "change", "session_id": "abc", "file_path": "/path/file.swift", "tool_name": "Write", "cwd": "/path"}
 
+// File descriptions (fire-and-forget)
+{"type": "file-descriptions", "session_id": "abc",
+ "descriptions": [{"file_path": "/abs/path", "description": "what changed"}]}
+
 // Query prompts (request/response)
 {"type": "query-prompts", "cwd": "/path"}
 // Response:
 {"prompts": [{"text": "...", "file_count": 3}], "session_id": "abc", "total_files": 12,
- "annotation_enabled": true, "template": "---\n{{summary_line}}"}
+ "annotation_enabled": true, "deep_link_enabled": true,
+ "show_prompt_list": true, "show_file_count_per_prompt": true, "show_session_id": true,
+ "template": "---\n{{summary_line}}"}
 
 // Template management (request/response)
 {"type": "template", "action": "add", "name": "my-template", "body": "---\n{{summary_line}}"}
@@ -379,11 +416,17 @@ The `nocrumbs` CLI (v0.3.0) is invoked by Claude Code hooks.
 
 **`nocrumbs annotate-commit <msg-file> [source]`** — called by git `prepare-commit-msg` hook:
 - Queries app via `query-prompts` socket message
-- If response includes `"template"` key, renders it via CLI-side template renderer
-- Otherwise, uses built-in default format (summary line + top 3 prompts)
+- Reads content toggle flags: `show_prompt_list`, `show_file_count_per_prompt`, `show_session_id`, `deep_link_enabled`
+- If response includes `"template"` key, renders it via CLI-side template renderer (respects toggles)
+- Otherwise, uses built-in default format (summary line + prompt list, respects toggles)
 - Respects `annotation_enabled` setting from app
 - Skips merge/squash commits
 - Won't double-annotate (checks for existing 🍞 marker)
+
+**`nocrumbs describe`** — pipe per-file change descriptions to app:
+- Reads stdin JSON: `{"session_id": "...", "descriptions": [{"file_path": "...", "description": "..."}]}`
+- Sends `type: "file-descriptions"` to socket (fire-and-forget)
+- App updates `fileChanges.description` column for matching session + path
 
 **`nocrumbs template <action>`** — manage commit annotation templates:
 - `add --name <name> --body <template>` — create or update a template
@@ -646,7 +689,7 @@ JSON-based color themes loaded from `Resources/Themes/` at runtime.
 
 ## Test Infrastructure
 
-53 tests across 7 files, all in `NoCrumbsTests/` (hosted test target).
+67 tests across 8 files, all in `NoCrumbsTests/` (hosted test target).
 
 ```bash
 xcodebuild test -project NoCrumbs.xcodeproj -scheme NoCrumbs -sdk macosx -derivedDataPath build \
@@ -661,6 +704,7 @@ xcodebuild test -project NoCrumbs.xcodeproj -scheme NoCrumbs -sdk macosx -derive
 | `GitProviderTests` | 8 | Integration | Real temp git repos: currentHead, isValidCommit (valid/invalid/after-reset), diffFromBase, headBefore, untrackedFiles |
 | `MercurialProviderTests` | — | Unit | Mercurial provider command construction and output parsing |
 | `RemoteURLParserTests` | 12 | Pure unit | SSH/HTTPS URL parsing, edge cases, whitespace handling |
+| `TemplateTests` | 8+ | Pure unit | TemplateRenderer and DB template CRUD, active switching |
 | `VCSDetectorTests` | 5 | Filesystem | Temp dirs with .git/.hg markers: detect git/hg/none, nested repos, repoRoot |
 
 **Key test utilities:**
@@ -686,9 +730,14 @@ Three sections in the Settings form:
 
 **General:**
 - **Annotation toggle** (`annotationEnabled`): Controls whether `nocrumbs annotate-commit` appends prompt context to commit messages
+- **Content sub-toggles** (visible when annotation enabled):
+  - **Include all details** — computed toggle: ON when all 4 sub-toggles are ON, sets all 4 at once
+  - **Prompt list** (`showPromptList`) — show numbered prompt lines in multi-prompt annotations
+  - **File count per prompt** (`showFileCountPerPrompt`) — show `(N files)` suffix on prompt lines
+  - **Session ID** (`showSessionID`) — show 8-char session prefix in summary line
+  - **Deep link** (`deepLinkInAnnotation`) — append `nocrumbs://` URL to annotations
 - **Commit Templates**: Lists custom templates when annotation is enabled. Click to activate, right-click to delete. Shows hint to use `nocrumbs template add` when empty.
-- Stored in `UserDefaults` via `@AppStorage`
-- Registered with default `true` in `AppDelegate.applicationDidFinishLaunching`
+- All stored in `UserDefaults` via `@AppStorage`, defaults registered in `AppDelegate.applicationDidFinishLaunching` (all default to `true`)
 - Read by `SocketServer.handleQueryPrompts` and included in response to CLI
 
 **Diff Theme:**
@@ -722,7 +771,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private let socketServer = SocketServer()
 
     func applicationDidFinishLaunching(_:) {
-        UserDefaults.standard.register(defaults: ["annotationEnabled": true])
+        UserDefaults.standard.register(defaults: [
+            "annotationEnabled": true, "deepLinkInAnnotation": true,
+            "showPromptList": true, "showFileCountPerPrompt": true, "showSessionID": true,
+        ])
         try Database.shared.open()     // SQLite + migrations (v1→v6) + cache load
         Task { await Database.shared.backfillBaseCommitHashes() }  // Async backfill for legacy events
         try await socketServer.start() // POSIX socket bind + listen (with 1s retry)
