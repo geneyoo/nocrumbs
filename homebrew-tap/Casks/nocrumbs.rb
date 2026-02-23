@@ -1,5 +1,5 @@
 cask "nocrumbs" do
-  version "0.4.5"
+  version "0.4.6"
   sha256 "PLACEHOLDER"
 
   url "https://github.com/geneyoo/nocrumbs/releases/download/v#{version}/NoCrumbs-#{version}.zip"
