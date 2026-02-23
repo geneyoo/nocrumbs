@@ -9,8 +9,7 @@ cask "nocrumbs" do
 
   depends_on macos: ">= :sonoma"
 
-  conflicts_with formula: "nocrumbs",
-                 because: "the cask includes the CLI binary bundled inside the app"
+  conflicts_with formula: "nocrumbs"
 
   preflight do
     # Clean up stale symlinks left by the old formula install
