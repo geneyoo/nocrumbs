@@ -2,12 +2,14 @@
 set -euo pipefail
 
 # NoCrumbs Release Pipeline (fully automated)
-# Usage: ./scripts/release.sh <version> [--team-id <id>] [--password <keychain-profile>]
+# Usage: ./scripts/release.sh [version] [--minor] [--major] [--team-id <id>] [--password <keychain-profile>]
+#
+# Version is optional — defaults to patch bump (e.g. 0.4.1 → 0.4.2).
+# Use --minor for minor bump (0.4.1 → 0.5.0) or --major for major bump (0.4.1 → 1.0.0).
+# Or pass an explicit version: ./scripts/release.sh 1.0.0
 #
 # Secrets are loaded from scripts/.env.local (gitignored).
 # See scripts/RUNBOOK.local.md for setup instructions.
-
-VERSION="${1:?Usage: $0 <version> [--team-id <id>] [--password <keychain-profile>]}"
 
 # Load local secrets (not tracked in git)
 PROJECT_DIR="$(cd "$(dirname "$0")/.." && pwd)"
@@ -23,15 +25,48 @@ KEYCHAIN_PROFILE="${NOCRUMBS_KEYCHAIN_PROFILE:-nocrumbs-notary}"
 BUILD_DIR="${PROJECT_DIR}/build-release"
 APP_NAME="NoCrumbs"
 
-# Parse optional flags
-shift
+# Read current version from Info.plist
+CURRENT_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" \
+    "${PROJECT_DIR}/NoCrumbs/Resources/Info.plist")
+
+# Parse semver components
+IFS='.' read -r CUR_MAJOR CUR_MINOR CUR_PATCH <<< "$CURRENT_VERSION"
+
+# Parse arguments
+BUMP_TYPE="patch"
+VERSION=""
+
 while [[ $# -gt 0 ]]; do
     case "$1" in
+        --major) BUMP_TYPE="major"; shift ;;
+        --minor) BUMP_TYPE="minor"; shift ;;
+        --patch) BUMP_TYPE="patch"; shift ;;
         --team-id) TEAM_ID="$2"; shift 2 ;;
         --password) KEYCHAIN_PROFILE="$2"; shift 2 ;;
-        *) echo "Unknown option: $1"; exit 1 ;;
+        -*)  echo "Unknown option: $1"; exit 1 ;;
+        *)
+            # Positional arg = explicit version
+            if [[ -z "$VERSION" ]]; then
+                VERSION="$1"; shift
+            else
+                echo "Unknown argument: $1"; exit 1
+            fi
+            ;;
     esac
 done
+
+# Compute version if not explicitly provided
+if [[ -z "$VERSION" ]]; then
+    case "$BUMP_TYPE" in
+        major) VERSION="$((CUR_MAJOR + 1)).0.0" ;;
+        minor) VERSION="${CUR_MAJOR}.$((CUR_MINOR + 1)).0" ;;
+        patch) VERSION="${CUR_MAJOR}.${CUR_MINOR}.$((CUR_PATCH + 1))" ;;
+    esac
+fi
+
+echo "Current version: ${CURRENT_VERSION}"
+echo "New version:     ${VERSION}"
+echo ""
 
 if [[ -z "$TEAM_ID" ]]; then
     echo "❌ TEAM_ID not set. Either:"
@@ -95,11 +130,19 @@ CLI_MAIN="${PROJECT_DIR}/CLI/Sources/nocrumbs/main.swift"
 sed -i '' "s/^let version = \".*\"/let version = \"${VERSION}\"/" "$CLI_MAIN"
 echo "✓ CLI version bumped"
 
+# Step 2b: Bump local cask template
+CASK_TEMPLATE="${PROJECT_DIR}/homebrew-tap/Casks/nocrumbs.rb"
+if [[ -f "$CASK_TEMPLATE" ]]; then
+    sed -i '' "s/version \".*\"/version \"${VERSION}\"/" "$CASK_TEMPLATE"
+    echo "✓ Cask template version bumped"
+fi
+
 # Step 3: Commit version bumps
 echo "→ Committing version bumps..."
 git -C "$PROJECT_DIR" add \
     "NoCrumbs/Resources/Info.plist" \
-    "CLI/Sources/nocrumbs/main.swift"
+    "CLI/Sources/nocrumbs/main.swift" \
+    "homebrew-tap/Casks/nocrumbs.rb"
 git -C "$PROJECT_DIR" commit -m "chore: bump version to ${VERSION}"
 echo "✓ Version bump committed"
 
