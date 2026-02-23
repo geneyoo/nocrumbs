@@ -56,7 +56,7 @@ NoCrumbs operates as a lightweight hook with minimal overhead:
 ## Supported Tools
 
 Currently supported:
-- **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** (Anthropic) — via hook events
+- **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** — via hook events
 
 Coming soon:
-- **[Codex CLI](https://github.com/openai/codex)** (OpenAI) — via hook events
+- **[Codex CLI](https://github.com/openai/codex)** — via hook events
