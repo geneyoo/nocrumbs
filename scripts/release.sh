@@ -283,12 +283,25 @@ git -C "$PROJECT_DIR" push origin main --tags
 echo "✓ Tag v${VERSION} pushed"
 
 # Step 16: Create GitHub Release
+RELEASE_NOTES="${PROJECT_DIR}/RELEASE_NOTES.md"
 echo "→ Creating GitHub Release v${VERSION}..."
-gh release create "v${VERSION}" "$ZIP_PATH" \
-    --repo geneyoo/nocrumbs \
-    --title "v${VERSION}" \
-    --generate-notes
-echo "✓ GitHub Release v${VERSION} created"
+if [[ -f "$RELEASE_NOTES" && -s "$RELEASE_NOTES" ]]; then
+    gh release create "v${VERSION}" "$ZIP_PATH" \
+        --repo geneyoo/nocrumbs \
+        --title "v${VERSION}" \
+        --notes-file "$RELEASE_NOTES"
+    # Clear after successful release
+    : > "$RELEASE_NOTES"
+    echo "✓ GitHub Release v${VERSION} created (from RELEASE_NOTES.md)"
+else
+    echo "⚠️  RELEASE_NOTES.md not found or empty — using auto-generated notes"
+    echo "   Tip: run /release-notes in Claude Code before releasing"
+    gh release create "v${VERSION}" "$ZIP_PATH" \
+        --repo geneyoo/nocrumbs \
+        --title "v${VERSION}" \
+        --generate-notes
+    echo "✓ GitHub Release v${VERSION} created (auto-generated)"
+fi
 
 # Step 17: Commit and push appcast (triggers GitHub Pages deploy)
 if [[ -f "${PROJECT_DIR}/docs-site/static/appcast.xml" ]]; then
