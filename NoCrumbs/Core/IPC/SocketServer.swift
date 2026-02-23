@@ -262,10 +262,11 @@ actor SocketServer {
     ) async {
         let toolName = json["tool_name"] as? String ?? "unknown"
 
-        // Only bridge Write/Edit tools with a file_path
+        // Only bridge Write/Edit tools with a file_path inside the project
         guard toolName == "Write" || toolName == "Edit",
             let toolInput = json["tool_input"] as? [String: Any],
-            let filePath = toolInput["file_path"] as? String
+            let filePath = toolInput["file_path"] as? String,
+            filePath.hasPrefix(cwd + "/")
         else {
             return
         }
@@ -597,9 +598,10 @@ actor SocketServer {
     private func handleChange(_ json: [String: Any], db: Database) async {
         guard let sessionID = json["session_id"] as? String,
             let filePath = json["file_path"] as? String,
-            let cwd = json["cwd"] as? String
+            let cwd = json["cwd"] as? String,
+            filePath.hasPrefix(cwd + "/")
         else {
-            logger.warning("[NC:Socket] Malformed change message")
+            logger.warning("[NC:Socket] Malformed or out-of-repo change message")
             return
         }
 

@@ -57,10 +57,10 @@ final class DatabaseTests: XCTestCase {
         try insertSession()
         let orphan = try insertOrphan()
 
-        // Attach file changes to the orphan
+        // Attach file changes to the orphan (path must be inside testProject)
         let change = FileChange(
             id: UUID(), eventID: orphan.id,
-            filePath: "/tmp/test.swift", toolName: "Write", timestamp: Date()
+            filePath: testProject + "/test.swift", toolName: "Write", timestamp: Date()
         )
         try db.insertFileChange(change)
 
@@ -79,7 +79,7 @@ final class DatabaseTests: XCTestCase {
         // Verify file changes still attached
         let changes = try db.fileChanges(forEventID: orphan.id)
         XCTAssertEqual(changes.count, 1)
-        XCTAssertEqual(changes.first?.filePath, "/tmp/test.swift")
+        XCTAssertEqual(changes.first?.filePath, testProject + "/test.swift")
     }
 
     func testNoOrphanCreatesNewEvent() throws {
@@ -122,8 +122,8 @@ final class DatabaseTests: XCTestCase {
         try insertSession()
         let orphan = try insertOrphan()
 
-        // Attach 3 file changes
-        let paths = ["/tmp/a.swift", "/tmp/b.swift", "/tmp/c.swift"]
+        // Attach 3 file changes (paths must be inside testProject)
+        let paths = [testProject + "/a.swift", testProject + "/b.swift", testProject + "/c.swift"]
         for path in paths {
             try db.insertFileChange(
                 FileChange(
@@ -188,5 +188,123 @@ final class DatabaseTests: XCTestCase {
             $0.sessionID == session2ID && $0.promptText == nil
         })
         XCTAssertNil(s2Orphan)
+    }
+
+    // MARK: - Out-of-Repo Filtering
+
+    func testOutOfRepoFileChangesExcludedFromCache() throws {
+        try insertSession()
+        let event = PromptEvent(
+            id: UUID(), sessionID: testSessionID, projectPath: testProject,
+            promptText: "Test prompt", timestamp: Date(),
+            vcs: .git, baseCommitHash: "abc123"
+        )
+        try db.insertPromptEvent(event)
+
+        // Insert an in-repo file change
+        let inRepo = FileChange(
+            id: UUID(), eventID: event.id,
+            filePath: testProject + "/Sources/app.swift", toolName: "Write", timestamp: Date()
+        )
+        try db.insertFileChange(inRepo)
+
+        // Insert an out-of-repo file change (e.g. ~/.claude/plans/...)
+        let outOfRepo = FileChange(
+            id: UUID(), eventID: event.id,
+            filePath: "/Users/someone/.claude/plans/plan.md", toolName: "Write", timestamp: Date()
+        )
+        try db.insertFileChange(outOfRepo)
+
+        // Both exist in the raw DB
+        let rawChanges = try db.fileChanges(forEventID: event.id)
+        XCTAssertEqual(rawChanges.count, 2)
+
+        // But the cache only has the in-repo file (cache filters on load)
+        // Re-open to trigger fresh cache load
+        db.close()
+        db = Database(path: tempPath)
+        try db.open()
+
+        let cached = db.fileChangesCache[event.id] ?? []
+        XCTAssertEqual(cached.count, 1)
+        XCTAssertEqual(cached.first?.filePath, testProject + "/Sources/app.swift")
+    }
+
+    // MARK: - Delete Methods
+
+    func testDeletePromptEvent() throws {
+        try insertSession()
+        let event = PromptEvent(
+            id: UUID(), sessionID: testSessionID, projectPath: testProject,
+            promptText: "Delete me", timestamp: Date(),
+            vcs: .git, baseCommitHash: "abc123"
+        )
+        try db.insertPromptEvent(event)
+        try db.insertFileChange(
+            FileChange(
+                id: UUID(), eventID: event.id,
+                filePath: testProject + "/file.swift", toolName: "Write", timestamp: Date()
+            ))
+
+        XCTAssertEqual(db.recentEvents.filter { $0.id == event.id }.count, 1)
+        XCTAssertEqual(db.fileChangesCache[event.id]?.count, 1)
+
+        try db.deletePromptEvent(id: event.id)
+
+        XCTAssertEqual(db.recentEvents.filter { $0.id == event.id }.count, 0)
+        XCTAssertNil(db.fileChangesCache[event.id])
+        // Cascade: file changes also deleted in DB
+        let rawChanges = try db.fileChanges(forEventID: event.id)
+        XCTAssertEqual(rawChanges.count, 0)
+    }
+
+    func testDeleteAllData() throws {
+        try insertSession()
+        let event = PromptEvent(
+            id: UUID(), sessionID: testSessionID, projectPath: testProject,
+            promptText: "Wipe me", timestamp: Date(),
+            vcs: .git, baseCommitHash: "abc123"
+        )
+        try db.insertPromptEvent(event)
+
+        XCTAssertFalse(db.sessions.isEmpty)
+        XCTAssertFalse(db.recentEvents.isEmpty)
+
+        try db.deleteAllData()
+
+        XCTAssertTrue(db.sessions.isEmpty)
+        XCTAssertTrue(db.recentEvents.isEmpty)
+        XCTAssertTrue(db.fileChangesCache.isEmpty)
+    }
+
+    func testEvictOlderThan() throws {
+        // Old session (10 days ago)
+        let oldDate = Date().addingTimeInterval(-10 * 86400)
+        try db.upsertSession(
+            Session(id: "old-session", projectPath: testProject, startedAt: oldDate, lastActivityAt: oldDate)
+        )
+        let oldEvent = PromptEvent(
+            id: UUID(), sessionID: "old-session", projectPath: testProject,
+            promptText: "Old prompt", timestamp: oldDate,
+            vcs: .git, baseCommitHash: "old"
+        )
+        try db.insertPromptEvent(oldEvent)
+
+        // Recent session (now)
+        try insertSession()
+        let newEvent = PromptEvent(
+            id: UUID(), sessionID: testSessionID, projectPath: testProject,
+            promptText: "New prompt", timestamp: Date(),
+            vcs: .git, baseCommitHash: "new"
+        )
+        try db.insertPromptEvent(newEvent)
+
+        XCTAssertEqual(db.sessions.count, 2)
+
+        try db.evictOlderThan(days: 7)
+
+        XCTAssertEqual(db.sessions.count, 1)
+        XCTAssertEqual(db.sessions.first?.id, testSessionID)
+        XCTAssertEqual(db.recentEvents.count, 1)
     }
 }

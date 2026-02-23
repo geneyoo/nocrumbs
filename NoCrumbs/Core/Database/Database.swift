@@ -452,7 +452,40 @@ final class Database {  // swiftlint:disable:this type_body_length
         try loadFileChanges()
         try loadRecentHookEvents()
         sessionStateCache.removeValue(forKey: id)
+        diffStatCache = diffStatCache.filter { key, _ in
+            recentEvents.contains { $0.id == key }
+        }
         logger.info("✅ [DB] Deleted session \(id) (cascade)")
+    }
+
+    func deletePromptEvent(id: UUID) throws {
+        try execute("DELETE FROM promptEvents WHERE id = ?", bindings: [.text(id.uuidString)])
+        recentEvents.removeAll { $0.id == id }
+        fileChangesCache.removeValue(forKey: id)
+        diffStatCache.removeValue(forKey: id)
+        logger.info("✅ [DB] Deleted prompt event \(id.uuidString) (cascade)")
+    }
+
+    func deleteAllData() throws {
+        try execute("DELETE FROM sessions")
+        sessions.removeAll()
+        recentEvents.removeAll()
+        fileChangesCache.removeAll()
+        recentHookEvents.removeAll()
+        sessionStateCache.removeAll()
+        diffStatCache.removeAll()
+        logger.info("✅ [DB] Cleared all data")
+    }
+
+    func evictOlderThan(days: Int) throws {
+        guard days > 0 else { return }
+        let cutoff = Date().addingTimeInterval(-Double(days) * 86400)
+        try execute(
+            "DELETE FROM sessions WHERE lastActivityAt < ?",
+            bindings: [.double(cutoff.timeIntervalSince1970)]
+        )
+        try loadCache()
+        logger.info("✅ [DB] Evicted sessions older than \(days) days")
     }
 
     // MARK: - CRUD: HookEvents
@@ -636,17 +669,18 @@ final class Database {  // swiftlint:disable:this type_body_length
     }
 
     private func loadFileChanges() throws {
-        // Single batch query instead of N+1 per-event queries
+        // Single batch query — join with promptEvents to filter out-of-repo paths
         let sql = """
-            SELECT fc.id, fc.eventID, fc.filePath, fc.toolName, fc.timestamp, fc.description
+            SELECT fc.id, fc.eventID, fc.filePath, fc.toolName, fc.timestamp, fc.description, pe.projectPath
             FROM fileChanges fc
             JOIN promptEvents pe ON fc.eventID = pe.id
             ORDER BY pe.timestamp DESC, fc.timestamp ASC
             LIMIT 5000
             """
         // swiftlint:disable force_unwrapping
-        let allChanges: [FileChange] = try query(sql) { stmt in
-            FileChange(
+        var cache: [UUID: [FileChange]] = [:]
+        let rows: [(FileChange, String)] = try query(sql) { stmt in
+            let change = FileChange(
                 id: UUID(uuidString: columnText(stmt, 0))!,
                 eventID: UUID(uuidString: columnText(stmt, 1))!,
                 filePath: columnText(stmt, 2),
@@ -654,10 +688,12 @@ final class Database {  // swiftlint:disable:this type_body_length
                 timestamp: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 4)),
                 description: sqlite3_column_text(stmt, 5).map { String(cString: $0) }
             )
+            let projectPath = columnText(stmt, 6)
+            return (change, projectPath)
         }
         // swiftlint:enable force_unwrapping
-        var cache: [UUID: [FileChange]] = [:]
-        for change in allChanges {
+        for (change, projectPath) in rows {
+            guard change.filePath.hasPrefix(projectPath + "/") else { continue }
             cache[change.eventID, default: []].append(change)
         }
         fileChangesCache = cache

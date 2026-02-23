@@ -37,10 +37,15 @@ private final class SidebarState {
     var expandedSessions: Set<String> = []
     @ObservationIgnored
     @AppStorage("hideEmptyEvents") var hideEmptyEvents = true
+    @ObservationIgnored
+    @AppStorage("confirmBeforeDelete") var confirmBeforeDelete = true
     var collapsedProjects: Set<String> = []
     var keyMonitor: Any?
     var renamingSessionID: String?
     var renameText = ""
+    var deletingSessionID: String?
+    var deletingEventID: UUID?
+    var showClearAllConfirmation = false
 }
 
 enum TimePeriod: Int, CaseIterable {
@@ -219,6 +224,50 @@ struct ContentView: View {
             } message: {
                 Text("Enter a custom name for this session, or leave empty to use the first prompt.")
             }
+            .alert(
+                "Delete Session",
+                isPresented: Binding(
+                    get: { state.deletingSessionID != nil },
+                    set: { if !$0 { state.deletingSessionID = nil } }
+                )
+            ) {
+                Button("Delete", role: .destructive) {
+                    guard let sessionID = state.deletingSessionID else { return }
+                    try? database.deleteSession(id: sessionID)
+                    state.deletingSessionID = nil
+                }
+                Button("Cancel", role: .cancel) {
+                    state.deletingSessionID = nil
+                }
+            } message: {
+                Text("This will permanently delete the session and all its prompts.")
+            }
+            .alert(
+                "Delete Prompt",
+                isPresented: Binding(
+                    get: { state.deletingEventID != nil },
+                    set: { if !$0 { state.deletingEventID = nil } }
+                )
+            ) {
+                Button("Delete", role: .destructive) {
+                    guard let eventID = state.deletingEventID else { return }
+                    try? database.deletePromptEvent(id: eventID)
+                    state.deletingEventID = nil
+                }
+                Button("Cancel", role: .cancel) {
+                    state.deletingEventID = nil
+                }
+            } message: {
+                Text("This will permanently delete this prompt and its file changes.")
+            }
+            .alert("Clear All Data", isPresented: $state.showClearAllConfirmation) {
+                Button("Clear All", role: .destructive) {
+                    try? database.deleteAllData()
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This will permanently delete all sessions, prompts, and file changes.")
+            }
             .toolbar {
                 ToolbarItem(placement: .automatic) {
                     Button {
@@ -227,6 +276,18 @@ struct ContentView: View {
                         Image(systemName: state.hideEmptyEvents ? "line.3.horizontal.decrease.circle.fill" : "line.3.horizontal.decrease.circle")
                     }
                     .help(state.hideEmptyEvents ? "Showing only prompts with file changes" : "Showing all prompts")
+                }
+                ToolbarItem(placement: .automatic) {
+                    Button {
+                        if state.confirmBeforeDelete {
+                            state.showClearAllConfirmation = true
+                        } else {
+                            try? database.deleteAllData()
+                        }
+                    } label: {
+                        Image(systemName: "trash")
+                    }
+                    .help("Clear all data")
                 }
             }
         }
@@ -251,12 +312,10 @@ struct ContentView: View {
             }
         case .event:
             if let event = item.event {
-                VStack(alignment: .leading, spacing: 2) {
-                    eventRow(event)
-                }
-                .padding(.vertical, 2)
-                .padding(.leading, 20)
-                .tag(item.id)
+                eventRow(event)
+                    .padding(.vertical, 2)
+                    .padding(.leading, 20)
+                    .tag(item.id)
             }
         }
     }
@@ -353,6 +412,14 @@ struct ContentView: View {
                     try? database.updateSessionName(nil, sessionID: session.id)
                 }
             }
+            Divider()
+            Button("Delete Session", role: .destructive) {
+                if state.confirmBeforeDelete {
+                    state.deletingSessionID = session.id
+                } else {
+                    try? database.deleteSession(id: session.id)
+                }
+            }
         }
     }
 
@@ -361,18 +428,29 @@ struct ContentView: View {
         let fileCount = database.fileChangesCache[event.id]?.count ?? 0
         let showState = isLatestEvent(event)
         let sState = showState ? database.sessionState(for: event.sessionID) : .idle
-        Text(event.promptText ?? "(no prompt)")
-            .lineLimit(2)
-            .font(.callout)
-        HStack(spacing: 6) {
-            SessionStateIndicator(state: sState)
-            Text(event.timestamp, style: .time)
-            if fileCount > 0 {
-                Label("\(fileCount)", systemImage: "doc")
+        VStack(alignment: .leading, spacing: 2) {
+            Text(event.promptText ?? "(no prompt)")
+                .lineLimit(2)
+                .font(.callout)
+            HStack(spacing: 6) {
+                SessionStateIndicator(state: sState)
+                Text(event.timestamp, style: .time)
+                if fileCount > 0 {
+                    Label("\(fileCount)", systemImage: "doc")
+                }
+            }
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+        }
+        .contextMenu {
+            Button("Delete Prompt", role: .destructive) {
+                if state.confirmBeforeDelete {
+                    state.deletingEventID = event.id
+                } else {
+                    try? database.deletePromptEvent(id: event.id)
+                }
             }
         }
-        .font(.caption2)
-        .foregroundStyle(.secondary)
     }
 
     // MARK: - Detail

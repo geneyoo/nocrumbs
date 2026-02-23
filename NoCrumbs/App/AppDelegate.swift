@@ -16,6 +16,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             "showPromptList": true,
             "showFileCountPerPrompt": true,
             "showSessionID": true,
+            "confirmBeforeDelete": true,
+            "retentionDays": 7,
         ])
 
         // Start Sparkle updater (only in Release builds with a real appcast)
@@ -35,6 +37,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         do {
             try Database.shared.open()
             logger.info("[NC:App] Database opened")
+            let retentionDays = UserDefaults.standard.integer(forKey: "retentionDays")
+            if retentionDays > 0 {
+                try Database.shared.evictOlderThan(days: retentionDays)
+            }
             Task { await Database.shared.backfillBaseCommitHashes() }
         } catch {
             logger.error("[NC:App] Database failed: \(error.localizedDescription)")

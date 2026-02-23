@@ -7,8 +7,11 @@ struct SettingsView: View {
     @AppStorage("showPromptList") private var showPromptList = true
     @AppStorage("showFileCountPerPrompt") private var showFileCountPerPrompt = true
     @AppStorage("showSessionID") private var showSessionID = true
+    @AppStorage("confirmBeforeDelete") private var confirmBeforeDelete = true
+    @AppStorage("retentionDays") private var retentionDays = 7
     @Environment(ThemeManager.self) private var themeManager
     @State private var healthChecker = HookHealthChecker.shared
+    @State private var showClearAllConfirmation = false
     private var database: Database { Database.shared }
 
     private var selectedThemeName: Binding<String> {
@@ -51,6 +54,37 @@ struct SettingsView: View {
             Section("Sidebar") {
                 Toggle("Hide prompts with no file changes", isOn: $hideEmptyEvents)
                     .help("Only show prompts that produced file changes (the most recent prompt in each session is always shown)")
+            }
+
+            Section("Data") {
+                Toggle("Confirm before deleting", isOn: $confirmBeforeDelete)
+                    .help("Show a confirmation dialog before deleting sessions or prompts")
+
+                Picker("Auto-delete after", selection: $retentionDays) {
+                    Text("1 day").tag(1)
+                    Text("3 days").tag(3)
+                    Text("7 days").tag(7)
+                    Text("14 days").tag(14)
+                    Text("30 days").tag(30)
+                    Text("Never").tag(0)
+                }
+                .help("Automatically delete sessions older than this on app launch")
+
+                Button("Clear All Data", role: .destructive) {
+                    if confirmBeforeDelete {
+                        showClearAllConfirmation = true
+                    } else {
+                        try? database.deleteAllData()
+                    }
+                }
+                .alert("Clear All Data", isPresented: $showClearAllConfirmation) {
+                    Button("Clear All", role: .destructive) {
+                        try? database.deleteAllData()
+                    }
+                    Button("Cancel", role: .cancel) {}
+                } message: {
+                    Text("This will permanently delete all sessions, prompts, and file changes.")
+                }
             }
 
             Section("General") {
