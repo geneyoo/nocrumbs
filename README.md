@@ -1,6 +1,6 @@
 # 🥐 NoCrumbs
 
-> AI writes the code. You keep the receipts.
+> Catch every crumb your coding agent leaves behind.
 
 A local-first tool that links every file change your AI coding assistant makes back to the prompt that caused it. Native Mac app + fire-and-forget CLI. No cloud, no telemetry, no accounts.
 

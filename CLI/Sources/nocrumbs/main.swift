@@ -4,7 +4,7 @@ let version = "0.4.0"
 let args = CommandLine.arguments
 
 guard args.count >= 2 else {
-    print("nocrumbs \(version) — organized receipts for agent code changes")
+    print("nocrumbs \(version) — catch every crumb your coding agent leaves behind")
     print("")
     print("Usage:")
     print("  nocrumbs event               Pipe any Claude Code hook event to app")
