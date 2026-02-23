@@ -1,0 +1,32 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: Build & Test
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Mac App
+        run: |
+          xcodebuild -project NoCrumbs.xcodeproj -scheme NoCrumbs \
+            -configuration Debug -sdk macosx -derivedDataPath build \
+            build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
+
+      - name: Run Tests
+        run: |
+          xcodebuild test -project NoCrumbs.xcodeproj -scheme NoCrumbs \
+            -sdk macosx -derivedDataPath build \
+            CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
+
+      - name: Build CLI
+        run: swift build -c release --package-path CLI/
