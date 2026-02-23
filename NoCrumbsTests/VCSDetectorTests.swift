@@ -75,5 +75,37 @@ final class VCSDetectorTests: XCTestCase {
         let root = VCSDetector.repoRoot(at: nested, for: .sapling)
         XCTAssertEqual(root, tmpDir)
     }
+    func testDetectWithTrailingSlash() throws {
+        try FileManager.default.createDirectory(
+            atPath: "\(tmpDir!)/.hg", withIntermediateDirectories: true
+        )
+        // Trailing slash should not break detection
+        XCTAssertEqual(VCSDetector.detect(at: tmpDir + "/"), .mercurial)
+    }
+
+    func testNormalizePath() {
+        // Trailing slash removed
+        XCTAssertFalse(VCSDetector.normalizePath("/tmp/test/").hasSuffix("/"))
+
+        // Root path preserved
+        XCTAssertEqual(VCSDetector.normalizePath("/"), "/")
+
+        // Normal path unchanged
+        let normal = VCSDetector.normalizePath("/tmp/test")
+        XCTAssertEqual(normal, "/tmp/test")
+    }
+
+    func testDetectWithSymlink() throws {
+        // Create actual .hg dir and a symlink to the parent
+        try FileManager.default.createDirectory(
+            atPath: "\(tmpDir!)/real/.hg", withIntermediateDirectories: true
+        )
+        let symlink = "\(tmpDir!)/link"
+        try FileManager.default.createSymbolicLink(
+            atPath: symlink, withDestinationPath: "\(tmpDir!)/real"
+        )
+        // Symlink should be resolved and .hg found
+        XCTAssertEqual(VCSDetector.detect(at: symlink), .mercurial)
+    }
 }
 // swiftlint:enable force_unwrapping implicitly_unwrapped_optional

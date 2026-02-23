@@ -2,7 +2,7 @@ import Foundation
 
 enum VCSDetector {
     static func detect(at path: String) -> VCSType? {
-        var current = path
+        var current = normalizePath(path)
         let fm = FileManager.default
         while current != "/" {
             if fm.fileExists(atPath: "\(current)/.git") { return .git }
@@ -14,7 +14,7 @@ enum VCSDetector {
     }
 
     static func repoRoot(at path: String, for vcs: VCSType) -> String? {
-        var current = path
+        var current = normalizePath(path)
         let fm = FileManager.default
         let marker: String
         switch vcs {
@@ -27,5 +27,14 @@ enum VCSDetector {
             current = (current as NSString).deletingLastPathComponent
         }
         return nil
+    }
+
+    /// Normalize path: resolve symlinks, remove trailing slashes.
+    static func normalizePath(_ path: String) -> String {
+        let resolved = (path as NSString).resolvingSymlinksInPath
+        if resolved.hasSuffix("/"), resolved.count > 1 {
+            return String(resolved.dropLast())
+        }
+        return resolved
     }
 }

@@ -61,8 +61,9 @@ final class DiffViewModelTests: XCTestCase {
         XCTAssertNil(vm.error)
     }
 
-    func testLoad_nilBaseHash() async throws {
-        let mock = MockVCSProvider()
+    func testLoad_nilBaseHash_liveCaptureAlsoFails() async throws {
+        var mock = MockVCSProvider()
+        mock.shouldThrow = VCSError.commandFailed("hg", 1, "not found")
         let vm = DiffViewModel(provider: mock)
         let event = makeEvent(baseCommitHash: nil)
         let change = makeFileChange(eventID: event.id, path: "/tmp/test/file.swift")
@@ -73,7 +74,7 @@ final class DiffViewModelTests: XCTestCase {
         try await Task.sleep(nanoseconds: 50_000_000)
 
         XCTAssertNotNil(vm.error)
-        XCTAssertTrue(vm.error?.contains("baseline") == true || vm.error?.contains("Waiting") == true)
+        XCTAssertTrue(vm.error?.contains("baseline commit") == true)
     }
 
     func testLoad_invalidCommit() async throws {
@@ -151,6 +152,81 @@ final class DiffViewModelTests: XCTestCase {
 
         // Cleanup
         try? FileManager.default.removeItem(atPath: "\(dir)/newfile.swift")
+    }
+    func testLoad_mercurialProvider() async throws {
+        var mock = MockVCSProvider()
+        mock.type = .mercurial
+        mock.diffOutput = """
+            diff --git a/file.swift b/file.swift
+            --- a/file.swift
+            +++ b/file.swift
+            @@ -1,1 +1,1 @@
+            -old
+            +new
+            """
+        let vm = DiffViewModel(provider: mock)
+        let event = makeEvent(vcs: .mercurial)
+        let change = makeFileChange(eventID: event.id, path: "/tmp/test/file.swift")
+
+        vm.load(event: event, fileChanges: [change])
+
+        try await Task.sleep(nanoseconds: 50_000_000)
+
+        XCTAssertNil(vm.error)
+        XCTAssertEqual(vm.fileDiffs.count, 1)
+        XCTAssertEqual(vm.fileDiffs[0].status, .modified)
+    }
+
+    func testLoad_noVCSShowsMessage() async throws {
+        let mock = MockVCSProvider()
+        let vm = DiffViewModel(provider: mock)
+        let event = makeEvent(vcs: nil, baseCommitHash: nil)
+        let change = makeFileChange(eventID: event.id, path: "/tmp/test/file.swift")
+
+        vm.load(event: event, fileChanges: [change])
+
+        try await Task.yield()
+
+        XCTAssertEqual(vm.error, "No VCS detected for this event")
+    }
+
+    func testLoad_nilBaseHashAttemptsLiveCapture() async throws {
+        var mock = MockVCSProvider()
+        mock.headHash = "live_captured_hash_1234567890abcdef12345678"
+        mock.diffOutput = """
+            diff --git a/file.swift b/file.swift
+            --- a/file.swift
+            +++ b/file.swift
+            @@ -1,1 +1,1 @@
+            -old
+            +new
+            """
+        let vm = DiffViewModel(provider: mock)
+        let event = makeEvent(baseCommitHash: nil)
+        let change = makeFileChange(eventID: event.id, path: "/tmp/test/file.swift")
+
+        vm.load(event: event, fileChanges: [change])
+
+        try await Task.sleep(nanoseconds: 100_000_000)
+
+        // Should succeed via live capture fallback
+        XCTAssertNil(vm.error)
+        XCTAssertEqual(vm.fileDiffs.count, 1)
+    }
+
+    func testLoad_nilBaseHashLiveCaptureFails() async throws {
+        var mock = MockVCSProvider()
+        mock.shouldThrow = VCSError.commandFailed("hg", 1, "command not found")
+        let vm = DiffViewModel(provider: mock)
+        let event = makeEvent(baseCommitHash: nil)
+        let change = makeFileChange(eventID: event.id, path: "/tmp/test/file.swift")
+
+        vm.load(event: event, fileChanges: [change])
+
+        try await Task.sleep(nanoseconds: 100_000_000)
+
+        XCTAssertNotNil(vm.error)
+        XCTAssertTrue(vm.error?.contains("baseline commit") == true)
     }
 }
 

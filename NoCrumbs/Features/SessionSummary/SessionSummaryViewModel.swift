@@ -125,16 +125,15 @@ final class SessionSummaryViewModel {
 
         logger.info("Loading diffstats for \(uncached.count) uncached events in session \(sessionID)")
 
-        let provider = self.provider
-
         loadTask = Task { [weak self] in
             await withTaskGroup(of: (UUID, Result<PromptDiffStat, Error>).self) { group in
                 for event in uncached {
                     let changes = fileChangesCache[event.id] ?? []
+                    let eventProvider = event.vcs.map { makeProvider(for: $0) } ?? GitProvider()
                     group.addTask {
                         do {
                             let stat = try await Self.loadDiffStat(
-                                event: event, fileChanges: changes, provider: provider
+                                event: event, fileChanges: changes, provider: eventProvider
                             )
                             return (event.id, .success(stat))
                         } catch {

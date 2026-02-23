@@ -575,19 +575,20 @@ final class Database {  // swiftlint:disable:this type_body_length
         logger.info("✅ [DB] Set active template '\(name)'")
     }
 
-    /// Backfill baseCommitHash for legacy events that have NULL.
+    /// Backfill baseCommitHash for events that have NULL (any VCS type).
     func backfillBaseCommitHashes() async {
         let events: [PromptEvent] = await MainActor.run {
-            recentEvents.filter { $0.baseCommitHash == nil && $0.vcs == .git }
+            recentEvents.filter { $0.baseCommitHash == nil && $0.vcs != nil }
         }
         guard !events.isEmpty else { return }
         logger.info("🔄 [DB] Backfilling baseCommitHash for \(events.count) events")
 
-        let provider = GitProvider()
         var cache: [String: String] = [:]
 
         for event in events {
-            let cacheKey = "\(event.projectPath)|\(Int(event.timestamp.timeIntervalSince1970))"
+            guard let vcs = event.vcs else { continue }
+            let provider = makeProvider(for: vcs)
+            let cacheKey = "\(event.projectPath)|\(vcs.rawValue)|\(Int(event.timestamp.timeIntervalSince1970))"
             let hash: String?
             if let cached = cache[cacheKey] {
                 hash = cached
@@ -613,7 +614,9 @@ final class Database {  // swiftlint:disable:this type_body_length
                     recentEvents[idx].baseCommitHash == nil
                 {
                     let old = recentEvents[idx]
-                    if let hash = cache["\(old.projectPath)|\(Int(old.timestamp.timeIntervalSince1970))"] {
+                    if let vcs = old.vcs,
+                        let hash = cache["\(old.projectPath)|\(vcs.rawValue)|\(Int(old.timestamp.timeIntervalSince1970))"]
+                    {
                         recentEvents[idx] = PromptEvent(
                             id: old.id, sessionID: old.sessionID, projectPath: old.projectPath,
                             promptText: old.promptText, timestamp: old.timestamp,

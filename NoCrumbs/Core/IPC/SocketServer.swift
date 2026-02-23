@@ -148,12 +148,13 @@ actor SocketServer {
     private func handleEvent(_ json: [String: Any], db: Database) async {
         guard let sessionID = json["session_id"] as? String,
             let hookEventName = json["hook_event_name"] as? String,
-            let cwd = json["cwd"] as? String
+            let rawCwd = json["cwd"] as? String
         else {
             logger.warning("[NC:Socket] Malformed event message")
             return
         }
 
+        let cwd = VCSDetector.normalizePath(rawCwd)
         let now = Date()
 
         // Build payload JSON from remaining interesting fields
@@ -234,7 +235,7 @@ actor SocketServer {
 
         var baseHash: String?
         if let vcsType {
-            baseHash = try? await makeProvider(for: vcsType).currentHead(at: cwd)
+            baseHash = await captureHead(vcs: vcsType, at: cwd)
         }
 
         let event = PromptEvent(
@@ -265,11 +266,12 @@ actor SocketServer {
         // Only bridge Write/Edit tools with a file_path inside the project
         guard toolName == "Write" || toolName == "Edit",
             let toolInput = json["tool_input"] as? [String: Any],
-            let filePath = toolInput["file_path"] as? String,
-            filePath.hasPrefix(cwd + "/")
+            let rawPath = toolInput["file_path"] as? String
         else {
             return
         }
+        let filePath = VCSDetector.normalizePath(rawPath)
+        guard filePath.hasPrefix(cwd + "/") else { return }
 
         let eventID: UUID? = await MainActor.run {
             db.recentEvents.first(where: { $0.sessionID == sessionID })?.id
@@ -284,7 +286,7 @@ actor SocketServer {
             let vcsType = VCSDetector.detect(at: cwd)
             var baseHash: String?
             if let vcsType {
-                baseHash = try? await makeProvider(for: vcsType).currentHead(at: cwd)
+                baseHash = await captureHead(vcs: vcsType, at: cwd)
             }
             let placeholderEvent = PromptEvent(
                 id: UUID(),
@@ -535,12 +537,13 @@ actor SocketServer {
     private func handlePrompt(_ json: [String: Any], db: Database) async {
         guard let sessionID = json["session_id"] as? String,
             let prompt = json["prompt"] as? String,
-            let cwd = json["cwd"] as? String
+            let rawCwd = json["cwd"] as? String
         else {
             logger.warning("[NC:Socket] Malformed prompt message")
             return
         }
 
+        let cwd = VCSDetector.normalizePath(rawCwd)
         let now = Date()
 
         // Backfill orphan: if a placeholder event exists for this session with nil promptText,
@@ -570,7 +573,7 @@ actor SocketServer {
         // Capture HEAD hash as diff baseline — if this fails, we still proceed (hash is optional)
         var baseHash: String?
         if let vcsType {
-            baseHash = try? await makeProvider(for: vcsType).currentHead(at: cwd)
+            baseHash = await captureHead(vcs: vcsType, at: cwd)
         }
 
         let session = Session(id: sessionID, projectPath: cwd, startedAt: now, lastActivityAt: now)
@@ -597,11 +600,17 @@ actor SocketServer {
 
     private func handleChange(_ json: [String: Any], db: Database) async {
         guard let sessionID = json["session_id"] as? String,
-            let filePath = json["file_path"] as? String,
-            let cwd = json["cwd"] as? String,
-            filePath.hasPrefix(cwd + "/")
+            let rawFilePath = json["file_path"] as? String,
+            let rawCwd = json["cwd"] as? String
         else {
-            logger.warning("[NC:Socket] Malformed or out-of-repo change message")
+            logger.warning("[NC:Socket] Malformed change message")
+            return
+        }
+
+        let cwd = VCSDetector.normalizePath(rawCwd)
+        let filePath = VCSDetector.normalizePath(rawFilePath)
+        guard filePath.hasPrefix(cwd + "/") else {
+            logger.warning("[NC:Socket] Out-of-repo change: \(filePath)")
             return
         }
 
@@ -618,7 +627,7 @@ actor SocketServer {
             let vcsType = VCSDetector.detect(at: cwd)
             var baseHash: String?
             if let vcsType {
-                baseHash = try? await makeProvider(for: vcsType).currentHead(at: cwd)
+                baseHash = await captureHead(vcs: vcsType, at: cwd)
             }
             let session = Session(id: sessionID, projectPath: cwd, startedAt: now, lastActivityAt: now)
             let event = PromptEvent(
@@ -673,6 +682,18 @@ actor SocketServer {
             } catch {
                 logger.error("[NC:Socket] DB error: \(error.localizedDescription)")
             }
+        }
+    }
+
+    // MARK: - VCS Head Capture
+
+    /// Captures the current HEAD hash, logging failures instead of silently swallowing them.
+    private func captureHead(vcs: VCSType, at path: String) async -> String? {
+        do {
+            return try await makeProvider(for: vcs).currentHead(at: path)
+        } catch {
+            logger.error("[NC:Socket] Failed to capture HEAD for \(vcs.rawValue) at \(path): \(error.localizedDescription)")
+            return nil
         }
     }
 

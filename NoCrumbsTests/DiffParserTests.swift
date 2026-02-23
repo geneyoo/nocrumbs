@@ -150,4 +150,77 @@ final class DiffParserTests: XCTestCase {
         let meaningful = diffs[0].hunks[0].lines.filter { !$0.text.isEmpty }
         XCTAssertEqual(meaningful.count, 0)
     }
+
+    // MARK: - Mercurial Format Tests
+
+    func testMercurialGitFormat() {
+        // `hg diff --git` produces identical output to `git diff`
+        let raw =
+            "diff --git a/ViewModel.swift b/ViewModel.swift\n"
+            + "--- a/ViewModel.swift\n"
+            + "+++ b/ViewModel.swift\n"
+            + "@@ -1,3 +1,3 @@\n"
+            + " import Foundation\n"
+            + "-let old = 1\n"
+            + "+let new = 2\n"
+            + " struct VM {}"
+
+        let diffs = DiffParser.parse(raw)
+        XCTAssertEqual(diffs.count, 1)
+        XCTAssertEqual(diffs[0].status, .modified)
+        XCTAssertEqual(diffs[0].oldPath, "ViewModel.swift")
+        XCTAssertEqual(diffs[0].newPath, "ViewModel.swift")
+    }
+
+    func testMercurialNewFile() {
+        // Mercurial new file diff (no mode line)
+        let raw =
+            "diff --git a/new.swift b/new.swift\n"
+            + "--- /dev/null\n"
+            + "+++ b/new.swift\n"
+            + "@@ -0,0 +1,2 @@\n"
+            + "+import Foundation\n"
+            + "+struct New {}"
+
+        let diffs = DiffParser.parse(raw)
+        XCTAssertEqual(diffs.count, 1)
+        XCTAssertEqual(diffs[0].status, .added)
+        XCTAssertNil(diffs[0].oldPath)
+        XCTAssertEqual(diffs[0].newPath, "new.swift")
+    }
+
+    func testMercurialWithHgHeaders() {
+        // Mercurial may emit extra headers before `diff --git` — parser should ignore them
+        let raw =
+            "# HG changeset patch\n"
+            + "# User test@example.com\n"
+            + "# Date 1234567890 0\n"
+            + "diff --git a/file.swift b/file.swift\n"
+            + "--- a/file.swift\n"
+            + "+++ b/file.swift\n"
+            + "@@ -1,1 +1,1 @@\n"
+            + "-old\n"
+            + "+new"
+
+        let diffs = DiffParser.parse(raw)
+        XCTAssertEqual(diffs.count, 1)
+        XCTAssertEqual(diffs[0].status, .modified)
+    }
+
+    func testPathsWithoutPrefixes() {
+        // Some VCS tools emit paths without a/ b/ prefixes
+        let raw =
+            "diff --git a/file.swift b/file.swift\n"
+            + "--- file.swift\n"
+            + "+++ file.swift\n"
+            + "@@ -1,1 +1,1 @@\n"
+            + "-old\n"
+            + "+new"
+
+        let diffs = DiffParser.parse(raw)
+        XCTAssertEqual(diffs.count, 1)
+        // Without a/ prefix, path is kept as-is
+        XCTAssertEqual(diffs[0].oldPath, "file.swift")
+        XCTAssertEqual(diffs[0].newPath, "file.swift")
+    }
 }

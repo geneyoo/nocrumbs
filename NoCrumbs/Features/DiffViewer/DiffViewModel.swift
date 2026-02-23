@@ -15,10 +15,12 @@ final class DiffViewModel {
     private var currentEventID: UUID?
     private var loadTask: Task<Void, Never>?
     private var diffCache: [UUID: [FileDiff]] = [:]
-    private let provider: any VCSProvider
+    private var provider: any VCSProvider
+    private let injectedProvider: Bool
 
-    init(provider: any VCSProvider = GitProvider()) {
-        self.provider = provider
+    init(provider: (any VCSProvider)? = nil) {
+        self.provider = provider ?? GitProvider()
+        self.injectedProvider = provider != nil
     }
 
     var selectedFile: FileDiff? {
@@ -29,12 +31,17 @@ final class DiffViewModel {
     func load(event: PromptEvent, fileChanges: [FileChange]) {
         loadTask?.cancel()
 
-        guard event.vcs != nil else {
+        guard let vcs = event.vcs else {
             fileDiffs = []
             linePairs = []
             error = "No VCS detected for this event"
             logger.warning("load: no VCS for event \(event.id)")
             return
+        }
+
+        // Use the correct provider for this event's VCS type (unless test-injected)
+        if !injectedProvider {
+            provider = makeProvider(for: vcs)
         }
 
         guard !fileChanges.isEmpty else {
@@ -98,11 +105,24 @@ final class DiffViewModel {
         relativePaths: [String], projectPath: String
     ) async {
         do {
-            guard let baseHash else {
+            // If baseHash is nil, attempt live capture as fallback
+            var resolvedHash = baseHash
+            if resolvedHash == nil {
+                logger.info("baseHash nil for event \(eventID) — attempting live HEAD capture")
+                resolvedHash = try? await provider.currentHead(at: projectPath)
+                if let hash = resolvedHash {
+                    logger.info("Live capture succeeded: \(hash)")
+                    await MainActor.run {
+                        try? Database.shared.updateBaseCommitHash(hash, forEventID: eventID)
+                    }
+                }
+            }
+
+            guard let baseHash = resolvedHash else {
                 guard currentEventID == eventID else { return }
-                error = "Waiting for baseline — try again in a moment"
+                error = "Could not determine baseline commit"
                 isLoading = false
-                logger.warning("no baseHash — waiting for backfill")
+                logger.warning("no baseHash — live capture also failed")
                 return
             }
 
