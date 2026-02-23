@@ -1,6 +1,6 @@
 # NoCrumbs - Claude Code Instructions
 
-> Catch every crumb your coding agent leaves behind. Links every file change Claude Code makes back to the prompt that caused it.
+> Catch every crumb your agent leaves behind. Links every file change Claude Code makes back to the prompt that caused it.
 
 ## Product Context
 
