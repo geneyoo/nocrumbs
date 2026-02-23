@@ -92,17 +92,21 @@ final class DiffViewModel {
             logger.info("  file[\(i)]: \(rp)")
         }
 
+        let eventTimestamp = event.timestamp
+
         loadTask = Task { [weak self] in
             await self?.performLoad(
                 eventID: eventID, baseHash: baseHash,
-                relativePaths: relativePaths, projectPath: projectPath
+                relativePaths: relativePaths, projectPath: projectPath,
+                eventTimestamp: eventTimestamp
             )
         }
     }
 
     private func performLoad(
         eventID: UUID, baseHash: String?,
-        relativePaths: [String], projectPath: String
+        relativePaths: [String], projectPath: String,
+        eventTimestamp: Date
     ) async {
         do {
             // If baseHash is nil, attempt live capture as fallback
@@ -128,17 +132,51 @@ final class DiffViewModel {
 
             let isValid = try await provider.isValidCommit(baseHash, at: projectPath)
             guard !Task.isCancelled else { return }
-            guard isValid else {
+
+            // If the original commit was rebased/stripped, try finding the nearest ancestor
+            if !isValid {
+                logger.warning("baseHash \(baseHash) is dangling — trying headBefore fallback")
+                if let fallbackHash = try? await provider.headBefore(eventTimestamp, at: projectPath),
+                    try await provider.isValidCommit(fallbackHash, at: projectPath)
+                {
+                    logger.info("headBefore fallback succeeded: \(fallbackHash)")
+                    await MainActor.run {
+                        try? Database.shared.updateBaseCommitHash(fallbackHash, forEventID: eventID)
+                    }
+                    // Continue with fallback hash
+                    return await performDiff(
+                        eventID: eventID, baseHash: fallbackHash,
+                        relativePaths: relativePaths, projectPath: projectPath
+                    )
+                }
+
                 guard currentEventID == eventID else { return }
                 error = "Commit \(String(baseHash.prefix(7))) no longer exists — likely rebased or reset"
                 isLoading = false
-                logger.warning("baseHash \(baseHash) is dangling (invalid commit)")
+                logger.warning("baseHash \(baseHash) is dangling, headBefore fallback also failed")
                 return
             }
 
+            await performDiff(
+                eventID: eventID, baseHash: baseHash,
+                relativePaths: relativePaths, projectPath: projectPath
+            )
+        } catch {
+            guard !Task.isCancelled, currentEventID == eventID else { return }
+            logger.error("load failed: \(error.localizedDescription)")
+            self.error = error.localizedDescription
+            isLoading = false
+        }
+    }
+
+    private func performDiff(
+        eventID: UUID, baseHash: String,
+        relativePaths: [String], projectPath: String
+    ) async {
+        do {
             let raw = try await provider.diffFromBase(baseHash, filePaths: relativePaths, at: projectPath)
             guard !Task.isCancelled else { return }
-            logger.info("git diff \(baseHash) returned \(raw.count) chars")
+            logger.info("diff \(baseHash.prefix(7)) returned \(raw.count) chars")
             var allDiffs = DiffParser.parse(raw)
             logger.info("parsed \(allDiffs.count) file diffs")
 
@@ -153,7 +191,7 @@ final class DiffViewModel {
             applyDiffs(allDiffs)
         } catch {
             guard !Task.isCancelled, currentEventID == eventID else { return }
-            logger.error("load failed: \(error.localizedDescription)")
+            logger.error("diff failed: \(error.localizedDescription)")
             self.error = error.localizedDescription
             isLoading = false
         }
