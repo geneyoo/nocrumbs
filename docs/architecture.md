@@ -96,14 +96,17 @@ NoCrumbs/
 │   │   ├── DeepLinkRouter.swift    # @Observable @MainActor: handles nocrumbs:// URLs, pending navigation
 │   │   ├── HookHealthChecker.swift # @Observable: checks CLI installed (Homebrew + bundle + PATH), hooks configured, socket active
 │   │   ├── SecretRedactor.swift     # Regex-based secret scrubbing (API keys, tokens, JWTs, credentials)
-│   │   └── SessionMarkdownFormatter.swift # Formats session data as markdown for clipboard export
+│   │   ├── SessionMarkdownFormatter.swift # Formats session data as markdown for clipboard export
+│   │   └── ShellEnvironment.swift  # Captures user's login shell env at launch for VCS subprocesses
 │   └── VCS/
 │       ├── DiffParser.swift       # Parses unified git/hg diff output → [FileDiff]
 │       ├── GitProvider.swift      # VCSProvider impl — shells out to /usr/bin/git via Process
-│       ├── MercurialProvider.swift # VCSProvider impl — shells out to hg via /usr/bin/env
-│       ├── SaplingProvider.swift  # VCSProvider impl — shells out to sl via /usr/bin/env
+│       ├── MercurialProvider.swift # VCSProvider impl — shells out to hg via resolved path + ShellEnvironment
+│       ├── SaplingProvider.swift  # VCSProvider impl — shells out to sl via resolved path + ShellEnvironment
 │       ├── RemoteURLParser.swift  # Parses git remote URLs (SSH/HTTPS) → web commit URLs
+│       ├── VCSBinaryResolver.swift # Resolves VCS binary paths for GUI apps with no PATH
 │       ├── VCSDetector.swift      # Static: walk up directory tree checking for .git/.hg/.sl
+│       │                          #   normalizePath(): resolves symlinks + strips trailing slashes
 │       └── VCSProvider.swift      # Protocol + makeProvider(for:) factory
 │
 ├── Features/
@@ -314,10 +317,10 @@ final class Database {
 ### Backfill
 
 On startup, `Database.backfillBaseCommitHashes()` runs async:
-- Finds events with NULL `baseCommitHash` and `vcs == .git`
-- Uses `git log --before=<timestamp> -1 --format=%H` to find what HEAD was at prompt time
+- Finds events with NULL `baseCommitHash` and any non-nil VCS type (git, mercurial, sapling)
+- Uses `makeProvider(for: vcs).headBefore(timestamp)` to find what HEAD was at prompt time
 - Updates each event with the resolved hash
-- Caches by `projectPath|timestamp` to avoid redundant git calls
+- Caches by `projectPath|vcsType|timestamp` to avoid redundant VCS calls
 
 ### Injection Pattern
 
@@ -394,8 +397,10 @@ Socket path: ~/Library/Application Support/NoCrumbs/nocrumbs.sock
 - Accepts connections in a detached Task loop
 - Reads full message, parses JSON, dispatches by `"type"` field
 - `"event"` → unified hook event handler; stores HookEvent, bridges to legacy prompt/change tables (fire-and-forget)
-- `"prompt"` → (legacy) captures `git rev-parse HEAD` as baseCommitHash, upserts session + inserts PromptEvent
+- `"prompt"` → (legacy) captures VCS HEAD as baseCommitHash via `captureHead()`, upserts session + inserts PromptEvent
 - `"change"` → (legacy) finds most recent event for session, attaches FileChange (or creates orphan event)
+- All handlers normalize `cwd` and `filePath` via `VCSDetector.normalizePath()` (resolves symlinks, strips trailing slashes)
+- `captureHead(vcs:at:)` helper replaces raw `try?` — logs actual error before returning nil
 - `"file-descriptions"` → updates `description` column on fileChanges matching session + path (fire-and-forget)
 - `"session-rename"` → updates session customName (fire-and-forget)
 - `"query-prompts"` → returns recent prompts + file counts + annotation/content toggle flags + active template body (request/response)
@@ -543,7 +548,7 @@ protocol VCSProvider: Sendable {
 func makeProvider(for vcs: VCSType) -> any VCSProvider
 ```
 
-**Testability:** `DiffViewModel` accepts `any VCSProvider` via init (defaults to `GitProvider()`), enabling `MockVCSProvider` injection in tests.
+**Testability:** `DiffViewModel` accepts `(any VCSProvider)?` via init. When injected (tests), the provider is locked. Otherwise, `load()` selects the correct provider per event via `makeProvider(for: event.vcs)`.
 
 **Implementations:**
 - `GitProvider` — shells out to `/usr/bin/git` via `Process` with async wrapper
@@ -553,19 +558,27 @@ func makeProvider(for vcs: VCSType) -> any VCSProvider
   - `headBefore` → `git log --before=<iso> -1 --format=%H` (for backfill)
   - `untrackedFiles` → `git ls-files --others --exclude-standard -- <files>`
   - `cleanFiles` → `git status --porcelain -- <files>` (identifies committed files)
-- `MercurialProvider` — shells out to `hg` via `/usr/bin/env` with async wrapper
+- `MercurialProvider` — shells out to `hg` via resolved binary path + `ShellEnvironment`
+  - Binary resolved via `VCSBinaryResolver` checking `/usr/local/bin/hg`, `/opt/homebrew/bin/hg`, `/opt/facebook/hg/bin/hg`
   - `currentHead` → `hg log -r . -T {node}`
   - `diffFromBase` → `hg diff --git -r <baseHash> <files>`
   - `headBefore` → `hg log -r "date('<iso>')" -l 1 -T {node}`
   - All commands produce `--git` format diffs for DiffParser compatibility
-- `SaplingProvider` — shells out to `sl` via `/usr/bin/env` with async wrapper
+  - `process.environment = ShellEnvironment.variables` for EdenFS/FB env vars
+- `SaplingProvider` — shells out to `sl` via resolved binary path + `ShellEnvironment`
+  - Binary resolved via `VCSBinaryResolver` checking `/opt/facebook/hg/bin/sl`, `/opt/homebrew/bin/sl`, `/usr/local/bin/sl`
   - `currentHead` → `sl log -r . -T {node}`
   - `currentBranch` → `sl bookmark --active`
   - `diffFromBase` → `sl diff --git -r <baseHash> <files>`
   - `headBefore` → `sl log -r "date('<iso>')" -l 1 -T {node}`
   - `untrackedFiles` → `sl status -un`
+  - `process.environment = ShellEnvironment.variables` for EdenFS/FB env vars
 
-**Detection:** `VCSDetector.detect(at:)` walks up from a path checking for `.git`, `.sl`, or `.hg` directories.
+**Binary Resolution:** `VCSBinaryResolver.resolve(name, knownPaths)` checks known install paths in order, falls back to `/usr/local/bin/<name>`. GUI apps have no PATH, so `/usr/bin/env` won't work.
+
+**Shell Environment:** `ShellEnvironment.variables` captures the user's login shell environment once at launch via `$SHELL -ilc env`. Falls back to `ProcessInfo.processInfo.environment` if capture fails. Required for `hg`/`sl` on machines with custom Python paths, `HGRCPATH`, or EdenFS configuration.
+
+**Detection:** `VCSDetector.detect(at:)` walks up from a path checking for `.git`, `.sl`, or `.hg` directories. Input paths are normalized via `normalizePath()` (resolves symlinks, strips trailing slashes).
 `VCSDetector.repoRoot(at:for:)` returns the root directory of the detected VCS repo.
 
 **Remote URL Parsing:** `RemoteURLParser.commitURL(remoteURL:hash:)` converts git SSH/HTTPS remote URLs to web commit URLs. Used for clickable commit SHA links in the prompt timeline.
@@ -598,9 +611,16 @@ Click PromptEvent in sidebar
               ↑ collapsible (sidebar.left toggle button)
 ```
 
-**Key design: `baseCommitHash`** — every prompt event stores git HEAD at the moment it arrives.
-`git diff <baseHash>` always works regardless of whether changes are uncommitted, staged, or committed.
-No fallback strategies needed. Legacy events are backfilled on startup via `git log --before`.
+**Key design: `baseCommitHash`** — every prompt event stores VCS HEAD at the moment it arrives.
+`vcs diff <baseHash>` always works regardless of whether changes are uncommitted, staged, or committed.
+Legacy events are backfilled on startup via `headBefore(timestamp)`.
+
+**VCS-aware provider selection:** `DiffViewModel.load()` selects the correct provider (Git/Mercurial/Sapling) based on `event.vcs`. When a test injects a mock provider, the injected provider is used instead.
+
+**Fallback chain when baseHash is unavailable or dangling:**
+1. If `baseCommitHash` is nil → attempt live `currentHead()` capture, update DB on success
+2. If `isValidCommit()` returns false (commit rebased/stripped) → try `headBefore(eventTimestamp)` to find nearest valid ancestor, update DB on success
+3. If all fallbacks fail → show error message
 
 ### Data Models
 
@@ -738,7 +758,7 @@ JSON-based color themes loaded from `Resources/Themes/` at runtime.
 
 ## Test Infrastructure
 
-99 tests across 10 files, all in `NoCrumbsTests/` (hosted test target).
+110 tests across 10 files, all in `NoCrumbsTests/` (hosted test target).
 
 ```bash
 xcodebuild test -project NoCrumbs.xcodeproj -scheme NoCrumbs -sdk macosx -derivedDataPath build \
@@ -748,8 +768,8 @@ xcodebuild test -project NoCrumbs.xcodeproj -scheme NoCrumbs -sdk macosx -derive
 | Suite | Tests | Type | Coverage |
 |-------|-------|------|----------|
 | `DatabaseTests` | — | Unit | CRUD operations, migrations, cascade delete |
-| `DiffParserTests` | 10 | Pure unit | Parser edge cases: empty, add, delete, modify, multi-file, multi-hunk, line numbers, binary, no-newline-at-EOF |
-| `DiffViewModelTests` | 7 | Unit (mock) | All load() paths: no VCS, no files, nil base hash, invalid commit, valid diff, git failure, untracked files |
+| `DiffParserTests` | 14 | Pure unit | Parser edge cases: empty, add, delete, modify, multi-file, multi-hunk, line numbers, binary, no-newline-at-EOF, Mercurial format (git mode, new file, HG headers, no-prefix paths) |
+| `DiffViewModelTests` | 11 | Unit (mock) | All load() paths: no VCS, no files, nil base hash (live capture success/fail), invalid commit, valid diff, git failure, untracked files, mercurial provider, VCS error message |
 | `GitProviderTests` | 8 | Integration | Real temp git repos: currentHead, isValidCommit (valid/invalid/after-reset), diffFromBase, headBefore, untrackedFiles |
 | `MercurialProviderTests` | 6 | Unit | Mercurial provider command construction and output parsing |
 | `RemoteURLParserTests` | 12 | Pure unit | SSH/HTTPS URL parsing, edge cases, whitespace handling |
