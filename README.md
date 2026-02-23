@@ -43,6 +43,7 @@ That's it. Use your AI coding assistant normally — prompts and file changes ap
 | **Commit message annotation** | Appends prompt history to commit messages automatically. Customizable templates |
 | **Session export** | Copy session summary as markdown. Deep links back to NoCrumbs |
 | **Git + Mercurial** | Detects VCS automatically |
+| **Secret redaction** | API keys, tokens, and credentials are scrubbed from commit annotations automatically |
 
 ### Commit Annotation
 
@@ -75,6 +76,8 @@ Granular content toggles in Settings: prompt list, file counts, session ID, deep
 **Lightweight.** Don't store diffs — git already has them. Store only prompt-to-commit linkage. DB stays under 1MB for years of use. Sub-millisecond IPC via Unix domain socket.
 
 **Local-first, always.** No network calls, no API keys, no accounts, no telemetry. Everything stays on your machine via Unix domain socket.
+
+**Secure by default.** Secret redaction strips API keys, tokens, and credentials from commit annotations before they hit git history. Pre-commit hooks and CI scanning prevent accidental secret leaks in contributions.
 
 **Capture intent, not noise.** Top-level user prompts only. Subagent activity, plan steps, todos — all discarded.
 
@@ -137,6 +140,30 @@ Currently supported:
 
 Coming soon:
 - **[Codex CLI](https://github.com/openai/codex)** — via hook events
+
+---
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `⌘ D` | Show NoCrumbs window |
+| `⌘ ,` | Settings |
+| `⌘ Q` | Quit |
+| `⌘ +` / `⌘ -` | Zoom in / out |
+| `⌘ 0` | Reset zoom |
+| `⌥ ←` / `⌥ →` | Collapse / expand session in sidebar |
+
+---
+
+## Contributing
+
+```bash
+# Set up the pre-commit secret scanning hook
+git config core.hooksPath .githooks
+```
+
+The pre-commit hook runs [gitleaks](https://github.com/gitleaks/gitleaks) on staged changes to catch accidental secret commits. CI runs the same scan on all PRs.
 
 ---
 

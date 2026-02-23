@@ -224,8 +224,9 @@ if [[ -f "${APPCAST_DIR}/appcast.xml" ]]; then
     echo "✓ Appcast copied to docs-site/static/appcast.xml"
 fi
 
-# Step 15: Tag and push
-echo "→ Tagging v${VERSION} and pushing..."
+# Step 15: Rebase on remote (in case PRs merged during build), tag, and push
+echo "→ Rebasing on remote, tagging v${VERSION}, and pushing..."
+git -C "$PROJECT_DIR" pull --rebase origin main
 git -C "$PROJECT_DIR" tag "v${VERSION}"
 git -C "$PROJECT_DIR" push origin main --tags
 echo "✓ Tag v${VERSION} pushed"

@@ -69,6 +69,17 @@ Custom templates for commit annotations. Use `nocrumbs template add` from the CL
 
 18 bundled color themes (12 dark, 6 light) for the diff viewer. Changes apply immediately.
 
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `⌘ D` | Show NoCrumbs window |
+| `⌘ ,` | Settings |
+| `⌘ Q` | Quit |
+| `⌘ +` / `⌘ -` | Zoom in / out |
+| `⌘ 0` | Reset zoom |
+| `⌥ ←` / `⌥ →` | Collapse / expand session in sidebar |
+
 ## Deep Links
 
 NoCrumbs registers the `nocrumbs://` URL scheme:

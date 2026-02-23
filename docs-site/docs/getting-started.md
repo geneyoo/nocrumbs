@@ -52,6 +52,16 @@ nocrumbs install-git-hooks
 2. Open a Claude Code session and send a prompt
 3. Open the NoCrumbs window — your prompt and file changes should appear in the sidebar
 
+## Contributing
+
+If building from source, set up the pre-commit secret scanning hook:
+
+```bash
+git config core.hooksPath .githooks
+```
+
+This runs [gitleaks](https://github.com/gitleaks/gitleaks) on staged changes before every commit.
+
 ## Next Steps
 
 - [How It Works](/docs/how-it-works) — architecture and data flow

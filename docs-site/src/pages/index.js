@@ -20,6 +20,11 @@ const features = [
     description:
       'No cloud, no telemetry, no accounts. A Unix socket, a SQLite database, and your machine. That\'s it.',
   },
+  {
+    title: 'Secure by Default',
+    description:
+      'API keys, tokens, and credentials are automatically redacted from commit annotations. Pre-commit hooks and CI scanning catch secrets before they reach git history.',
+  },
 ];
 
 function HeroSection() {
@@ -59,7 +64,7 @@ function FeaturesSection() {
       <div className="container">
         <div className="row">
           {features.map(({ title, description }, idx) => (
-            <div key={idx} className={clsx('col col--4')} style={{ marginBottom: '1.5rem' }}>
+            <div key={idx} className={clsx('col col--3')} style={{ marginBottom: '1.5rem' }}>
               <div className="feature-card">
                 <h3>{title}</h3>
                 <p>{description}</p>

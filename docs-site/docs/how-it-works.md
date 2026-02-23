@@ -40,9 +40,35 @@ Claude Code ──hook event──▶ nocrumbs CLI ──Unix socket──▶ Ma
 ### What Doesn't Get Captured
 
 - File contents or diffs (derived from git on demand)
-- API keys or credentials
+- API keys or credentials (automatically redacted — see below)
 - Network traffic of any kind
 - Subagent activity or internal planning steps
+
+## Security
+
+### Secret Redaction
+
+When NoCrumbs annotates commit messages, it automatically scrubs secrets from prompt text before writing to git history. Covered patterns:
+
+- OpenAI / Anthropic API keys (`sk-...`)
+- AWS access key IDs (`AKIA...`)
+- GitHub / GitLab personal access tokens
+- Slack bot and user tokens
+- JWTs
+- Generic `password=`, `token=`, `api_key=` assignments
+
+Redaction runs in both the Mac app and CLI — secrets never reach your commit history.
+
+### Contributor Secret Scanning
+
+The repo includes a [gitleaks](https://github.com/gitleaks/gitleaks) pre-commit hook and CI workflow:
+
+```bash
+# One-time setup for contributors
+git config core.hooksPath .githooks
+```
+
+The hook scans staged changes before every commit. The same scan runs on all PRs via GitHub Actions.
 
 ## Performance
 
