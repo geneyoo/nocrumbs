@@ -9,7 +9,6 @@ struct DiffDetailView: View {
     @State private var scrollSync = DiffScrollSync()
     @State private var isFileListVisible = true
     @State private var fileListWidth: CGFloat = LayoutGuide.fileListWidth
-    @GestureState private var dragOffset: CGFloat = 0
     @State private var fileSearchQuery = ""
     @State private var isHeaderExpanded = false
     @State private var headerHeight: CGFloat = 200
@@ -160,40 +159,12 @@ struct DiffDetailView: View {
     // MARK: - Diff Content
 
     private var diffContent: some View {
-        HStack(spacing: LayoutGuide.spacingNone) {
-            if isFileListVisible {
-                fileList
-                    .frame(width: min(max(fileListWidth + dragOffset, 120), 400))
-                    .transition(.move(edge: .leading).combined(with: .opacity))
-                fileListResizeHandle
-            }
-            diffPanes
-        }
-        .animation(.smooth(duration: 0.2), value: isFileListVisible)
-    }
-
-    private var fileListResizeHandle: some View {
-        Rectangle()
-            .fill(Color.clear)
-            .frame(width: 6)
-            .overlay(Divider(), alignment: .center)
-            .contentShape(Rectangle())
-            .onHover { hovering in
-                if hovering {
-                    NSCursor.resizeLeftRight.push()
-                } else {
-                    NSCursor.pop()
-                }
-            }
-            .gesture(
-                DragGesture(minimumDistance: 1)
-                    .updating($dragOffset) { value, state, _ in
-                        state = value.translation.width
-                    }
-                    .onEnded { value in
-                        fileListWidth = min(max(fileListWidth + value.translation.width, 120), 400)
-                    }
-            )
+        DiffSplitView(
+            fileListVisible: isFileListVisible,
+            fileListWidth: fileListWidth,
+            fileList: { fileList },
+            detail: { diffPanes }
+        )
     }
 
     // MARK: - File List
@@ -256,17 +227,6 @@ struct DiffDetailView: View {
         VStack(spacing: LayoutGuide.spacingNone) {
             // Column headers with file list toggle
             HStack(spacing: LayoutGuide.spacingNone) {
-                Button {
-                    isFileListVisible.toggle()
-                } label: {
-                    Image(systemName: "sidebar.left")
-                        .font(.caption)
-                        .foregroundStyle(isFileListVisible ? .primary : .secondary)
-                }
-                .buttonStyle(.borderless)
-                .padding(.leading, LayoutGuide.paddingM)
-                .help(isFileListVisible ? "Hide file list" : "Show file list")
-
                 Text("Before")
                     .font(.caption.weight(.medium))
                     .foregroundStyle(.secondary)
@@ -278,6 +238,18 @@ struct DiffDetailView: View {
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, LayoutGuide.paddingS)
+            }
+            .overlay(alignment: .leading) {
+                Button {
+                    isFileListVisible.toggle()
+                } label: {
+                    Image(systemName: "sidebar.left")
+                        .font(.caption)
+                        .foregroundStyle(isFileListVisible ? .primary : .secondary)
+                }
+                .buttonStyle(.borderless)
+                .padding(.leading, LayoutGuide.paddingM)
+                .help(isFileListVisible ? "Hide file list" : "Show file list")
             }
             Divider()
 
