@@ -4,63 +4,71 @@ sidebar_position: 1
 
 # Getting Started
 
-CLI agents are replacing IDEs — but they leave no trace of which prompt caused which change. NoCrumbs fills that gap. A lightweight CLI hook + native Mac app that links every prompt to the commits it produced. Install once, forget about it.
+Install NoCrumbs and start tracking AI-generated changes in under a minute.
 
-**Requirements:** macOS 14+, Xcode 15+ (to build from source)
-
-## Install
-
-### Homebrew (recommended)
+## 1. Install
 
 ```bash
 brew install geneyoo/tap/nocrumbs
 ```
 
-This installs both the Mac app and the `nocrumbs` CLI.
+This installs both the Mac app and the `nocrumbs` CLI. Requires macOS 14+.
 
-### From source
+<details>
+<summary>Building from source</summary>
+
+Requires Xcode 15+.
 
 ```bash
-# 1. Clone & build the Mac app
 git clone https://github.com/geneyoo/nocrumbs.git && cd nocrumbs
+
+# Mac app
 xcodebuild -project NoCrumbs.xcodeproj -scheme NoCrumbs -configuration Release \
   -sdk macosx -derivedDataPath build build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
 open build/Build/Products/Release/NoCrumbs.app
 
-# 2. Build & install the CLI
+# CLI
 swift build -c release --package-path CLI/
 cp CLI/.build/release/nocrumbs /usr/local/bin/
 ```
 
-## Configure Hooks
+</details>
 
-Run these once after installing:
+## 2. Configure
 
 ```bash
-# Register Claude Code hooks (~/.claude/settings.json)
 nocrumbs install
-
-# Install git commit annotation hook (run in each repo)
-nocrumbs install-git-hooks
 ```
 
-`nocrumbs install` writes hook entries to your Claude Code config so prompts and file changes are captured automatically. `nocrumbs install-git-hooks` adds a `prepare-commit-msg` hook that annotates your commits with prompt context.
+That's it. This registers Claude Code hooks so prompts and file changes are captured automatically.
 
-## Verify
+Optionally, add commit annotations to a repo:
+
+```bash
+nocrumbs install-git-hooks    # run in each repo you want annotations
+```
+
+## 3. Verify
 
 1. The NoCrumbs icon appears in your menu bar
 2. Open a Claude Code session and send a prompt
-3. Open the NoCrumbs window — your prompt and file changes should appear in the sidebar
+3. Open the NoCrumbs window — your prompt and file changes appear in the sidebar
 
-## Contributing
+## Updating
 
-If building from source, set up the pre-commit secret scanning hook:
+The Mac app checks for updates automatically. To update the CLI:
 
 ```bash
-git config core.hooksPath .githooks
+brew upgrade nocrumbs
 ```
 
-This runs [gitleaks](https://github.com/gitleaks/gitleaks) on staged changes before every commit.
+## Uninstall
+
+```bash
+brew uninstall nocrumbs
+```
+
+Data lives in `~/Library/Application Support/NoCrumbs/`. Remove that directory to delete all local data.
 
 ## Next Steps
 

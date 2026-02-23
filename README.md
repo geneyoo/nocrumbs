@@ -6,31 +6,16 @@ A local-first tool that links every file change your AI coding assistant makes b
 
 ## Quick Start
 
-### Homebrew (recommended)
-
 ```bash
 brew install geneyoo/tap/nocrumbs
-```
-
-### From source
-
-```bash
-# 1. Build & launch
-git clone https://github.com/geneyoo/nocrumbs.git && cd nocrumbs
-xcodebuild -project NoCrumbs.xcodeproj -scheme NoCrumbs -configuration Release \
-  -sdk macosx -derivedDataPath build build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
-open build/Build/Products/Release/NoCrumbs.app
-
-# 2. Install CLI + hooks
-swift build -c release --package-path CLI/
-cp CLI/.build/release/nocrumbs /usr/local/bin/
 nocrumbs install
-nocrumbs install-git-hooks
 ```
 
 That's it. Use your AI coding assistant normally — prompts and file changes appear in NoCrumbs automatically.
 
-**Requirements:** macOS 14+, Xcode 15+ (to build from source)
+Optionally, add commit annotations to a repo: `nocrumbs install-git-hooks`
+
+**Requirements:** macOS 14+ &nbsp;|&nbsp; [Building from source →](https://geneyoo.github.io/nocrumbs/docs/getting-started#building-from-source)
 
 ---
 

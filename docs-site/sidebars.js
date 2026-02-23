@@ -3,7 +3,6 @@ const sidebars = {
   docs: [
     'getting-started',
     'how-it-works',
-    'installation',
     {
       type: 'category',
       label: 'Guides',
