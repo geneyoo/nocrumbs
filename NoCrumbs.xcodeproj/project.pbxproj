@@ -22,6 +22,7 @@
 		C6790B0751E4DA40828B609D /* Session.swift in Sources */ = {isa = PBXBuildFile; fileRef = 127A4015EC6E11386657358E /* Session.swift */; };
 		AABB5566778899001122EEFF /* HookEvent.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5566778899AABB001122EEFF /* HookEvent.swift */; };
 		D80D064DB9F6C9C9DF635713 /* NoCrumbsApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 776872DA80B73BA9E09C28A3 /* NoCrumbsApp.swift */; };
+		B2D3E4F506172839405A6B7C /* VCSBinaryResolver.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1C2D3E4F5061728394A5B6C /* VCSBinaryResolver.swift */; };
 		E5439CA1FB677D97447268AE /* VCSDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = 37CE3F16F07E020EEDE309B8 /* VCSDetector.swift */; };
 		F1A2B3C4D5E6F7089AB0C1D2 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5C /* SettingsView.swift */; };
 		FB0B46458B8730FFCAE8EF9E /* AppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = A77379228A89D5FF2E9A7E4C /* AppDelegate.swift */; };
@@ -95,6 +96,7 @@
 
 /* Begin PBXFileReference section */
 		127A4015EC6E11386657358E /* Session.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Session.swift; sourceTree = "<group>"; };
+		A1C2D3E4F5061728394A5B6C /* VCSBinaryResolver.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VCSBinaryResolver.swift; sourceTree = "<group>"; };
 		37CE3F16F07E020EEDE309B8 /* VCSDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VCSDetector.swift; sourceTree = "<group>"; };
 		3D069F5ACA9BB864C8B7AFA6 /* GitProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitProvider.swift; sourceTree = "<group>"; };
 		4A1B2C3D4E5F6A7B8C9D0E1F /* MercurialProvider.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MercurialProvider.swift; sourceTree = "<group>"; };
@@ -253,6 +255,7 @@
 				4A1B2C3D4E5F6A7B8C9D0E1F /* MercurialProvider.swift */,
 				R1F00001947253F7B233B101 /* RemoteURLParser.swift */,
 				8E1A2B3C4D5E6F7A8B9C0D1E /* SaplingProvider.swift */,
+				A1C2D3E4F5061728394A5B6C /* VCSBinaryResolver.swift */,
 				37CE3F16F07E020EEDE309B8 /* VCSDetector.swift */,
 				98CDF552C67056A28C4819EA /* VCSProvider.swift */,
 			);
@@ -590,6 +593,7 @@
 				F1A2B3C4D5E6F7089AB0C1D2 /* SettingsView.swift in Sources */,
 				3251E77D9085383118BFAF1E /* SocketServer.swift in Sources */,
 				E5439CA1FB677D97447268AE /* VCSDetector.swift in Sources */,
+				B2D3E4F506172839405A6B7C /* VCSBinaryResolver.swift in Sources */,
 				70E7223E6442AAB1656BE297 /* VCSProvider.swift in Sources */,
 				184663C5EAA33A42CA66BBBB /* VCSType.swift in Sources */,
 				913317F929604861AE97FA87 /* DiffTheme.swift in Sources */,
