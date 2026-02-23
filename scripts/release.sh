@@ -25,9 +25,8 @@ KEYCHAIN_PROFILE="${NOCRUMBS_KEYCHAIN_PROFILE:-nocrumbs-notary}"
 BUILD_DIR="${PROJECT_DIR}/build-release"
 APP_NAME="NoCrumbs"
 
-# Read current version from Info.plist
-CURRENT_VERSION=$(/usr/libexec/PlistBuddy -c "Print :CFBundleShortVersionString" \
-    "${PROJECT_DIR}/NoCrumbs/Resources/Info.plist")
+# Read current version from VERSION file (single source of truth)
+CURRENT_VERSION=$(tr -d '[:space:]' < "${PROJECT_DIR}/VERSION")
 
 # Parse semver components
 IFS='.' read -r CUR_MAJOR CUR_MINOR CUR_PATCH <<< "$CURRENT_VERSION"
@@ -113,10 +112,12 @@ echo "Team ID: ${TEAM_ID}"
 echo "Project: ${PROJECT_DIR}"
 echo ""
 
-# Step 1: Bump version in Info.plist
-echo "→ Bumping Info.plist version to ${VERSION}..."
-/usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${VERSION}" \
-    "${PROJECT_DIR}/NoCrumbs/Resources/Info.plist"
+# Step 1: Write VERSION file (single source of truth)
+echo "→ Bumping version to ${VERSION}..."
+echo "${VERSION}" > "${PROJECT_DIR}/VERSION"
+
+# Step 2: Sync all derived version sources from VERSION
+"${PROJECT_DIR}/scripts/sync-version.sh"
 
 # Increment build number (use date-based)
 BUILD_NUMBER=$(date +%Y%m%d%H%M)
@@ -124,24 +125,12 @@ BUILD_NUMBER=$(date +%Y%m%d%H%M)
     "${PROJECT_DIR}/NoCrumbs/Resources/Info.plist"
 echo "   Version: ${VERSION} (${BUILD_NUMBER})"
 
-# Step 2: Bump CLI version
-echo "→ Bumping CLI version to ${VERSION}..."
-CLI_MAIN="${PROJECT_DIR}/CLI/Sources/nocrumbs/main.swift"
-sed -i '' "s/^let version = \".*\"/let version = \"${VERSION}\"/" "$CLI_MAIN"
-echo "✓ CLI version bumped"
-
-# Step 2b: Bump local cask template
-CASK_TEMPLATE="${PROJECT_DIR}/homebrew-tap/Casks/nocrumbs.rb"
-if [[ -f "$CASK_TEMPLATE" ]]; then
-    sed -i '' "s/version \".*\"/version \"${VERSION}\"/" "$CASK_TEMPLATE"
-    echo "✓ Cask template version bumped"
-fi
-
-# Step 3: Commit version bumps
+# Step 3: Commit version bumps (all derived from VERSION)
 echo "→ Committing version bumps..."
 git -C "$PROJECT_DIR" add \
+    "VERSION" \
     "NoCrumbs/Resources/Info.plist" \
-    "CLI/Sources/nocrumbs/main.swift" \
+    "CLI/Sources/nocrumbs/Version.swift" \
     "homebrew-tap/Casks/nocrumbs.rb"
 git -C "$PROJECT_DIR" commit -m "chore: bump version to ${VERSION}"
 echo "✓ Version bump committed"

@@ -1,6 +1,6 @@
 import Foundation
 
-let version = "0.4.2"
+// `version` is defined in Version.swift (generated from VERSION file)
 let args = CommandLine.arguments
 
 guard args.count >= 2 else {

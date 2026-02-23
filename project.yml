@@ -38,6 +38,9 @@ targets:
     postBuildScripts:
       - name: "Build & Embed CLI"
         script: |
+          # Sync version from VERSION file to CLI Version.swift + Info.plist
+          "${SRCROOT}/scripts/sync-version.sh"
+
           if [ "$NOCRUMBS_SKIP_CLI" = "1" ] || [ "$CI" = "true" ]; then
             echo "Skipping CLI build (NOCRUMBS_SKIP_CLI=1)"
             exit 0
