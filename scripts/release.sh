@@ -321,31 +321,33 @@ cask "nocrumbs" do
   url "https://github.com/geneyoo/nocrumbs/releases/download/v#{version}/NoCrumbs-#{version}.zip"
   name "NoCrumbs"
   desc "Catch every crumb your agent leaves behind"
-  homepage "https://nocrumbs.ai"
+  homepage "https://nocrumbs.ai/"
 
   depends_on macos: ">= :sonoma"
-
-  conflicts_with formula: "nocrumbs"
-
-  preflight do
-    # Clean up stale symlinks left by the old formula install
-    %w[/usr/local/bin/nocrumbs /opt/homebrew/bin/nocrumbs].each do |path|
-      if File.symlink?(path) && !File.exist?(path)
-        File.delete(path)
-      end
-    end
-  end
 
   app "NoCrumbs.app"
   binary "#{appdir}/NoCrumbs.app/Contents/Resources/nocrumbs"
 
-  zap trash: [
-    "~/Library/Application Support/NoCrumbs",
-  ]
+  preflight do
+    %w[/usr/local/bin/nocrumbs /opt/homebrew/bin/nocrumbs].each do |path|
+      File.delete(path) if File.symlink?(path) && !File.exist?(path)
+    end
+  end
+
+  zap trash: "~/Library/Application Support/NoCrumbs"
 end
 CASK_EOF
     # Remove old formula if it exists
     rm -f "${TAP_DIR}/Formula/nocrumbs.rb"
+
+    # Validate cask syntax before pushing (catches invalid stanzas, deprecated keys, etc.)
+    echo "→ Validating cask with brew style..."
+    if ! brew style --fix "${TAP_DIR}/Casks/nocrumbs.rb"; then
+        echo "❌ Cask validation failed — fix ${TAP_DIR}/Casks/nocrumbs.rb and retry"
+        exit 1
+    fi
+    echo "✓ Cask passed brew style check"
+
     git -C "$TAP_DIR" add -A
     git -C "$TAP_DIR" commit -m "chore: bump nocrumbs cask to v${VERSION}"
     git -C "$TAP_DIR" push origin main
