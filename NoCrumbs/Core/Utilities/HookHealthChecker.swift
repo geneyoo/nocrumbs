@@ -17,13 +17,39 @@ final class HookHealthChecker {
     }
 
     func refresh() {
-        cliInstalled = FileManager.default.isExecutableFile(atPath: "/usr/local/bin/nocrumbs")
-
+        cliInstalled = findCLI()
         hooksConfigured = checkHooksConfigured()
 
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
         let sockPath = appSupport?.appendingPathComponent("NoCrumbs/nocrumbs.sock").path ?? ""
         socketActive = FileManager.default.fileExists(atPath: sockPath)
+    }
+
+    private func findCLI() -> Bool {
+        // Check common Homebrew paths + app bundle
+        let paths = [
+            "/opt/homebrew/bin/nocrumbs",       // Apple Silicon Homebrew
+            "/usr/local/bin/nocrumbs",           // Intel Homebrew
+            Bundle.main.bundlePath + "/Contents/Resources/nocrumbs",
+        ]
+        for path in paths {
+            if FileManager.default.isExecutableFile(atPath: path) {
+                return true
+            }
+        }
+        // Fallback: check PATH via which
+        let proc = Process()
+        proc.executableURL = URL(fileURLWithPath: "/usr/bin/which")
+        proc.arguments = ["nocrumbs"]
+        proc.standardOutput = FileHandle.nullDevice
+        proc.standardError = FileHandle.nullDevice
+        do {
+            try proc.run()
+            proc.waitUntilExit()
+            return proc.terminationStatus == 0
+        } catch {
+            return false
+        }
     }
 
     private func checkHooksConfigured() -> Bool {

@@ -74,7 +74,7 @@ which nocrumbs && nocrumbs --version
 ```
 
 - ✅ `CLI: nocrumbs 0.3.0`
-- ❌ `CLI: not found in PATH` — tell user to run `swift build -c release --package-path CLI/ && cp CLI/.build/release/nocrumbs /usr/local/bin/`
+- ❌ `CLI: not found in PATH` — tell user to run `brew install --cask geneyoo/tap/nocrumbs` (or for dev builds: `swift build -c release --package-path CLI/ && ln -sf "$PWD/CLI/.build/release/nocrumbs" /opt/homebrew/bin/nocrumbs`)
 
 ### 4. Claude Code hooks installed
 
