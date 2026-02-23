@@ -133,10 +133,10 @@ nocrumbs template             Manage commit annotation templates (add/list/set/r
 ## Supported Tools
 
 Currently supported:
-- **Claude Code** (Anthropic) — via PostToolUse hooks
+- **[Claude Code](https://docs.anthropic.com/en/docs/claude-code)** — via hook events
 
-Planned:
-- Additional AI coding assistants as hook APIs become available
+Coming soon:
+- **[Codex CLI](https://github.com/openai/codex)** — via hook events
 
 ---
 
