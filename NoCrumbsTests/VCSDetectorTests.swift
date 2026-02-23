@@ -34,6 +34,13 @@ final class VCSDetectorTests: XCTestCase {
         XCTAssertEqual(VCSDetector.detect(at: tmpDir), .mercurial)
     }
 
+    func testDetectSapling() throws {
+        try FileManager.default.createDirectory(
+            atPath: "\(tmpDir!)/.sl", withIntermediateDirectories: true
+        )
+        XCTAssertEqual(VCSDetector.detect(at: tmpDir), .sapling)
+    }
+
     func testDetectNone() {
         XCTAssertNil(VCSDetector.detect(at: tmpDir))
     }
@@ -57,6 +64,15 @@ final class VCSDetectorTests: XCTestCase {
             atPath: "\(tmpDir!)/.git", withIntermediateDirectories: true
         )
         let root = VCSDetector.repoRoot(at: nested, for: .git)
+        XCTAssertEqual(root, tmpDir)
+    }
+    func testRepoRootSapling() throws {
+        let nested = "\(tmpDir!)/a/b/c"
+        try FileManager.default.createDirectory(atPath: nested, withIntermediateDirectories: true)
+        try FileManager.default.createDirectory(
+            atPath: "\(tmpDir!)/.sl", withIntermediateDirectories: true
+        )
+        let root = VCSDetector.repoRoot(at: nested, for: .sapling)
         XCTAssertEqual(root, tmpDir)
     }
 }

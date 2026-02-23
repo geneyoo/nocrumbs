@@ -17,5 +17,6 @@ func makeProvider(for vcs: VCSType) -> any VCSProvider {
     switch vcs {
     case .git: GitProvider()
     case .mercurial: MercurialProvider()
+    case .sapling: SaplingProvider()
     }
 }
