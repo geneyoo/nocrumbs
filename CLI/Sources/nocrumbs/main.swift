@@ -4,7 +4,7 @@ let version = "0.4.0"
 let args = CommandLine.arguments
 
 guard args.count >= 2 else {
-    print("nocrumbs \(version) — git blame for the AI era")
+    print("nocrumbs \(version) — organized receipts for agent code changes")
     print("")
     print("Usage:")
     print("  nocrumbs event               Pipe any Claude Code hook event to app")

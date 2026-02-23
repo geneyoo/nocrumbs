@@ -1,6 +1,6 @@
 # NoCrumbs - Claude Code Instructions
 
-> Git blame for the AI era. Links every file change Claude Code makes back to the prompt that caused it.
+> Organized receipts for agent code changes. Links every file change Claude Code makes back to the prompt that caused it.
 
 ## Product Context
 

@@ -9,7 +9,7 @@ sidebar_position: 2
 - **IDEs are pre-agentic.** They were built for humans writing code line-by-line — file trees, syntax highlighting, inline diffs. That workflow is fading.
 - **CLI agents are replacing them** — Claude Code, Codex CLI, aider. No file trees, no inline diffs. Just a prompt and a commit. Faster, less overhead, no UI tax.
 - **But you lose all traceability.** The agent touches a dozen files across 3 commits, and `git log` gives you a hash and a message. Which prompt caused which change? Gone.
-- **`git blame` tells you who and when — not why.** With AI writing the code, the "why" is the prompt. And nothing captures that today.
+- **`git log` tells you what and when — not why.** With agents writing the code, the "why" is the prompt. And nothing captures that today.
 
 ## The Solution
 
