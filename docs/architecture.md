@@ -94,7 +94,7 @@ NoCrumbs/
 │   │   └── VCSType.swift          # enum: .git, .mercurial, .sapling
 │   ├── Utilities/
 │   │   ├── DeepLinkRouter.swift    # @Observable @MainActor: handles nocrumbs:// URLs, pending navigation
-│   │   ├── HookHealthChecker.swift # @Observable: checks CLI installed, hooks configured, socket active
+│   │   ├── HookHealthChecker.swift # @Observable: checks CLI installed (Homebrew + bundle + PATH), hooks configured, socket active
 │   │   ├── SecretRedactor.swift     # Regex-based secret scrubbing (API keys, tokens, JWTs, credentials)
 │   │   └── SessionMarkdownFormatter.swift # Formats session data as markdown for clipboard export
 │   └── VCS/
@@ -120,7 +120,7 @@ NoCrumbs/
 │   ├── Settings/
 │   │   └── SettingsView.swift  # Hook status, annotation toggle + content sub-toggles + template list, diff theme picker
 │   └── Setup/
-│       └── SetupView.swift     # First-run guide: install CLI, configure hooks, verify socket
+│       └── SetupView.swift     # First-run guide: brew install cask, configure hooks, start session + docs link
 │
 ├── Resources/
 │   ├── Assets.xcassets         # App icon (16–1024px, Apple squircle mask)
@@ -159,10 +159,13 @@ NoCrumbsTests/                      # Test target (hosted by app)
 ├── RemoteURLParserTests.swift     # SSH/HTTPS remote URL → commit URL parsing
 └── VCSDetectorTests.swift         # 5 tests — filesystem with temp VCS markers
 
+VERSION                            # Single source of truth for app + CLI version (e.g. "0.4.2")
+
 CLI/
 ├── Package.swift               # Swift 5.9, macOS 14+, zero dependencies
 └── Sources/nocrumbs/
     ├── main.swift              # Subcommand dispatch: event, capture-*, annotate-commit, install*, describe, template, rename
+    ├── Version.swift           # Auto-generated from VERSION file — `let version = "x.y.z"`
     ├── CaptureEventCommand.swift  # Unified hook event → JSON to socket (v3+)
     ├── CapturePromptCommand.swift # (legacy) Parse UserPromptSubmit stdin → JSON to socket
     ├── CaptureChangeCommand.swift # (legacy) Parse PostToolUse stdin → JSON to socket
@@ -177,8 +180,10 @@ CLI/
 
 scripts/
 ├── generate_icon.swift         # Generates macOS app icon sizes with Apple squircle mask
-└── release.sh                  # Release pipeline: build (app+CLI) → sign → notarize → staple → appcast → cask
-                                #   Reads secrets from scripts/.env.local (gitignored)
+├── release.sh                  # Release pipeline: build (app+CLI) → sign → notarize → staple → appcast → cask
+│                               #   Auto-bumps version (patch default, --minor, --major)
+│                               #   Reads secrets from scripts/.env.local (gitignored)
+└── sync-version.sh             # Derives Info.plist, CLI Version.swift, cask template from VERSION file
 
 .githooks/
 └── pre-commit                  # Gitleaks pre-commit hook: scans staged changes for secrets
@@ -860,13 +865,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
 ## Release Pipeline
 
-**Script:** `scripts/release.sh <version>`
+**Script:** `scripts/release.sh [version] [--minor] [--major]`
+
+Version is optional — defaults to patch bump. Reads current version from `VERSION` file.
 
 ```
-Version bump (PlistBuddy + CLI main.swift)
+Write VERSION file (single source of truth)
+    → scripts/sync-version.sh (derives Info.plist, CLI Version.swift, cask template)
     → Clean Release build (Developer ID Application, hardened runtime, universal binary)
         → "Build & Embed CLI" build phase: swift build CLI → copy to .app/Contents/Resources/nocrumbs
     → Verify embedded CLI binary exists and reports correct version
+    → Codesign embedded CLI binary (Developer ID + hardened runtime + timestamp)
     → Code signing verification (codesign --verify)
     → Zip (ditto) — CLI comes bundled inside app
     → Notarize (xcrun notarytool submit --wait)
@@ -876,6 +885,8 @@ Version bump (PlistBuddy + CLI main.swift)
     → Generate appcast.xml (generate_appcast)
     → Update Homebrew cask (geneyoo/homebrew-tap) with new version + SHA
 ```
+
+**Version management:** Single `VERSION` file at repo root. `scripts/sync-version.sh` propagates to Info.plist, `CLI/Sources/nocrumbs/Version.swift`, and `homebrew-tap/Casks/nocrumbs.rb`. Xcode build phase runs sync automatically. No separate version constants to maintain.
 
 **Distribution:** Single Homebrew cask installs app + symlinks CLI:
 ```bash
