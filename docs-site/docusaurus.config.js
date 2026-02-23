@@ -47,7 +47,7 @@ const config = {
     ({
       colorMode: {
         defaultMode: 'dark',
-        respectPrefersColorScheme: true,
+        respectPrefersColorScheme: false,
       },
       navbar: {
         title: 'NoCrumbs',
