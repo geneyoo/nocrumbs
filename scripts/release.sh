@@ -285,7 +285,10 @@ fi
 
 # Step 15: Rebase on remote (in case PRs merged during build), tag, and push
 echo "→ Rebasing on remote, tagging v${VERSION}, and pushing..."
+# Stash appcast changes before rebase (Step 14 creates unstaged changes)
+git -C "$PROJECT_DIR" stash --include-untracked
 git -C "$PROJECT_DIR" pull --rebase origin main
+git -C "$PROJECT_DIR" stash pop || true
 git -C "$PROJECT_DIR" tag "v${VERSION}"
 git -C "$PROJECT_DIR" push origin main --tags
 echo "✓ Tag v${VERSION} pushed"
