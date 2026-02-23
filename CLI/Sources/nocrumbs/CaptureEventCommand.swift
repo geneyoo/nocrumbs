@@ -6,6 +6,7 @@ enum CaptureEventCommand {
         "session_id", "cwd", "hook_event_name",
         "prompt", "tool_name", "tool_input",
         "stop_hook_active", "agent_id", "agent_type",
+        "transcript_path",
     ]
 
     static func run() throws {

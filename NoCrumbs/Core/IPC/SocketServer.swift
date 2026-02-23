@@ -158,7 +158,10 @@ actor SocketServer {
 
         // Build payload JSON from remaining interesting fields
         var payloadDict: [String: Any] = [:]
-        let payloadKeys = ["prompt", "tool_name", "tool_input", "stop_hook_active", "agent_id", "agent_type"]
+        let payloadKeys = [
+            "prompt", "tool_name", "tool_input", "stop_hook_active",
+            "agent_id", "agent_type", "transcript_path",
+        ]
         for key in payloadKeys {
             if let value = json[key] { payloadDict[key] = value }
         }
@@ -206,7 +209,9 @@ actor SocketServer {
     private func bridgePromptEvent(
         _ json: [String: Any], sessionID: String, cwd: String, now: Date, db: Database
     ) async {
-        let prompt = json["prompt"] as? String
+        // Fall back to transcript extraction for subagent sessions with no prompt
+        let prompt: String? = (json["prompt"] as? String)
+            ?? (json["transcript_path"] as? String).flatMap { extractPromptFromTranscript($0) }
 
         // Backfill orphan if prompt text is available and an orphan exists for this session
         if let prompt {
@@ -271,6 +276,10 @@ actor SocketServer {
 
         guard let eventID else {
             // No prompt event yet — create placeholder (same as legacy handleChange)
+            // For subagent worktree sessions, try to extract task description from transcript
+            let transcriptPrompt: String? = (json["transcript_path"] as? String)
+                .flatMap { extractPromptFromTranscript($0) }
+
             let vcsType = VCSDetector.detect(at: cwd)
             var baseHash: String?
             if let vcsType {
@@ -280,7 +289,7 @@ actor SocketServer {
                 id: UUID(),
                 sessionID: sessionID,
                 projectPath: cwd,
-                promptText: nil,
+                promptText: transcriptPrompt,
                 timestamp: now,
                 vcs: vcsType,
                 baseCommitHash: baseHash
@@ -663,6 +672,37 @@ actor SocketServer {
                 logger.error("[NC:Socket] DB error: \(error.localizedDescription)")
             }
         }
+    }
+
+    // MARK: - Transcript Extraction
+
+    /// Extracts the first user-role message from a Claude Code transcript JSONL file.
+    /// Used to recover the task description for subagent worktree sessions where
+    /// `UserPromptSubmit` never fires (no human prompt).
+    private nonisolated func extractPromptFromTranscript(_ path: String) -> String? {
+        guard let handle = FileHandle(forReadingAtPath: path) else { return nil }
+        defer { handle.closeFile() }
+        // Read up to 64KB — enough to find the first user message
+        let chunk = handle.readData(ofLength: 65536)
+        guard let text = String(data: chunk, encoding: .utf8) else { return nil }
+        for line in text.components(separatedBy: "\n") {
+            guard !line.isEmpty,
+                let data = line.data(using: .utf8),
+                let obj = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
+                obj["role"] as? String == "user" || obj["type"] as? String == "human"
+            else { continue }
+            // Content may be a string or array of content blocks
+            if let content = obj["content"] as? String {
+                return String(content.prefix(500))
+            }
+            if let blocks = obj["content"] as? [[String: Any]],
+                let first = blocks.first(where: { $0["type"] as? String == "text" }),
+                let text = first["text"] as? String
+            {
+                return String(text.prefix(500))
+            }
+        }
+        return nil
     }
 }
 
