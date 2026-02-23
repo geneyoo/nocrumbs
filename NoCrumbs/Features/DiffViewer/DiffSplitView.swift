@@ -47,7 +47,9 @@ struct DiffSplitView<FileList: View, Detail: View>: NSViewRepresentable {
         detailHost.rootView = detail()
 
         if fileListVisible {
-            if split.isSubviewCollapsed(fileListHost) {
+            // Always enforce position — collapsed or zero-width both need correction
+            let currentWidth = fileListHost.frame.width
+            if split.isSubviewCollapsed(fileListHost) || currentWidth < 1 {
                 split.setPosition(fileListWidth, ofDividerAt: 0)
             }
         } else {

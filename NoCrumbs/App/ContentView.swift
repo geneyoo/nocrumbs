@@ -104,12 +104,18 @@ struct ContentView: View {
             }
         }
 
+        // The latest event's sequence is "live" — show all prompts in it
+        let liveSequenceID = allEvents.first(where: {
+            !($0.promptText?.isTaskNotification ?? false)
+        })?.sequenceID
+
         return allEvents.filter { event in
             // Always skip task-notifications when filtering
             if event.promptText?.isTaskNotification ?? false { return false }
             return event.id == latestID
                 || !(database.fileChangesCache[event.id] ?? []).isEmpty
                 || (event.sequenceID != nil && changedSequences.contains(event.sequenceID!))
+                || (event.sequenceID != nil && event.sequenceID == liveSequenceID)
         }
     }
 
