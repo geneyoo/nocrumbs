@@ -9,6 +9,18 @@ cask "nocrumbs" do
 
   depends_on macos: ">= :sonoma"
 
+  conflicts_with formula: "nocrumbs",
+                 because: "the cask includes the CLI binary bundled inside the app"
+
+  preflight do
+    # Clean up stale symlinks left by the old formula install
+    %w[/usr/local/bin/nocrumbs /opt/homebrew/bin/nocrumbs].each do |path|
+      if File.symlink?(path) && !File.exist?(path)
+        File.delete(path)
+      end
+    end
+  end
+
   app "NoCrumbs.app"
   binary "#{appdir}/NoCrumbs.app/Contents/Resources/nocrumbs"
 
