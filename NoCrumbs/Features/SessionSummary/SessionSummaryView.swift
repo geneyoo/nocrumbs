@@ -13,8 +13,19 @@ struct SessionSummaryView: View {
         let allEvents = database.eventsForSession(id: session.id)
         guard hideEmptyEvents else { return allEvents }
         let latestID = allEvents.first?.id
+
+        var changedSequences = Set<String>()
+        for event in allEvents {
+            guard let seqID = event.sequenceID else { continue }
+            if !(database.fileChangesCache[event.id] ?? []).isEmpty {
+                changedSequences.insert(seqID)
+            }
+        }
+
         return allEvents.filter { event in
-            event.id == latestID || !(database.fileChangesCache[event.id] ?? []).isEmpty
+            event.id == latestID
+                || !(database.fileChangesCache[event.id] ?? []).isEmpty
+                || (event.sequenceID != nil && changedSequences.contains(event.sequenceID!))
         }
     }
 
@@ -30,7 +41,7 @@ struct SessionSummaryView: View {
 
     private var sessionFirstPrompt: String {
         if let name = session.customName { return name }
-        let text = events.last?.promptText ?? "(no prompt)"
+        let text = events.last?.promptText?.displayPromptText ?? "(no prompt)"
         return text.replacingOccurrences(of: "\n", with: " ")
     }
 
@@ -207,10 +218,33 @@ struct SessionSummaryView: View {
     private var promptTimelineSection: some View {
         GroupBox {
             LazyVStack(alignment: .leading, spacing: LayoutGuide.spacingNone) {
-                ForEach(events) { event in
-                    promptRow(event)
-                    if event.id != events.last?.id {
-                        Divider().padding(.leading, LayoutGuide.paddingM)
+                let grouped = sequenceGroups(from: events)
+                ForEach(Array(grouped.enumerated()), id: \.offset) { groupIndex, group in
+                    ForEach(Array(group.enumerated()), id: \.element.id) { eventIndex, event in
+                        HStack(spacing: LayoutGuide.spacingNone) {
+                            // Sequence indicator for multi-prompt sequences
+                            if group.count > 1 {
+                                VStack(spacing: LayoutGuide.spacingNone) {
+                                    Rectangle()
+                                        .fill(eventIndex == 0 ? Color.clear : Color.gray.opacity(0.2))
+                                        .frame(width: 2)
+                                    Circle()
+                                        .fill(Color.secondary)
+                                        .frame(width: 5, height: 5)
+                                    Rectangle()
+                                        .fill(eventIndex == group.count - 1 ? Color.clear : Color.gray.opacity(0.2))
+                                        .frame(width: 2)
+                                }
+                                .frame(width: 12)
+                            }
+                            promptRow(event)
+                        }
+                        if eventIndex < group.count - 1 {
+                            Divider().padding(.leading, group.count > 1 ? 12 + LayoutGuide.paddingM : LayoutGuide.paddingM)
+                        }
+                    }
+                    if groupIndex < grouped.count - 1 {
+                        Divider().padding(.vertical, 2)
                     }
                 }
             }
@@ -218,6 +252,25 @@ struct SessionSummaryView: View {
             Text("Prompt Timeline")
                 .font(.headline)
         }
+    }
+
+    /// Groups events by sequenceID, preserving order. Events with nil sequenceID are solo groups.
+    private func sequenceGroups(from events: [PromptEvent]) -> [[PromptEvent]] {
+        var groups: [[PromptEvent]] = []
+        var currentSeqID: String?
+        var currentGroup: [PromptEvent] = []
+
+        for event in events.reversed() {  // chronological order (oldest first)
+            if let seqID = event.sequenceID, seqID == currentSeqID {
+                currentGroup.append(event)
+            } else {
+                if !currentGroup.isEmpty { groups.append(currentGroup) }
+                currentGroup = [event]
+                currentSeqID = event.sequenceID
+            }
+        }
+        if !currentGroup.isEmpty { groups.append(currentGroup) }
+        return groups
     }
 
     @ViewBuilder
@@ -235,7 +288,7 @@ struct SessionSummaryView: View {
 
             // Prompt text
             VStack(alignment: .leading, spacing: LayoutGuide.spacingXS) {
-                Text(event.promptText ?? "(no prompt)")
+                Text(event.promptText?.displayPromptText ?? "(no prompt)")
                     .lineLimit(2)
                     .font(.callout)
 
@@ -254,7 +307,7 @@ struct SessionSummaryView: View {
                                 .foregroundStyle(.tertiary)
                         }
                     }
-                    let fileCount = stat?.totalFiles ?? fileChanges.count
+                    let fileCount = max(stat?.totalFiles ?? 0, fileChanges.count)
                     if fileCount > 0 {
                         Text("\(fileCount) file\(fileCount == 1 ? "" : "s")")
                             .foregroundStyle(.secondary)

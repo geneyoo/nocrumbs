@@ -39,16 +39,26 @@ final class SessionSummaryViewModel {
     var uniqueFiles: [AggregatedFileStat] {
         var byPath: [String: (status: FileDiff.FileStatus, adds: Int, dels: Int, prompts: Set<UUID>)] = [:]
         let cache = Database.shared.diffStatCache
+        let fileChangesCache = Database.shared.fileChangesCache
 
         for id in currentEventIDs {
-            guard let promptStat = cache[id] else { continue }
-            for file in promptStat.fileStats {
-                var entry = byPath[file.filePath] ?? (status: file.status, adds: 0, dels: 0, prompts: [])
-                entry.adds += file.additions
-                entry.dels += file.deletions
-                entry.prompts.insert(promptStat.eventID)
-                entry.status = file.status
-                byPath[file.filePath] = entry
+            // Prefer diffStat file stats when available
+            if let promptStat = cache[id], !promptStat.fileStats.isEmpty {
+                for file in promptStat.fileStats {
+                    var entry = byPath[file.filePath] ?? (status: file.status, adds: 0, dels: 0, prompts: [])
+                    entry.adds += file.additions
+                    entry.dels += file.deletions
+                    entry.prompts.insert(promptStat.eventID)
+                    entry.status = file.status
+                    byPath[file.filePath] = entry
+                }
+            } else {
+                // Fallback: use fileChanges (tool-use records) when no diff stats
+                for change in fileChangesCache[id] ?? [] {
+                    var entry = byPath[change.filePath] ?? (status: .modified, adds: 0, dels: 0, prompts: [])
+                    entry.prompts.insert(id)
+                    byPath[change.filePath] = entry
+                }
             }
         }
 

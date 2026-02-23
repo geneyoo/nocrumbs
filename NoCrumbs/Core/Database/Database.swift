@@ -222,6 +222,13 @@ final class Database {  // swiftlint:disable:this type_body_length
             setUserVersion(8)
             logger.info("🔄 [DB] Migrated to v8 (session customName)")
         }
+
+        if version < 9 {
+            exec("ALTER TABLE promptEvents ADD COLUMN sequenceID TEXT")
+            exec("CREATE INDEX IF NOT EXISTS idx_promptEvents_sequenceID ON promptEvents(sequenceID)")
+            setUserVersion(9)
+            logger.info("🔄 [DB] Migrated to v9 (sequenceID)")
+        }
     }
 
     // MARK: - CRUD: Sessions
@@ -255,8 +262,8 @@ final class Database {  // swiftlint:disable:this type_body_length
 
     func insertPromptEvent(_ event: PromptEvent) throws {
         let sql = """
-            INSERT OR REPLACE INTO promptEvents (id, sessionID, projectPath, promptText, timestamp, vcs, baseCommitHash)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
+            INSERT OR REPLACE INTO promptEvents (id, sessionID, projectPath, promptText, timestamp, vcs, baseCommitHash, sequenceID)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
             """
         try execute(
             sql,
@@ -268,6 +275,7 @@ final class Database {  // swiftlint:disable:this type_body_length
                 .double(event.timestamp.timeIntervalSince1970),
                 event.vcs.map { .text($0.rawValue) } ?? .null,
                 event.baseCommitHash.map { .text($0) } ?? .null,
+                event.sequenceID.map { .text($0) } ?? .null,
             ])
         // Inline cache update: prepend (most recent first) and cap at 500
         if let idx = recentEvents.firstIndex(where: { $0.id == event.id }) {
@@ -338,9 +346,13 @@ final class Database {  // swiftlint:disable:this type_body_length
         recentEvents.filter { $0.sessionID == id }
     }
 
+    func eventsForSequence(id: String) -> [PromptEvent] {
+        recentEvents.filter { $0.sequenceID == id }
+    }
+
     func recentEvents(forProject projectPath: String, since: Date) throws -> [PromptEvent] {
         let sql = """
-            SELECT id, sessionID, projectPath, promptText, timestamp, vcs, baseCommitHash
+            SELECT id, sessionID, projectPath, promptText, timestamp, vcs, baseCommitHash, sequenceID
             FROM promptEvents
             WHERE projectPath = ? AND timestamp >= ? AND promptText IS NOT NULL
             ORDER BY timestamp DESC
@@ -360,7 +372,8 @@ final class Database {  // swiftlint:disable:this type_body_length
                 promptText: sqlite3_column_text(stmt, 3).map { String(cString: $0) },
                 timestamp: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 4)),
                 vcs: vcsRaw.flatMap { VCSType(rawValue: $0) },
-                baseCommitHash: sqlite3_column_text(stmt, 6).map { String(cString: $0) }
+                baseCommitHash: sqlite3_column_text(stmt, 6).map { String(cString: $0) },
+                sequenceID: sqlite3_column_text(stmt, 7).map { String(cString: $0) }
             )
         }
     }
@@ -407,7 +420,8 @@ final class Database {  // swiftlint:disable:this type_body_length
             recentEvents[idx] = PromptEvent(
                 id: old.id, sessionID: old.sessionID, projectPath: old.projectPath,
                 promptText: text, timestamp: old.timestamp,
-                vcs: old.vcs, baseCommitHash: old.baseCommitHash
+                vcs: old.vcs, baseCommitHash: old.baseCommitHash,
+                sequenceID: old.sequenceID
             )
         }
         logger.info("✅ [DB] Backfilled prompt text for \(eventID.uuidString)")
@@ -620,7 +634,8 @@ final class Database {  // swiftlint:disable:this type_body_length
                         recentEvents[idx] = PromptEvent(
                             id: old.id, sessionID: old.sessionID, projectPath: old.projectPath,
                             promptText: old.promptText, timestamp: old.timestamp,
-                            vcs: old.vcs, baseCommitHash: hash
+                            vcs: old.vcs, baseCommitHash: hash,
+                            sequenceID: old.sequenceID
                         )
                     }
                 }
@@ -656,7 +671,7 @@ final class Database {  // swiftlint:disable:this type_body_length
 
     private func loadRecentEvents() throws {
         recentEvents = try query(
-            "SELECT id, sessionID, projectPath, promptText, timestamp, vcs, baseCommitHash FROM promptEvents ORDER BY timestamp DESC LIMIT 500"
+            "SELECT id, sessionID, projectPath, promptText, timestamp, vcs, baseCommitHash, sequenceID FROM promptEvents ORDER BY timestamp DESC LIMIT 500"
         ) { stmt in
             let vcsRaw = sqlite3_column_text(stmt, 5).map { String(cString: $0) }
             return PromptEvent(
@@ -666,7 +681,8 @@ final class Database {  // swiftlint:disable:this type_body_length
                 promptText: sqlite3_column_text(stmt, 3).map { String(cString: $0) },
                 timestamp: Date(timeIntervalSince1970: sqlite3_column_double(stmt, 4)),
                 vcs: vcsRaw.flatMap { VCSType(rawValue: $0) },
-                baseCommitHash: sqlite3_column_text(stmt, 6).map { String(cString: $0) }
+                baseCommitHash: sqlite3_column_text(stmt, 6).map { String(cString: $0) },
+                sequenceID: sqlite3_column_text(stmt, 7).map { String(cString: $0) }
             )
         }
     }

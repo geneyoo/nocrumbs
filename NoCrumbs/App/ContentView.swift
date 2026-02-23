@@ -10,24 +10,35 @@ private struct SidebarItem: Identifiable {
     let session: Session?
     let event: PromptEvent?
     let projectName: String?
+    let sequencePosition: SequencePosition
 
     enum Kind { case timePeriodHeader, projectHeader, session, event }
 
+    enum SequencePosition {
+        case solo
+        case first
+        case middle
+        case last
+
+        var isFirst: Bool { if case .first = self { return true } else { return false } }
+        var isLast: Bool { if case .last = self { return true } else { return false } }
+    }
+
     static func timePeriodHeader(_ period: TimePeriod) -> SidebarItem {
-        SidebarItem(id: UUID(), kind: .timePeriodHeader, session: nil, event: nil, projectName: period.label)
+        SidebarItem(id: UUID(), kind: .timePeriodHeader, session: nil, event: nil, projectName: period.label, sequencePosition: .solo)
     }
 
     static func projectHeader(_ name: String) -> SidebarItem {
-        SidebarItem(id: UUID(), kind: .projectHeader, session: nil, event: nil, projectName: name)
+        SidebarItem(id: UUID(), kind: .projectHeader, session: nil, event: nil, projectName: name, sequencePosition: .solo)
     }
 
     static func session(_ s: Session) -> SidebarItem {
         let uuid = UUID(uuidString: s.id) ?? UUID()
-        return SidebarItem(id: uuid, kind: .session, session: s, event: nil, projectName: nil)
+        return SidebarItem(id: uuid, kind: .session, session: s, event: nil, projectName: nil, sequencePosition: .solo)
     }
 
-    static func event(_ e: PromptEvent) -> SidebarItem {
-        SidebarItem(id: e.id, kind: .event, session: nil, event: e, projectName: nil)
+    static func event(_ e: PromptEvent, position: SequencePosition = .solo) -> SidebarItem {
+        SidebarItem(id: e.id, kind: .event, session: nil, event: e, projectName: nil, sequencePosition: position)
     }
 }
 
@@ -78,9 +89,27 @@ struct ContentView: View {
     private func filteredEvents(for sessionID: String) -> [PromptEvent] {
         let allEvents = database.eventsForSession(id: sessionID)
         guard state.hideEmptyEvents else { return allEvents }
-        let latestID = allEvents.first?.id  // most recent = "live", never filtered
+
+        // Latest non-system event is "live", never filtered
+        let latestID = allEvents.first(where: {
+            !($0.promptText?.isTaskNotification ?? false)
+        })?.id
+
+        // Build set of sequenceIDs that have at least one file change
+        var changedSequences = Set<String>()
+        for event in allEvents {
+            guard let seqID = event.sequenceID else { continue }
+            if !(database.fileChangesCache[event.id] ?? []).isEmpty {
+                changedSequences.insert(seqID)
+            }
+        }
+
         return allEvents.filter { event in
-            event.id == latestID || !(database.fileChangesCache[event.id] ?? []).isEmpty
+            // Always skip task-notifications when filtering
+            if event.promptText?.isTaskNotification ?? false { return false }
+            return event.id == latestID
+                || !(database.fileChangesCache[event.id] ?? []).isEmpty
+                || (event.sequenceID != nil && changedSequences.contains(event.sequenceID!))
         }
     }
 
@@ -88,6 +117,25 @@ struct ContentView: View {
     private func isLatestEvent(_ event: PromptEvent) -> Bool {
         let allEvents = database.eventsForSession(id: event.sessionID)
         return allEvents.first?.id == event.id
+    }
+
+    /// Groups events by sequenceID, preserving order. Events with nil sequenceID are solo groups.
+    private func sequenceGroups(from events: [PromptEvent]) -> [[PromptEvent]] {
+        var groups: [[PromptEvent]] = []
+        var currentSeqID: String?
+        var currentGroup: [PromptEvent] = []
+
+        for event in events.reversed() {  // chronological order (oldest first)
+            if let seqID = event.sequenceID, seqID == currentSeqID {
+                currentGroup.append(event)
+            } else {
+                if !currentGroup.isEmpty { groups.append(currentGroup) }
+                currentGroup = [event]
+                currentSeqID = event.sequenceID
+            }
+        }
+        if !currentGroup.isEmpty { groups.append(currentGroup) }
+        return groups
     }
 
     private var flatItems: [SidebarItem] {
@@ -135,7 +183,17 @@ struct ContentView: View {
                     guard !events.isEmpty else { continue }
                     items.append(.session(session))
                     if state.expandedSessions.contains(session.id) {
-                        items.append(contentsOf: events.map { .event($0) })
+                        let groups = sequenceGroups(from: events)
+                        for group in groups {
+                            for (idx, event) in group.enumerated() {
+                                let pos: SidebarItem.SequencePosition
+                                if group.count == 1 { pos = .solo }
+                                else if idx == 0 { pos = .first }
+                                else if idx == group.count - 1 { pos = .last }
+                                else { pos = .middle }
+                                items.append(.event(event, position: pos))
+                            }
+                        }
                     }
                 }
             }
@@ -312,7 +370,7 @@ struct ContentView: View {
             }
         case .event:
             if let event = item.event {
-                eventRow(event)
+                eventRow(event, position: item.sequencePosition)
                     .padding(.vertical, 2)
                     .padding(.leading, 20)
                     .tag(item.id)
@@ -365,8 +423,8 @@ struct ContentView: View {
     private func sessionRow(_ session: Session) -> some View {
         let events = filteredEvents(for: session.id)
         let eventCount = events.count
-        let firstPrompt = events.first?.promptText
-        let displayTitle = session.customName ?? firstPrompt ?? "(no prompt)"
+        let firstPrompt = events.last?.promptText  // oldest (chronological first)
+        let displayTitle = session.customName ?? firstPrompt?.displayPromptText ?? "(no prompt)"
         let expanded = state.expandedSessions.contains(session.id)
         let sState = database.sessionState(for: session.id)
         HStack(spacing: 4) {
@@ -424,23 +482,41 @@ struct ContentView: View {
     }
 
     @ViewBuilder
-    private func eventRow(_ event: PromptEvent) -> some View {
+    private func eventRow(_ event: PromptEvent, position: SidebarItem.SequencePosition) -> some View {
         let fileCount = database.fileChangesCache[event.id]?.count ?? 0
         let showState = isLatestEvent(event)
         let sState = showState ? database.sessionState(for: event.sessionID) : .idle
-        VStack(alignment: .leading, spacing: 2) {
-            Text(event.promptText ?? "(no prompt)")
-                .lineLimit(2)
-                .font(.callout)
-            HStack(spacing: 6) {
-                SessionStateIndicator(state: sState)
-                Text(event.timestamp, style: .time)
-                if fileCount > 0 {
-                    Label("\(fileCount)", systemImage: "doc")
+        HStack(spacing: LayoutGuide.spacingNone) {
+            // Sequence indicator (only for multi-prompt sequences)
+            if case .solo = position {} else {
+                VStack(spacing: LayoutGuide.spacingNone) {
+                    Rectangle()
+                        .fill(position.isFirst ? Color.clear : Color.gray.opacity(0.2))
+                        .frame(width: 2)
+                    Circle()
+                        .fill(Color.secondary)
+                        .frame(width: 5, height: 5)
+                    Rectangle()
+                        .fill(position.isLast ? Color.clear : Color.gray.opacity(0.2))
+                        .frame(width: 2)
                 }
+                .frame(width: 12)
             }
-            .font(.caption2)
-            .foregroundStyle(.secondary)
+
+            VStack(alignment: .leading, spacing: 2) {
+                Text(event.promptText?.displayPromptText ?? "(no prompt)")
+                    .lineLimit(2)
+                    .font(.callout)
+                HStack(spacing: 6) {
+                    SessionStateIndicator(state: sState)
+                    Text(event.timestamp, style: .time)
+                    if fileCount > 0 {
+                        Label("\(fileCount)", systemImage: "doc")
+                    }
+                }
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+            }
         }
         .contextMenu {
             Button("Delete Prompt", role: .destructive) {

@@ -30,7 +30,7 @@ struct DiffDetailView: View {
             return name
         }
         let events = database.eventsForSession(id: event.sessionID)
-        let text = events.last?.promptText ?? "(no prompt)"
+        let text = events.last?.promptText?.displayPromptText ?? "(no prompt)"
         return text.replacingOccurrences(of: "\n", with: " ")
     }
 
@@ -75,7 +75,7 @@ struct DiffDetailView: View {
 
     private var collapsedHeader: some View {
         VStack(alignment: .leading, spacing: LayoutGuide.spacingS) {
-            Text(event.promptText ?? "(no prompt text)")
+            Text(event.promptText?.displayPromptText ?? "(no prompt text)")
                 .font(.headline)
                 .lineLimit(1)
                 .truncationMode(.tail)
@@ -94,7 +94,7 @@ struct DiffDetailView: View {
         return VStack(spacing: LayoutGuide.spacingNone) {
             VStack(alignment: .leading, spacing: LayoutGuide.spacingS) {
                 ScrollView(.vertical) {
-                    Text(event.promptText ?? "(no prompt text)")
+                    Text(event.promptText?.displayPromptText ?? "(no prompt text)")
                         .font(.headline)
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)

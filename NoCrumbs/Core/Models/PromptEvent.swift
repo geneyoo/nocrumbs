@@ -8,4 +8,5 @@ struct PromptEvent: Identifiable, Codable, Equatable, Sendable {
     let timestamp: Date
     let vcs: VCSType?
     let baseCommitHash: String?  // HEAD at prompt time — diff baseline
+    let sequenceID: String?  // groups prompts into change sequences
 }

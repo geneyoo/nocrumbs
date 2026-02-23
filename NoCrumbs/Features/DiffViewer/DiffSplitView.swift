@@ -28,6 +28,12 @@ struct DiffSplitView<FileList: View, Detail: View>: NSViewRepresentable {
 
         context.coordinator.split = split
 
+        // Force initial divider position after AppKit lays out
+        let width = fileListWidth
+        DispatchQueue.main.async {
+            split.setPosition(width, ofDividerAt: 0)
+        }
+
         return split
     }
 

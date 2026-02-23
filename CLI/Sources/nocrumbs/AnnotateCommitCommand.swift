@@ -53,13 +53,41 @@ enum AnnotateCommitCommand {
         let showFileCountPerPrompt = json["show_file_count_per_prompt"] as? Bool ?? true
         let showSessionID = json["show_session_id"] as? Bool ?? true
 
-        // Build prompt data for rendering
-        let promptData: [(text: String, fileCount: Int)] = prompts.compactMap { p in
+        // Build prompt data for rendering, grouping by sequence
+        let rawPromptData: [(text: String, fileCount: Int, sequenceID: String?)] = prompts.compactMap { p in
             guard let text = p["text"] as? String else { return nil }
             let fc = p["file_count"] as? Int ?? 0
+            let seqID = p["sequence_id"] as? String
             let sanitized = redactSecrets(text)
-            return (text: sanitized, fileCount: fc)
+            return (text: sanitized, fileCount: fc, sequenceID: seqID)
         }
+
+        // Collapse sequences: use last prompt's text, aggregate file counts
+        let promptData: [(text: String, fileCount: Int)] = {
+            var groups: [(text: String, fileCount: Int)] = []
+            var currentSeqID: String?
+            var currentText = ""
+            var currentFiles = 0
+
+            for p in rawPromptData {
+                if let seqID = p.sequenceID, seqID == currentSeqID {
+                    // Continue sequence — keep updating representative text to last prompt
+                    currentText = p.text
+                    currentFiles += p.fileCount
+                } else {
+                    if !currentText.isEmpty {
+                        groups.append((text: currentText, fileCount: currentFiles))
+                    }
+                    currentSeqID = p.sequenceID
+                    currentText = p.text
+                    currentFiles = p.fileCount
+                }
+            }
+            if !currentText.isEmpty {
+                groups.append((text: currentText, fileCount: currentFiles))
+            }
+            return groups
+        }()
 
         let deepLink =
             deepLinkEnabled && !sessionID.isEmpty

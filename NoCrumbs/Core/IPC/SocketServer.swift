@@ -297,20 +297,33 @@ actor SocketServer {
             baseHash = await captureHead(vcs: vcsType, at: cwd)
         }
 
-        let event = PromptEvent(
-            id: UUID(),
-            sessionID: sessionID,
-            projectPath: cwd,
-            promptText: prompt,
-            timestamp: now,
-            vcs: vcsType,
-            baseCommitHash: baseHash
-        )
-
         await MainActor.run {
             do {
+                // Determine sequenceID: continue current sequence unless last prompt had changes
+                let sequenceID: String = {
+                    let sessionEvents = db.recentEvents.filter { $0.sessionID == sessionID }
+                    guard let lastEvent = sessionEvents.first else {
+                        return UUID().uuidString  // First prompt → new sequence
+                    }
+                    let lastHadChanges = !(db.fileChangesCache[lastEvent.id] ?? []).isEmpty
+                    if lastHadChanges {
+                        return UUID().uuidString  // Last prompt had changes → new sequence
+                    }
+                    return lastEvent.sequenceID ?? UUID().uuidString  // Continue current sequence
+                }()
+
+                let event = PromptEvent(
+                    id: UUID(),
+                    sessionID: sessionID,
+                    projectPath: cwd,
+                    promptText: prompt,
+                    timestamp: now,
+                    vcs: vcsType,
+                    baseCommitHash: baseHash,
+                    sequenceID: sequenceID
+                )
                 try db.insertPromptEvent(event)
-                logger.info("[NC:Socket] Bridged prompt event \(event.id.uuidString)")
+                logger.info("[NC:Socket] Bridged prompt event \(event.id.uuidString) seq=\(sequenceID.prefix(8))")
             } catch {
                 logger.error("[NC:Socket] Bridge prompt error: \(error.localizedDescription)")
             }
@@ -347,25 +360,38 @@ actor SocketServer {
             if let vcsType {
                 baseHash = await captureHead(vcs: vcsType, at: cwd)
             }
-            let placeholderEvent = PromptEvent(
-                id: UUID(),
-                sessionID: sessionID,
-                projectPath: cwd,
-                promptText: transcriptPrompt,
-                timestamp: now,
-                vcs: vcsType,
-                baseCommitHash: baseHash
-            )
-            let change = FileChange(
-                id: UUID(),
-                eventID: placeholderEvent.id,
-                filePath: filePath,
-                toolName: toolName,
-                timestamp: now
-            )
-
             await MainActor.run {
                 do {
+                    // Orphan placeholder: determine sequenceID same as bridgePromptEvent
+                    let sequenceID: String = {
+                        let sessionEvents = db.recentEvents.filter { $0.sessionID == sessionID }
+                        guard let lastEvent = sessionEvents.first else {
+                            return UUID().uuidString
+                        }
+                        let lastHadChanges = !(db.fileChangesCache[lastEvent.id] ?? []).isEmpty
+                        if lastHadChanges {
+                            return UUID().uuidString
+                        }
+                        return lastEvent.sequenceID ?? UUID().uuidString
+                    }()
+
+                    let placeholderEvent = PromptEvent(
+                        id: UUID(),
+                        sessionID: sessionID,
+                        projectPath: cwd,
+                        promptText: transcriptPrompt,
+                        timestamp: now,
+                        vcs: vcsType,
+                        baseCommitHash: baseHash,
+                        sequenceID: sequenceID
+                    )
+                    let change = FileChange(
+                        id: UUID(),
+                        eventID: placeholderEvent.id,
+                        filePath: filePath,
+                        toolName: toolName,
+                        timestamp: now
+                    )
                     try db.insertPromptEvent(placeholderEvent)
                     try db.insertFileChange(change)
                     logger.info("[NC:Socket] Bridged orphaned change \(filePath)")
@@ -455,7 +481,9 @@ actor SocketServer {
                 let prompts: [[String: Any]] = events.reversed().compactMap { event in
                     guard let text = event.promptText else { return nil }
                     let fileCount = (try? db.fileChangeCount(forEventID: event.id)) ?? 0
-                    return ["text": text, "file_count": fileCount]
+                    var prompt: [String: Any] = ["text": text, "file_count": fileCount]
+                    if let seqID = event.sequenceID { prompt["sequence_id"] = seqID }
+                    return prompt
                 }
 
                 var response: [String: Any] = [
@@ -636,19 +664,33 @@ actor SocketServer {
         }
 
         let session = Session(id: sessionID, projectPath: cwd, startedAt: now, lastActivityAt: now)
-        let event = PromptEvent(
-            id: UUID(),
-            sessionID: sessionID,
-            projectPath: cwd,
-            promptText: prompt,
-            timestamp: now,
-            vcs: vcsType,
-            baseCommitHash: baseHash
-        )
 
         await MainActor.run {
             do {
                 try db.upsertSession(session)
+
+                let sequenceID: String = {
+                    let sessionEvents = db.recentEvents.filter { $0.sessionID == sessionID }
+                    guard let lastEvent = sessionEvents.first else {
+                        return UUID().uuidString
+                    }
+                    let lastHadChanges = !(db.fileChangesCache[lastEvent.id] ?? []).isEmpty
+                    if lastHadChanges {
+                        return UUID().uuidString
+                    }
+                    return lastEvent.sequenceID ?? UUID().uuidString
+                }()
+
+                let event = PromptEvent(
+                    id: UUID(),
+                    sessionID: sessionID,
+                    projectPath: cwd,
+                    promptText: prompt,
+                    timestamp: now,
+                    vcs: vcsType,
+                    baseCommitHash: baseHash,
+                    sequenceID: sequenceID
+                )
                 try db.insertPromptEvent(event)
                 logger.info("[NC:Socket] Stored prompt event \(event.id.uuidString)")
             } catch {
@@ -689,26 +731,40 @@ actor SocketServer {
                 baseHash = await captureHead(vcs: vcsType, at: cwd)
             }
             let session = Session(id: sessionID, projectPath: cwd, startedAt: now, lastActivityAt: now)
-            let event = PromptEvent(
-                id: UUID(),
-                sessionID: sessionID,
-                projectPath: cwd,
-                promptText: nil,
-                timestamp: now,
-                vcs: vcsType,
-                baseCommitHash: baseHash
-            )
-            let change = FileChange(
-                id: UUID(),
-                eventID: event.id,
-                filePath: filePath,
-                toolName: toolName,
-                timestamp: now
-            )
 
             await MainActor.run {
                 do {
                     try db.upsertSession(session)
+
+                    let sequenceID: String = {
+                        let sessionEvents = db.recentEvents.filter { $0.sessionID == sessionID }
+                        guard let lastEvent = sessionEvents.first else {
+                            return UUID().uuidString
+                        }
+                        let lastHadChanges = !(db.fileChangesCache[lastEvent.id] ?? []).isEmpty
+                        if lastHadChanges {
+                            return UUID().uuidString
+                        }
+                        return lastEvent.sequenceID ?? UUID().uuidString
+                    }()
+
+                    let event = PromptEvent(
+                        id: UUID(),
+                        sessionID: sessionID,
+                        projectPath: cwd,
+                        promptText: nil,
+                        timestamp: now,
+                        vcs: vcsType,
+                        baseCommitHash: baseHash,
+                        sequenceID: sequenceID
+                    )
+                    let change = FileChange(
+                        id: UUID(),
+                        eventID: event.id,
+                        filePath: filePath,
+                        toolName: toolName,
+                        timestamp: now
+                    )
                     try db.insertPromptEvent(event)
                     try db.insertFileChange(change)
                     logger.info("[NC:Socket] Stored orphaned change \(filePath)")

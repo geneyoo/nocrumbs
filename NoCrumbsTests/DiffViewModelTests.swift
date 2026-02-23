@@ -17,7 +17,8 @@ final class DiffViewModelTests: XCTestCase {
             promptText: "test prompt",
             timestamp: Date(),
             vcs: vcs,
-            baseCommitHash: baseCommitHash
+            baseCommitHash: baseCommitHash,
+            sequenceID: nil
         )
     }
 

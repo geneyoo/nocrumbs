@@ -157,30 +157,36 @@ ls -la ~/Library/Application\ Support/NoCrumbs/nocrumbs.sock
 sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite "SELECT COUNT(*) FROM sessions; SELECT COUNT(*) FROM promptEvents; SELECT COUNT(*) FROM commitTemplates;"
 ```
 
-Also verify schema version:
+Also verify schema version and sequenceID column:
 ```bash
 sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite "PRAGMA user_version;"
+sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite "SELECT COUNT(*) FROM promptEvents WHERE sequenceID IS NOT NULL;"
 ```
 
-- ✅ `Database: N sessions, M events, K templates (schema vX)`
+- ✅ `Database: N sessions, M events, K templates (schema vX), N events with sequenceID`
 - ❌ `Database: not found or query failed`
+- ⚠️ `Database: schema < v9 — sequenceID column missing`
 
 ### 9. Live capture test
 
-Send a test event through the CLI:
+Send two test events through the CLI to verify sequenceID grouping:
 
 ```bash
-echo '{"session_id":"verify-test","prompt":"NoCrumbs verification probe","cwd":"/tmp"}' | nocrumbs capture-prompt
+echo '{"session_id":"verify-test","prompt":"NoCrumbs verification probe 1","cwd":"/tmp"}' | nocrumbs capture-prompt
+sleep 0.5
+echo '{"session_id":"verify-test","prompt":"NoCrumbs verification probe 2","cwd":"/tmp"}' | nocrumbs capture-prompt
 ```
 
-Wait 1 second, then verify it landed in the DB:
+Wait 1 second, then verify both landed in the DB and share the same sequenceID:
 
 ```bash
 sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite "SELECT COUNT(*) FROM sessions WHERE id = 'verify-test';"
+sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite "SELECT sequenceID, COUNT(*) FROM promptEvents WHERE sessionID = 'verify-test' GROUP BY sequenceID;"
 ```
 
-- ✅ `Live capture: test prompt stored and verified`
-- ❌ `Live capture: prompt sent but not found in DB`
+- ✅ `Live capture: 2 test prompts stored, same sequenceID`
+- ⚠️ `Live capture: prompts stored but sequenceID not grouped (NULL or different)`
+- ❌ `Live capture: prompts sent but not found in DB`
 
 ### 10. Remote transport
 

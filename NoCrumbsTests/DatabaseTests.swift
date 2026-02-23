@@ -45,7 +45,8 @@ final class DatabaseTests: XCTestCase {
             promptText: nil,
             timestamp: Date(),
             vcs: .git,
-            baseCommitHash: "abc123"
+            baseCommitHash: "abc123",
+            sequenceID: nil
         )
         try db.insertPromptEvent(event)
         return event
@@ -89,7 +90,7 @@ final class DatabaseTests: XCTestCase {
         let first = PromptEvent(
             id: UUID(), sessionID: testSessionID, projectPath: testProject,
             promptText: "First prompt", timestamp: Date(),
-            vcs: .git, baseCommitHash: "abc123"
+            vcs: .git, baseCommitHash: "abc123", sequenceID: nil
         )
         try db.insertPromptEvent(first)
 
@@ -97,7 +98,7 @@ final class DatabaseTests: XCTestCase {
         let second = PromptEvent(
             id: UUID(), sessionID: testSessionID, projectPath: testProject,
             promptText: "Second prompt", timestamp: Date().addingTimeInterval(1),
-            vcs: .git, baseCommitHash: "def456"
+            vcs: .git, baseCommitHash: "def456", sequenceID: nil
         )
         try db.insertPromptEvent(second)
 
@@ -160,7 +161,7 @@ final class DatabaseTests: XCTestCase {
         let orphan = PromptEvent(
             id: UUID(), sessionID: testSessionID, projectPath: testProject,
             promptText: nil, timestamp: Date(),
-            vcs: .git, baseCommitHash: "aaa"
+            vcs: .git, baseCommitHash: "aaa", sequenceID: nil
         )
         try db.insertPromptEvent(orphan)
 
@@ -168,7 +169,7 @@ final class DatabaseTests: XCTestCase {
         let normal = PromptEvent(
             id: UUID(), sessionID: session2ID, projectPath: testProject,
             promptText: "Already has text", timestamp: Date(),
-            vcs: .git, baseCommitHash: "bbb"
+            vcs: .git, baseCommitHash: "bbb", sequenceID: nil
         )
         try db.insertPromptEvent(normal)
 
@@ -197,7 +198,7 @@ final class DatabaseTests: XCTestCase {
         let event = PromptEvent(
             id: UUID(), sessionID: testSessionID, projectPath: testProject,
             promptText: "Test prompt", timestamp: Date(),
-            vcs: .git, baseCommitHash: "abc123"
+            vcs: .git, baseCommitHash: "abc123", sequenceID: nil
         )
         try db.insertPromptEvent(event)
 
@@ -237,7 +238,7 @@ final class DatabaseTests: XCTestCase {
         let event = PromptEvent(
             id: UUID(), sessionID: testSessionID, projectPath: testProject,
             promptText: "Delete me", timestamp: Date(),
-            vcs: .git, baseCommitHash: "abc123"
+            vcs: .git, baseCommitHash: "abc123", sequenceID: nil
         )
         try db.insertPromptEvent(event)
         try db.insertFileChange(
@@ -263,7 +264,7 @@ final class DatabaseTests: XCTestCase {
         let event = PromptEvent(
             id: UUID(), sessionID: testSessionID, projectPath: testProject,
             promptText: "Wipe me", timestamp: Date(),
-            vcs: .git, baseCommitHash: "abc123"
+            vcs: .git, baseCommitHash: "abc123", sequenceID: nil
         )
         try db.insertPromptEvent(event)
 
@@ -286,7 +287,7 @@ final class DatabaseTests: XCTestCase {
         let oldEvent = PromptEvent(
             id: UUID(), sessionID: "old-session", projectPath: testProject,
             promptText: "Old prompt", timestamp: oldDate,
-            vcs: .git, baseCommitHash: "old"
+            vcs: .git, baseCommitHash: "old", sequenceID: nil
         )
         try db.insertPromptEvent(oldEvent)
 
@@ -295,7 +296,7 @@ final class DatabaseTests: XCTestCase {
         let newEvent = PromptEvent(
             id: UUID(), sessionID: testSessionID, projectPath: testProject,
             promptText: "New prompt", timestamp: Date(),
-            vcs: .git, baseCommitHash: "new"
+            vcs: .git, baseCommitHash: "new", sequenceID: nil
         )
         try db.insertPromptEvent(newEvent)
 
@@ -306,5 +307,76 @@ final class DatabaseTests: XCTestCase {
         XCTAssertEqual(db.sessions.count, 1)
         XCTAssertEqual(db.sessions.first?.id, testSessionID)
         XCTAssertEqual(db.recentEvents.count, 1)
+    }
+
+    // MARK: - SequenceID
+
+    func testSequenceIDRoundTrip() throws {
+        try insertSession()
+        let seqID = UUID().uuidString
+        let event = PromptEvent(
+            id: UUID(), sessionID: testSessionID, projectPath: testProject,
+            promptText: "Test prompt", timestamp: Date(),
+            vcs: .git, baseCommitHash: "abc123", sequenceID: seqID
+        )
+        try db.insertPromptEvent(event)
+
+        // Verify in memory cache
+        let cached = db.recentEvents.first(where: { $0.id == event.id })
+        XCTAssertEqual(cached?.sequenceID, seqID)
+
+        // Verify survives reload (close + reopen)
+        db.close()
+        db = Database(path: tempPath)
+        try db.open()
+
+        let reloaded = db.recentEvents.first(where: { $0.id == event.id })
+        XCTAssertEqual(reloaded?.sequenceID, seqID)
+    }
+
+    func testSequenceIDNilBackwardCompat() throws {
+        try insertSession()
+        let event = PromptEvent(
+            id: UUID(), sessionID: testSessionID, projectPath: testProject,
+            promptText: "Legacy prompt", timestamp: Date(),
+            vcs: .git, baseCommitHash: "abc123", sequenceID: nil
+        )
+        try db.insertPromptEvent(event)
+
+        let cached = db.recentEvents.first(where: { $0.id == event.id })
+        XCTAssertNil(cached?.sequenceID)
+    }
+
+    func testEventsForSequence() throws {
+        try insertSession()
+        let seqA = UUID().uuidString
+        let seqB = UUID().uuidString
+
+        for i in 0..<3 {
+            try db.insertPromptEvent(PromptEvent(
+                id: UUID(), sessionID: testSessionID, projectPath: testProject,
+                promptText: "Prompt \(i)", timestamp: Date().addingTimeInterval(Double(i)),
+                vcs: .git, baseCommitHash: nil, sequenceID: i < 2 ? seqA : seqB
+            ))
+        }
+
+        XCTAssertEqual(db.eventsForSequence(id: seqA).count, 2)
+        XCTAssertEqual(db.eventsForSequence(id: seqB).count, 1)
+    }
+
+    func testBackfillPreservesSequenceID() throws {
+        try insertSession()
+        let seqID = UUID().uuidString
+        let event = PromptEvent(
+            id: UUID(), sessionID: testSessionID, projectPath: testProject,
+            promptText: nil, timestamp: Date(),
+            vcs: .git, baseCommitHash: "abc123", sequenceID: seqID
+        )
+        try db.insertPromptEvent(event)
+        try db.updatePromptText("Backfilled", forEventID: event.id)
+
+        let updated = db.recentEvents.first(where: { $0.id == event.id })
+        XCTAssertEqual(updated?.promptText, "Backfilled")
+        XCTAssertEqual(updated?.sequenceID, seqID)
     }
 }
