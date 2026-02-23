@@ -3,12 +3,25 @@
     <channel>
         <title>NoCrumbs</title>
         <item>
+            <title>0.4.2</title>
+            <pubDate>Sun, 22 Feb 2026 22:43:33 -0500</pubDate>
+            <sparkle:version>202602222242</sparkle:version>
+            <sparkle:shortVersionString>0.4.2</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.4.2/NoCrumbs-0.4.2.zip" length="4491424" type="application/octet-stream" sparkle:edSignature="fymo9pESjj8FMiDUEd+UunVWAR95Yu2wsj2FgpJE4JE+LNi8ER3Qj67mz963pVPF8YlpuVjhzHZrzmuPleSxCQ=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.4.2/NoCrumbs202602222242-202602222148.delta" sparkle:deltaFrom="202602222148" length="91242" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="t2Bg1QiJJZ3zxxUmnr/Ayirwotb9JsfSdlfQ64p+5169LmYgOQEml2kTB68zOITbpBj4E6q/bc6+6jQHXfCrAQ=="/>
+                <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.4.2/NoCrumbs202602222242-202602221847.delta" sparkle:deltaFrom="202602221847" length="327954" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="ftmGt/BZKtu9Z8F7X0kfGPK1q96D67E42/4A1lvfgAw81A14dOunbjJ4cOC+kygpQ6YSVrwvOmBnp+OownqRDQ=="/>
+                <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.4.2/NoCrumbs202602222242-202602221820.delta" sparkle:deltaFrom="202602221820" length="327606" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="Wmsc6HFdTS4udOIiBQGCQHukNVhNWz+7s1yDusb/DYJIPywaTTdlUhQj64FKIR5C6yAjNVw84EF6ga+HvvVWBA=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>0.4.1</title>
             <pubDate>Sun, 22 Feb 2026 21:50:13 -0500</pubDate>
             <sparkle:version>202602222148</sparkle:version>
             <sparkle:shortVersionString>0.4.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.4.1/NoCrumbs-0.4.1.zip" length="4367132" type="application/octet-stream" sparkle:edSignature="mQ5THf6QE7DNxUrYbIU/fDpCSpw9rkY6YVVce2fca8yNxlhnrq+ZaDl0Y5pRd7h8Cj6BXFoDTaAjXDbQtJfECA=="/>
+            <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.4.2/NoCrumbs-0.4.1.zip" length="4367132" type="application/octet-stream" sparkle:edSignature="mQ5THf6QE7DNxUrYbIU/fDpCSpw9rkY6YVVce2fca8yNxlhnrq+ZaDl0Y5pRd7h8Cj6BXFoDTaAjXDbQtJfECA=="/>
             <sparkle:deltas>
                 <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.4.1/NoCrumbs202602222148-202602221847.delta" sparkle:deltaFrom="202602221847" length="247098" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="LuiHzXYpoOwkdv2zro9V9TWnQn+EasZrkHBNjp75UWW4KhW25zT5fLGHgWFVa+YkqpN8o6qTMs/7hUF+c3l/DA=="/>
                 <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.4.1/NoCrumbs202602222148-202602221820.delta" sparkle:deltaFrom="202602221820" length="248974" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="WSY6GUKn927sFF78rHFR/egsaSUeUM7XrEA/6jhC4uh5WMQqNfsPm1LusZRcwFEiqG2zLeS93nQmFjavUhzqBg=="/>
@@ -20,18 +33,10 @@
             <sparkle:version>202602221847</sparkle:version>
             <sparkle:shortVersionString>0.4.0</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.4.1/NoCrumbs-0.4.0.zip" length="4331780" type="application/octet-stream" sparkle:edSignature="qttu0Ezel4XMzep/Dnmx+/OvwpQpU3jBaBMWCOe3HhSe7+bKKYdBMRct0eXmldin6qA50loN+OawnBuJUSi+Bw=="/>
+            <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.4.2/NoCrumbs-0.4.0.zip" length="4331780" type="application/octet-stream" sparkle:edSignature="qttu0Ezel4XMzep/Dnmx+/OvwpQpU3jBaBMWCOe3HhSe7+bKKYdBMRct0eXmldin6qA50loN+OawnBuJUSi+Bw=="/>
             <sparkle:deltas>
                 <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.4.0/NoCrumbs202602221847-202602221820.delta" sparkle:deltaFrom="202602221820" length="11742" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="YLSasdk1GMjBkov71xiY1v8xBszdBxlxl4rnszqT28TaqJCMNIazZZHWOXNpxuDKgmq9cGABG26uNAHlMP+GAw=="/>
             </sparkle:deltas>
-        </item>
-        <item>
-            <title>0.1.0</title>
-            <pubDate>Sun, 22 Feb 2026 18:21:56 -0500</pubDate>
-            <sparkle:version>202602221820</sparkle:version>
-            <sparkle:shortVersionString>0.1.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.4.1/NoCrumbs-0.1.0.zip" length="4331774" type="application/octet-stream" sparkle:edSignature="MSQ+t7WPt+x0JOLOuQSY7/TOtto/Gq9EKNxlbnqysoI8MetVSWKXLaW6Imv9tV3XNkloNfyxmUIPDDV/wDZHAA=="/>
         </item>
     </channel>
 </rss>
