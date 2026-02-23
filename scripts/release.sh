@@ -252,6 +252,31 @@ if [[ -f "${PROJECT_DIR}/docs-site/static/appcast.xml" ]]; then
     fi
 fi
 
+# Step 18: Update Homebrew tap
+echo "→ Updating Homebrew tap formula..."
+TAP_REPO="geneyoo/homebrew-tap"
+TAR_URL="https://github.com/geneyoo/nocrumbs/archive/refs/tags/v${VERSION}.tar.gz"
+TAR_SHA=$(curl -sL "$TAR_URL" | shasum -a 256 | awk '{print $1}')
+
+if [[ -n "$TAR_SHA" && "$TAR_SHA" != "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" ]]; then
+    TAP_DIR=$(mktemp -d)
+    gh repo clone "$TAP_REPO" "$TAP_DIR" -- --depth 1 2>/dev/null
+    FORMULA_FILE="${TAP_DIR}/Formula/nocrumbs.rb"
+    if [[ -f "$FORMULA_FILE" ]]; then
+        sed -i '' "s|url \".*\"|url \"${TAR_URL}\"|" "$FORMULA_FILE"
+        sed -i '' "s|sha256 \".*\"|sha256 \"${TAR_SHA}\"|" "$FORMULA_FILE"
+        git -C "$TAP_DIR" add Formula/nocrumbs.rb
+        git -C "$TAP_DIR" commit -m "chore: bump nocrumbs to v${VERSION}"
+        git -C "$TAP_DIR" push origin main
+        echo "✓ Homebrew tap updated to v${VERSION}"
+    else
+        echo "⚠️  Formula not found at ${FORMULA_FILE}"
+    fi
+    rm -rf "$TAP_DIR"
+else
+    echo "⚠️  Failed to fetch SHA256 for tarball — update Homebrew tap manually"
+fi
+
 # Summary
 echo ""
 echo "=== Release ${VERSION} Complete ==="
@@ -260,5 +285,6 @@ echo "Artifacts:"
 echo "  Zip:     ${ZIP_PATH}"
 echo "  Appcast: ${APPCAST_DIR}/appcast.xml"
 echo "  Release: https://github.com/geneyoo/nocrumbs/releases/tag/v${VERSION}"
+echo "  Homebrew: brew install geneyoo/tap/nocrumbs"
 echo ""
 echo "Appcast will be live at https://nocrumbs.ai/appcast.xml after Pages deploys."
