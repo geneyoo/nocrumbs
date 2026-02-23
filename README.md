@@ -4,6 +4,8 @@
 
 A local-first tool that links every file change your AI coding assistant makes back to the prompt that caused it. Native Mac app + fire-and-forget CLI. No cloud, no telemetry, no accounts.
 
+![NoCrumbs demo — expand session, browse prompts, view diffs](docs-site/static/img/demo.gif)
+
 ## Quick Start
 
 ```bash

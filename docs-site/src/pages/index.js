@@ -58,6 +58,24 @@ function HeroSection() {
   );
 }
 
+function DemoSection() {
+  return (
+    <section style={{ padding: '2rem 0' }}>
+      <div className="container" style={{ textAlign: 'center' }}>
+        <img
+          src="/img/demo.gif"
+          alt="NoCrumbs demo — browse sessions, view diffs"
+          style={{
+            maxWidth: '100%',
+            borderRadius: '8px',
+            boxShadow: '0 4px 24px rgba(0, 0, 0, 0.3)',
+          }}
+        />
+      </div>
+    </section>
+  );
+}
+
 function FeaturesSection() {
   return (
     <section className="features">
@@ -82,6 +100,7 @@ export default function Home() {
   return (
     <Layout title={siteConfig.title} description={siteConfig.tagline}>
       <HeroSection />
+      <DemoSection />
       <FeaturesSection />
     </Layout>
   );
