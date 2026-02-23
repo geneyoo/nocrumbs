@@ -35,6 +35,30 @@ targets:
       - path: NoCrumbs/Resources
     dependencies:
       - package: Sparkle
+    postBuildScripts:
+      - name: "Build & Embed CLI"
+        script: |
+          if [ "$NOCRUMBS_SKIP_CLI" = "1" ]; then
+            echo "Skipping CLI build (NOCRUMBS_SKIP_CLI=1)"
+            exit 0
+          fi
+          CLI_DIR="${SRCROOT}/CLI"
+          if [ ! -d "$CLI_DIR" ]; then
+            echo "warning: CLI directory not found at $CLI_DIR — skipping CLI embed"
+            exit 0
+          fi
+          echo "Building CLI..."
+          swift build -c release --package-path "$CLI_DIR" --arch arm64 --arch x86_64 --disable-sandbox 2>&1 | grep -v __preview || true
+          CLI_BIN="$CLI_DIR/.build/apple/Products/Release/nocrumbs"
+          if [ ! -f "$CLI_BIN" ]; then
+            echo "error: CLI binary not found at $CLI_BIN"
+            exit 1
+          fi
+          DEST="${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Contents/Resources"
+          mkdir -p "$DEST"
+          cp "$CLI_BIN" "$DEST/nocrumbs"
+          echo "CLI embedded at $DEST/nocrumbs"
+        basedOnDependencyAnalysis: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.geneyoo.nocrumbs

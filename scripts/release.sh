@@ -104,7 +104,9 @@ git -C "$PROJECT_DIR" commit -m "chore: bump version to ${VERSION}"
 echo "✓ Version bump committed"
 
 # Step 4: Clean build with Developer ID signing + hardened runtime
-echo "→ Building Release configuration..."
+# The Xcode build phase "Build & Embed CLI" builds the CLI and copies it into
+# NoCrumbs.app/Contents/Resources/nocrumbs automatically.
+echo "→ Building Release configuration (app + embedded CLI)..."
 xcodebuild -project "${PROJECT_DIR}/NoCrumbs.xcodeproj" \
     -scheme "${APP_NAME}" \
     -configuration Release \
@@ -124,6 +126,15 @@ if [[ ! -d "$APP_PATH" ]]; then
     exit 1
 fi
 echo "✓ Built: ${APP_PATH}"
+
+# Verify CLI is embedded in app bundle
+CLI_IN_BUNDLE="${APP_PATH}/Contents/Resources/nocrumbs"
+if [[ ! -x "$CLI_IN_BUNDLE" ]]; then
+    echo "❌ CLI binary not found in app bundle at ${CLI_IN_BUNDLE}"
+    exit 1
+fi
+echo "✓ CLI embedded: ${CLI_IN_BUNDLE}"
+"$CLI_IN_BUNDLE" --version
 
 # Step 5: Re-sign Sparkle embedded binaries with Developer ID + timestamp
 echo "→ Re-signing Sparkle framework binaries..."
@@ -252,29 +263,45 @@ if [[ -f "${PROJECT_DIR}/docs-site/static/appcast.xml" ]]; then
     fi
 fi
 
-# Step 18: Update Homebrew tap
-echo "→ Updating Homebrew tap formula..."
+# Step 18: Update Homebrew tap (cask)
+echo "→ Updating Homebrew cask..."
 TAP_REPO="geneyoo/homebrew-tap"
-TAR_URL="https://github.com/geneyoo/nocrumbs/archive/refs/tags/v${VERSION}.tar.gz"
-TAR_SHA=$(curl -sL "$TAR_URL" | shasum -a 256 | awk '{print $1}')
+ZIP_URL="https://github.com/geneyoo/nocrumbs/releases/download/v${VERSION}/NoCrumbs-${VERSION}.zip"
+ZIP_SHA=$(shasum -a 256 "$ZIP_PATH" | awk '{print $1}')
 
-if [[ -n "$TAR_SHA" && "$TAR_SHA" != "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855" ]]; then
+if [[ -n "$ZIP_SHA" ]]; then
     TAP_DIR=$(mktemp -d)
     gh repo clone "$TAP_REPO" "$TAP_DIR" -- --depth 1 2>/dev/null
-    FORMULA_FILE="${TAP_DIR}/Formula/nocrumbs.rb"
-    if [[ -f "$FORMULA_FILE" ]]; then
-        sed -i '' "s|url \".*\"|url \"${TAR_URL}\"|" "$FORMULA_FILE"
-        sed -i '' "s|sha256 \".*\"|sha256 \"${TAR_SHA}\"|" "$FORMULA_FILE"
-        git -C "$TAP_DIR" add Formula/nocrumbs.rb
-        git -C "$TAP_DIR" commit -m "chore: bump nocrumbs to v${VERSION}"
-        git -C "$TAP_DIR" push origin main
-        echo "✓ Homebrew tap updated to v${VERSION}"
-    else
-        echo "⚠️  Formula not found at ${FORMULA_FILE}"
-    fi
+    mkdir -p "${TAP_DIR}/Casks"
+    cat > "${TAP_DIR}/Casks/nocrumbs.rb" <<CASK_EOF
+cask "nocrumbs" do
+  version "${VERSION}"
+  sha256 "${ZIP_SHA}"
+
+  url "https://github.com/geneyoo/nocrumbs/releases/download/v#{version}/NoCrumbs-#{version}.zip"
+  name "NoCrumbs"
+  desc "Catch every crumb your agent leaves behind"
+  homepage "https://nocrumbs.ai"
+
+  depends_on macos: ">= :sonoma"
+
+  app "NoCrumbs.app"
+  binary "#{appdir}/NoCrumbs.app/Contents/Resources/nocrumbs"
+
+  zap trash: [
+    "~/Library/Application Support/NoCrumbs",
+  ]
+end
+CASK_EOF
+    # Remove old formula if it exists
+    rm -f "${TAP_DIR}/Formula/nocrumbs.rb"
+    git -C "$TAP_DIR" add -A
+    git -C "$TAP_DIR" commit -m "chore: bump nocrumbs cask to v${VERSION}"
+    git -C "$TAP_DIR" push origin main
+    echo "✓ Homebrew cask updated to v${VERSION}"
     rm -rf "$TAP_DIR"
 else
-    echo "⚠️  Failed to fetch SHA256 for tarball — update Homebrew tap manually"
+    echo "⚠️  Failed to compute SHA256 — update Homebrew cask manually"
 fi
 
 # Summary
@@ -285,6 +312,6 @@ echo "Artifacts:"
 echo "  Zip:     ${ZIP_PATH}"
 echo "  Appcast: ${APPCAST_DIR}/appcast.xml"
 echo "  Release: https://github.com/geneyoo/nocrumbs/releases/tag/v${VERSION}"
-echo "  Homebrew: brew install geneyoo/tap/nocrumbs"
+echo "  Homebrew: brew install --cask geneyoo/tap/nocrumbs"
 echo ""
 echo "Appcast will be live at https://nocrumbs.ai/appcast.xml after Pages deploys."

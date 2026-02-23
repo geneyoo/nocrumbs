@@ -108,7 +108,8 @@ NoCrumbs/
 │
 ├── Features/
 │   ├── DiffViewer/
-│   │   ├── DiffDetailView.swift     # Main diff layout: header + collapsible file list + side-by-side panes
+│   │   ├── DiffDetailView.swift     # Main diff layout: header + DiffSplitView (file list + side-by-side panes)
+│   │   ├── DiffSplitView.swift      # NSSplitView wrapper (NSViewRepresentable) — native AppKit resize for file list / diff panes
 │   │   ├── DiffViewModel.swift      # @Observable: loads diffs via injected VCSProvider, builds side-by-side line pairs
 │   │   ├── DiffTextView.swift       # NSViewRepresentable wrapping NSTextView (TextKit 1)
 │   │   ├── DiffScrollSync.swift     # Syncs scroll position between left + right panes
@@ -176,7 +177,7 @@ CLI/
 
 scripts/
 ├── generate_icon.swift         # Generates macOS app icon sizes with Apple squircle mask
-└── release.sh                  # Release pipeline: build → sign → notarize → staple → Sparkle appcast
+└── release.sh                  # Release pipeline: build (app+CLI) → sign → notarize → staple → appcast → cask
                                 #   Reads secrets from scripts/.env.local (gitignored)
 
 .githooks/
@@ -686,19 +687,18 @@ Wraps `NSTextView` (TextKit 1) via `NSViewRepresentable`:
 
 ```
 DiffDetailView
-├── header (prompt text, timestamp, file count)
-├── HStack
-│   ├── fileList (List, 180pt, sidebar style) — collapsible via sidebar.left toggle
-│   ├── Divider
+├── header (prompt text, timestamp, file count — expandable/collapsible with resize handle)
+├── DiffSplitView (NSSplitView via NSViewRepresentable)
+│   ├── fileList (List, sidebar style, searchable) — collapsible, native AppKit drag-to-resize
 │   └── diffPanes
-│       ├── column headers (toggle button + "Before" | "After")
+│       ├── column headers (sidebar.left toggle + "Before" | "After")
 │       └── diffPanesContent (HStack, maxHeight: .infinity)
 │           ├── leftPane (DiffTextView or "File did not exist")
 │           ├── Divider
 │           └── rightPane (DiffTextView or "File was deleted")
 ```
 
-**Key layout fix:** `maxHeight: .infinity` on `diffPanesContent` and each pane — required because `NSScrollView` has no intrinsic content size in SwiftUI, so without this the HStack collapses to zero height.
+**DiffSplitView:** `NSSplitView` wrapper replacing manual SwiftUI `HStack` + frame sizing for the file list / diff panes split. Uses `NSHostingView` to embed SwiftUI views in each pane. Delegate constrains file list width to 120–400pt, file list pane is collapsible. Native AppKit drag handle eliminates SwiftUI relayout jank.
 
 **Reactivity:** `onChange(of: event)` watches the full PromptEvent struct (not just `.id`) so backfill updates to `baseCommitHash` trigger a reload.
 
@@ -809,6 +809,7 @@ Accessible via native Settings scene (`Cmd+,`) or menu bar "Settings..."
 | Zoom scaling | `AppScale` (@Observable) | Cmd+/- zoom (0.6–2.0×), persisted to UserDefaults |
 | Auto-updates | Sparkle `SPUStandardUpdaterController` | Non-App Store update mechanism, EdDSA-signed appcast |
 | Design tokens | `AppColors`, `AppFonts`, `LayoutGuide` | Semantic color/font/spacing constants, scale-aware |
+| File list / diff split | `NSSplitView` (`NSViewRepresentable`) | Native AppKit drag-to-resize, no SwiftUI relayout jank |
 | Diff panes | `NSTextView` (`NSViewRepresentable`) | TextKit 1 — battle-tested, no TextKit 2 scrolling bugs |
 | Scroll sync | `DiffScrollSync` (NSView bounds observation) | Syncs left/right panes via boundsDidChangeNotification |
 | Line numbers | Custom `DiffNSTextView.draw()` override | Draws gutter numbers in TextKit 1 coordinate space |
@@ -862,15 +863,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 **Script:** `scripts/release.sh <version>`
 
 ```
-Version bump (PlistBuddy)
+Version bump (PlistBuddy + CLI main.swift)
     → Clean Release build (Developer ID Application, hardened runtime, universal binary)
+        → "Build & Embed CLI" build phase: swift build CLI → copy to .app/Contents/Resources/nocrumbs
+    → Verify embedded CLI binary exists and reports correct version
     → Code signing verification (codesign --verify)
-    → Zip (ditto)
+    → Zip (ditto) — CLI comes bundled inside app
     → Notarize (xcrun notarytool submit --wait)
     → Staple (xcrun stapler staple)
     → Re-zip (final distributable)
     → Sparkle EdDSA sign (sign_update)
     → Generate appcast.xml (generate_appcast)
+    → Update Homebrew cask (geneyoo/homebrew-tap) with new version + SHA
+```
+
+**Distribution:** Single Homebrew cask installs app + symlinks CLI:
+```bash
+brew install --cask geneyoo/tap/nocrumbs
+# Installs NoCrumbs.app to /Applications
+# Symlinks NoCrumbs.app/Contents/Resources/nocrumbs to PATH
 ```
 
 **Signing:** Developer ID Application certificate, hardened runtime enabled in both Debug and Release configs. Entitlements: Apple Events only (for `nocrumbs://` URL scheme).
@@ -930,16 +941,16 @@ echo '{"session_id":"test","tool_name":"Write","tool_input":{"file_path":"test.s
 
 **Build:**
 ```bash
-# Mac App
+# Mac App (CLI is embedded automatically via "Build & Embed CLI" build phase)
 xcodebuild -project NoCrumbs.xcodeproj -scheme NoCrumbs -configuration Debug \
   -sdk macosx -derivedDataPath build build \
   CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
 
-# CLI
-swift build -c release --package-path CLI/
+# Skip CLI embed for faster iterative builds
+NOCRUMBS_SKIP_CLI=1 xcodebuild ...
 
-# Install CLI
-cp CLI/.build/release/nocrumbs /usr/local/bin/
+# CLI only (standalone, for development)
+swift build -c release --package-path CLI/
 
 # Run app
 open build/Build/Products/Debug/NoCrumbs.app

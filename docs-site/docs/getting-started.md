@@ -9,7 +9,7 @@ Install NoCrumbs and start tracking AI-generated changes in under a minute.
 ## 1. Install
 
 ```bash
-brew install geneyoo/tap/nocrumbs
+brew install --cask geneyoo/tap/nocrumbs
 ```
 
 This installs both the Mac app and the `nocrumbs` CLI. Requires macOS 14+.
@@ -22,14 +22,13 @@ Requires Xcode 15+.
 ```bash
 git clone https://github.com/geneyoo/nocrumbs.git && cd nocrumbs
 
-# Mac app
+# Build app (CLI is embedded automatically)
 xcodebuild -project NoCrumbs.xcodeproj -scheme NoCrumbs -configuration Release \
   -sdk macosx -derivedDataPath build build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
 open build/Build/Products/Release/NoCrumbs.app
 
-# CLI
-swift build -c release --package-path CLI/
-cp CLI/.build/release/nocrumbs /usr/local/bin/
+# Symlink the embedded CLI to your PATH
+ln -sf "$PWD/build/Build/Products/Release/NoCrumbs.app/Contents/Resources/nocrumbs" /usr/local/bin/nocrumbs
 ```
 
 </details>
@@ -56,16 +55,16 @@ nocrumbs install-git-hooks    # run in each repo you want annotations
 
 ## Updating
 
-The Mac app checks for updates automatically. To update the CLI:
+The Mac app checks for updates automatically via Sparkle. To update everything via Homebrew:
 
 ```bash
-brew upgrade nocrumbs
+brew upgrade --cask nocrumbs
 ```
 
 ## Uninstall
 
 ```bash
-brew uninstall nocrumbs
+brew uninstall --cask nocrumbs
 ```
 
 Data lives in `~/Library/Application Support/NoCrumbs/`. Remove that directory to delete all local data.

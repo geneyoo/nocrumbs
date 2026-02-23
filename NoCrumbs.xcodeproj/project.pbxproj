@@ -460,6 +460,7 @@
 				1903300E880AB186ADDE2C37 /* Sources */,
 				7153A4A91F4F918DF3A002BB /* Frameworks */,
 				5B5057509CD94B9C959DE07C /* Resources */,
+				A1B2C3D4E5F6A7B8C9D0E1F2 /* Build & Embed CLI */,
 			);
 			buildRules = (
 			);
@@ -541,6 +542,24 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* Build & Embed CLI */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputPaths = (
+			);
+			name = "Build & Embed CLI";
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "if [ \"$NOCRUMBS_SKIP_CLI\" = \"1\" ]; then\n  echo \"Skipping CLI build (NOCRUMBS_SKIP_CLI=1)\"\n  exit 0\nfi\nCLI_DIR=\"${SRCROOT}/CLI\"\nif [ ! -d \"$CLI_DIR\" ]; then\n  echo \"warning: CLI directory not found at $CLI_DIR — skipping CLI embed\"\n  exit 0\nfi\necho \"Building CLI...\"\nswift build -c release --package-path \"$CLI_DIR\" --arch arm64 --arch x86_64 --disable-sandbox 2>&1 | grep -v __preview || true\nCLI_BIN=\"$CLI_DIR/.build/apple/Products/Release/nocrumbs\"\nif [ ! -f \"$CLI_BIN\" ]; then\n  echo \"error: CLI binary not found at $CLI_BIN\"\n  exit 1\nfi\nDEST=\"${BUILT_PRODUCTS_DIR}/${PRODUCT_NAME}.app/Contents/Resources\"\nmkdir -p \"$DEST\"\ncp \"$CLI_BIN\" \"$DEST/nocrumbs\"\necho \"CLI embedded at $DEST/nocrumbs\"\n";
+			alwaysOutOfDate = 1;
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		1903300E880AB186ADDE2C37 /* Sources */ = {

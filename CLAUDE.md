@@ -86,17 +86,27 @@ NavigationStack      // Use NavigationSplitView
 ## Build
 
 ```bash
-# Mac App — build (output to local build/ directory)
+# Mac App — build (CLI is embedded automatically via "Build & Embed CLI" build phase)
 xcodebuild -project NoCrumbs.xcodeproj -scheme NoCrumbs -configuration Debug -sdk macosx -derivedDataPath build build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO
 
 # Mac App — run
 open build/Build/Products/Debug/NoCrumbs.app
 
-# CLI
+# CLI only (standalone, for development)
 swift build -c release --package-path CLI/
+
+# Skip CLI embed during iterative development (faster builds)
+NOCRUMBS_SKIP_CLI=1 xcodebuild ...
 ```
 
 Use `/run` skill to build + launch in one step. Always verify builds before confirming fixes.
+
+## Install
+
+```bash
+brew install --cask geneyoo/tap/nocrumbs   # installs app + CLI
+nocrumbs install                            # configures Claude Code hooks
+```
 
 ## Tests
 

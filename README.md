@@ -9,7 +9,7 @@ A local-first tool that links every file change your AI coding assistant makes b
 ## Quick Start
 
 ```bash
-brew install geneyoo/tap/nocrumbs
+brew install --cask geneyoo/tap/nocrumbs
 nocrumbs install
 ```
 
