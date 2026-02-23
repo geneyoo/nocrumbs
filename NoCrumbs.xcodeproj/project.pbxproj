@@ -83,6 +83,9 @@
 		S1A00001BB534E69B484BF01 /* SecretRedactor.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1F00001947253F7B233B101 /* SecretRedactor.swift */; };
 		SE1A0001BB534E69B484BF01 /* ShellEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = SE1F0001947253F7B233B101 /* ShellEnvironment.swift */; };
 		S1A00002BB534E69B484BF02 /* SecretRedactorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1F00002947253F7B233B102 /* SecretRedactorTests.swift */; };
+		TE1A0001A2B3C4D5E6F70001 /* TransportEndpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = TE1F0001A2B3C4D5E6F70001 /* TransportEndpoint.swift */; };
+		TE1A0002A2B3C4D5E6F70002 /* TransportEndpointTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = TE1F0002A2B3C4D5E6F70002 /* TransportEndpointTests.swift */; };
+		ST1A0001A2B3C4D5E6F70001 /* SocketTransportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ST1F0001A2B3C4D5E6F70001 /* SocketTransportTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -174,6 +177,9 @@
 		S1F00001947253F7B233B101 /* SecretRedactor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretRedactor.swift; sourceTree = "<group>"; };
 		SE1F0001947253F7B233B101 /* ShellEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellEnvironment.swift; sourceTree = "<group>"; };
 		S1F00002947253F7B233B102 /* SecretRedactorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretRedactorTests.swift; sourceTree = "<group>"; };
+		TE1F0001A2B3C4D5E6F70001 /* TransportEndpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransportEndpoint.swift; sourceTree = "<group>"; };
+		TE1F0002A2B3C4D5E6F70002 /* TransportEndpointTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransportEndpointTests.swift; sourceTree = "<group>"; };
+		ST1F0001A2B3C4D5E6F70001 /* SocketTransportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocketTransportTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -221,6 +227,7 @@
 			children = (
 				3E97C4331A6A2B294BFCA1E6 /* SocketClient.swift */,
 				5E0978BBFBDC197AD349E9F5 /* SocketServer.swift */,
+				TE1F0001A2B3C4D5E6F70001 /* TransportEndpoint.swift */,
 			);
 			path = IPC;
 			sourceTree = "<group>";
@@ -433,6 +440,8 @@
 				BB5566778899001122334455 /* DatabaseTests.swift */,
 				T3F00002TEMPLATE00TEST02 /* TemplateTests.swift */,
 				S1F00002947253F7B233B102 /* SecretRedactorTests.swift */,
+				ST1F0001A2B3C4D5E6F70001 /* SocketTransportTests.swift */,
+				TE1F0002A2B3C4D5E6F70002 /* TransportEndpointTests.swift */,
 			);
 			name = Tests;
 			path = NoCrumbsTests;
@@ -618,6 +627,7 @@
 				M5A00002BB534E69B484BF02 /* DeepLinkRouter.swift in Sources */,
 				S1A00001BB534E69B484BF01 /* SecretRedactor.swift in Sources */,
 				SE1A0001BB534E69B484BF01 /* ShellEnvironment.swift in Sources */,
+				TE1A0001A2B3C4D5E6F70001 /* TransportEndpoint.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -635,6 +645,8 @@
 				T3F00001TEMPLATE00TEST01 /* TemplateTests.swift in Sources */,
 				R1A00002BB534E69B484BF02 /* RemoteURLParserTests.swift in Sources */,
 				S1A00002BB534E69B484BF02 /* SecretRedactorTests.swift in Sources */,
+				TE1A0002A2B3C4D5E6F70002 /* TransportEndpointTests.swift in Sources */,
+				ST1A0001A2B3C4D5E6F70001 /* SocketTransportTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

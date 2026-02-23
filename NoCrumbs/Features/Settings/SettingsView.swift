@@ -9,6 +9,7 @@ struct SettingsView: View {
     @AppStorage("showSessionID") private var showSessionID = true
     @AppStorage("confirmBeforeDelete") private var confirmBeforeDelete = true
     @AppStorage("retentionDays") private var retentionDays = 7
+    @AppStorage("remoteTCPPort") private var remoteTCPPort = 0
     @Environment(ThemeManager.self) private var themeManager
     @State private var healthChecker = HookHealthChecker.shared
     @State private var showClearAllConfirmation = false
@@ -140,6 +141,37 @@ struct SettingsView: View {
                             }
                         }
                     }
+                }
+            }
+
+            Section("Remote") {
+                Toggle(
+                    "Accept remote connections",
+                    isOn: Binding(
+                        get: { remoteTCPPort > 0 },
+                        set: { enabled in
+                            remoteTCPPort = enabled ? Int(TransportEndpoint.defaultTCPPort) : 0
+                            Task {
+                                let server = await AppDelegate.shared?.socketServer
+                                if enabled {
+                                    try? await server?.startTCPListener(port: TransportEndpoint.defaultTCPPort)
+                                } else {
+                                    await server?.stopTCPListener()
+                                }
+                            }
+                        }
+                    )
+                )
+                .help("Listen on localhost TCP port for connections from remote dev servers via SSH/ET tunnel")
+
+                if remoteTCPPort > 0 {
+                    LabeledContent("Port") {
+                        Text("\(remoteTCPPort)")
+                            .monospacedDigit()
+                    }
+                    Text("Remote CLI connects via SSH tunnel or `export NOCRUMBS_HOST=localhost`")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
                 }
             }
 

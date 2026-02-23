@@ -1,51 +1,66 @@
 ---
 name: verify
 description: Run automated E2E verification of the NoCrumbs pipeline (hooks → CLI → socket → DB → UI). Use when the user says "verify", "check pipeline", "e2e check", or uses /verify.
-version: 5.0.0
+version: 6.0.0
 ---
 
 # Verify NoCrumbs Pipeline
 
-> Last synced with codebase at commit: `e5a3675` (2026-02-22)
+> Last synced with codebase at commit: `8856539` (2026-02-23)
 
 ## Argument Handling
 
-**`/verify --all`** — Run all checks without prompting.
+**`/verify`** (no args) — **Runs ALL checks by default.** This is the agentic default — run everything, report results.
 
-**`/verify` (no args)** — Use `AskUserQuestion` to ask which checks to run:
+**`/verify --select`** — Interactive mode. Use `AskUserQuestion` to ask which check groups to run:
 
 ```
 question: "Which checks do you want to run?"
 header: "Checks"
 multiSelect: true
 options:
-  - label: "Build (app + CLI)"
-    description: "Checks 1-2: xcodebuild + swift build"
-  - label: "Pipeline (CLI, hooks, socket, DB)"
-    description: "Checks 3-8: CLI binary, hooks, app running, socket, DB, live capture"
-  - label: "Git hooks"
-    description: "Check 9: prepare-commit-msg hook"
+  - label: "Build + Tests"
+    description: "Checks 1-3: xcodebuild, swift build, unit tests"
+  - label: "Pipeline"
+    description: "Checks 4-9: CLI binary, hooks, app running, socket, DB, live capture"
+  - label: "Remote transport"
+    description: "Check 10: transport endpoint config"
   - label: "UI interaction"
-    description: "Checks 10-12: sidebar selection, expand/collapse, window title consistency"
+    description: "Checks 11-14: sidebar selection, expand/collapse, window title"
 ```
 
 Map selections to check numbers:
-- "Build (app + CLI)" → checks 1, 2
-- "Pipeline (CLI, hooks, socket, DB)" → checks 3, 4, 5, 6, 7, 8
-- "Git hooks" → check 9
-- "UI interaction" → checks 10, 11, 12
+- "Build + Tests" → checks 1, 2, 3
+- "Pipeline" → checks 4, 5, 6, 7, 8, 9
+- "Remote transport" → check 10
+- "UI interaction" → checks 11, 12, 13, 14
 
-Always run **check 13 (cleanup)** if check 8 was included.
+Always run **check 15 (cleanup)** if check 9 was included.
 
-**`/verify <specific args>`** — If the user passes other args (e.g., "build", "ui", "pipeline"), interpret them as check group names and skip the prompt.
+**`/verify <specific args>`** — Interpret as group names: "build", "tests", "pipeline", "remote", "ui", "git". Skip the prompt.
 
-## Execution
+**Inference:** When the user says "verify" in conversation (not as a slash command), infer `--all`. If context suggests only a subset is relevant (e.g., "verify the build" or "verify after my socket changes"), select only the relevant groups.
 
-Run selected checks in order. **Continue past failures** — show full status for every check.
+## Execution Strategy — Agentic Parallelism
 
-Output one line per check: `✅` or `❌` with details. At the end, print summary `N/N passed`.
+**Maximize parallelism.** Independent check groups run concurrently via `Task` agents:
 
-**Prerequisite:** Accessibility permission must be granted for the terminal running Claude Code (System Settings → Privacy & Security → Accessibility). If AppleScript UI checks fail with "not allowed assistive access", tell the user to grant it and re-run.
+**Parallel group 1 (no dependencies):**
+- Build checks (1, 2, 3) — can run simultaneously
+
+**Sequential group (depends on builds passing):**
+- Pipeline checks (4-9) — sequential, each depends on prior
+- Remote transport (10) — independent but fast, run after builds
+- UI checks (11-14) — sequential, depend on app running (check 6)
+
+**Always last:**
+- Cleanup (15)
+
+Use `Task` subagents with `subagent_type: "Bash"` to run Build checks 1, 2, 3 in parallel. Then run pipeline + remote + UI sequentially.
+
+**Continue past failures** — show full status for every check. Never bail early.
+
+Output one line per check as you go: `✅` or `❌` with details. At the end, print summary `N/N passed`.
 
 ## Checks
 
@@ -67,29 +82,42 @@ swift build -c release --package-path CLI/ 2>&1 | tail -3
 - ✅ `Build (CLI): succeeded`
 - ❌ `Build (CLI): failed` — show the first 5 error lines
 
-### 3. CLI binary
+### 3. Unit Tests
+
+```bash
+xcodebuild test -project NoCrumbs.xcodeproj -scheme NoCrumbs -sdk macosx -derivedDataPath build CODE_SIGN_IDENTITY="" CODE_SIGNING_REQUIRED=NO 2>&1 | tail -5
+```
+
+Parse the output for test results. Look for the line matching `Executed N tests, with M tests skipped and K failures`.
+
+- ✅ `Tests: N passed, M skipped, 0 failures`
+- ❌ `Tests: K failures out of N tests` — show failing test names from output (lines matching `Test Case.*FAILED`)
+- ❌ `Tests: build failed` — show first 5 error lines
+
+### 4. CLI binary
 
 ```bash
 which nocrumbs && nocrumbs --version
 ```
 
-- ✅ `CLI: nocrumbs 0.3.0`
+- ✅ `CLI: nocrumbs X.Y.Z`
 - ❌ `CLI: not found in PATH` — tell user to run `brew install --cask geneyoo/tap/nocrumbs` (or for dev builds: `swift build -c release --package-path CLI/ && ln -sf "$PWD/CLI/.build/release/nocrumbs" /opt/homebrew/bin/nocrumbs`)
 
-### 4. Claude Code hooks installed
+### 5. Claude Code hooks installed
 
 ```bash
 cat ~/.claude/settings.json
 ```
 
-Parse JSON. Confirm both hooks exist:
-- `hooks.UserPromptSubmit` contains `nocrumbs capture-prompt` or `nocrumbs event`
-- `hooks.PostToolUse` contains matcher `Write|Edit` and `nocrumbs capture-change` or `nocrumbs event`
+Parse JSON. Confirm hooks exist:
+- `hooks.UserPromptSubmit` contains `nocrumbs event` or `nocrumbs capture-prompt`
+- `hooks.PostToolUse` contains `nocrumbs event` or `nocrumbs capture-change`
 
-- ✅ `Hooks: UserPromptSubmit + PostToolUse (Write|Edit)`
+- ✅ `Hooks: UserPromptSubmit + PostToolUse configured`
+- ⚠️ `Hooks: using legacy commands (capture-prompt/capture-change) — run nocrumbs install to upgrade`
 - ❌ `Hooks: missing [which ones]` — tell user to run `nocrumbs install`
 
-### 5. App running + window open
+### 6. App running + window open
 
 ```bash
 pgrep -x NoCrumbs
@@ -114,7 +142,7 @@ end tell'
 - ✅ `App: running (PID XXXXX), window open`
 - ❌ `App: not running` or `App: window failed to open`
 
-### 6. Socket alive
+### 7. Socket alive
 
 ```bash
 ls -la ~/Library/Application\ Support/NoCrumbs/nocrumbs.sock
@@ -123,7 +151,7 @@ ls -la ~/Library/Application\ Support/NoCrumbs/nocrumbs.sock
 - ✅ `Socket: nocrumbs.sock present`
 - ❌ `Socket: nocrumbs.sock not found`
 
-### 7. Database accessible
+### 8. Database accessible
 
 ```bash
 sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite "SELECT COUNT(*) FROM sessions; SELECT COUNT(*) FROM promptEvents; SELECT COUNT(*) FROM commitTemplates;"
@@ -134,13 +162,12 @@ Also verify schema version:
 sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite "PRAGMA user_version;"
 ```
 
-- ✅ `Database: N sessions, M events, K templates (schema v6)`
+- ✅ `Database: N sessions, M events, K templates (schema vX)`
 - ❌ `Database: not found or query failed`
-- ⚠️ `Database: schema version < 6 — restart app to trigger migration`
 
-### 8. Live capture test
+### 9. Live capture test
 
-Send a test prompt + a file change through the CLI:
+Send a test event through the CLI:
 
 ```bash
 echo '{"session_id":"verify-test","prompt":"NoCrumbs verification probe","cwd":"/tmp"}' | nocrumbs capture-prompt
@@ -155,18 +182,53 @@ sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite "SELECT COUNT(*)
 - ✅ `Live capture: test prompt stored and verified`
 - ❌ `Live capture: prompt sent but not found in DB`
 
-### 9. Git hooks
+### 10. Remote transport
+
+Verify the transport endpoint resolution is correct and remote infrastructure exists:
+
+**Step A: Check TransportEndpoint resolves to local Unix socket by default**
 
 ```bash
-cat .git/hooks/prepare-commit-msg
+# Verify no stale env vars are set that would redirect transport
+echo "NOCRUMBS_SOCK=${NOCRUMBS_SOCK:-unset} NOCRUMBS_HOST=${NOCRUMBS_HOST:-unset}"
+```
+
+- If either is set, report as ⚠️ warning (not failure — user may intend this)
+
+**Step B: Check install-remote command exists**
+
+```bash
+nocrumbs install-remote --help 2>&1 || nocrumbs 2>&1 | grep -c "install.*remote"
+```
+
+- Verify `install-remote` or `install --remote` appears in CLI help
+
+**Step C: Check remoteTCPPort setting**
+
+```bash
+defaults read com.geneyoo.nocrumbs remoteTCPPort 2>/dev/null || echo "not set"
+```
+
+Report current state — no failure if not set (it's opt-in).
+
+- ✅ `Remote: transport defaults to Unix socket, install-remote available, TCP port [not set | NNNNN]`
+- ⚠️ `Remote: NOCRUMBS_HOST is set to X — transport will use TCP`
+- ❌ `Remote: install-remote command not found in CLI`
+
+### 11. Git hooks
+
+```bash
+cat .git/hooks/prepare-commit-msg 2>/dev/null
 ```
 
 - ✅ `Git hooks: prepare-commit-msg installed` (if file exists and contains `nocrumbs`)
 - ❌ `Git hooks: prepare-commit-msg not installed` — tell user to run `nocrumbs install-git-hooks`
 
-### 10. UI interaction — session header selection
+### 12. UI interaction — session header selection
 
 **This check uses AppleScript to physically click UI elements and verify behavior.**
+
+**Prerequisite:** Accessibility permission must be granted for the terminal running Claude Code (System Settings → Privacy & Security → Accessibility). If AppleScript UI checks fail with "not allowed assistive access", tell the user to grant it and re-run.
 
 The outline path for the sidebar list is:
 ```
@@ -196,28 +258,26 @@ tell application "System Events" to tell process "NoCrumbs"
         select row 1
     end tell
     delay 0.3
-    -- Check if row 1 is now selected
     set sel to value of attribute "AXSelected" of row 1 of theOutline
     return sel as text
 end tell'
 ```
 
-If `AXSelected` returns `missing value` or is not reliable, fall back to checking the detail pane. After clicking row 1, check if the detail pane shows session info:
+If `AXSelected` returns `missing value` or is not reliable, fall back to checking the detail pane:
 
 ```bash
 osascript -e '
 tell application "System Events" to tell process "NoCrumbs"
-    -- Look for "Session" text in the detail pane (right side of splitter)
     set detailGroup to group 2 of splitter group 1 of group 1 of window 1
     set allText to entire contents of detailGroup
     return allText as text
 end tell' 2>&1
 ```
 
-If the output contains "Session" or "ID" (from SessionDetailView), selection worked. If it still shows "Select a prompt", selection failed.
+If output contains "Session" or "ID", selection worked. If "Select a prompt", failed.
 
 - ✅ `UI click: session header selectable`
-- ❌ `UI click: session header NOT selectable — clicking row 1 did not change detail pane`
+- ❌ `UI click: session header NOT selectable`
 
 **Step C: Option+Right to expand**
 
@@ -225,22 +285,16 @@ If the output contains "Session" or "ID" (from SessionDetailView), selection wor
 osascript -e '
 tell application "System Events" to tell process "NoCrumbs"
     set theOutline to outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 1
-    -- Make sure outline has focus
     set focused of theOutline to true
     delay 0.1
-    -- Send Option+Right arrow
     key code 124 using {option down}
     delay 0.5
-    -- Count rows after expand
     set rowCount to count of rows of theOutline
     return rowCount
 end tell'
 ```
 
-Record this as `rowsAfterExpand`. If `rowsAfterExpand > rowsBefore`, expansion worked (child event rows appeared).
-
-- ✅ `UI expand: Option+Right added N child rows (before: X, after: Y)`
-- ❌ `UI expand: row count unchanged after Option+Right (still N)`
+Record as `rowsAfterExpand`. If `rowsAfterExpand > rowsBefore`, expansion worked.
 
 **Step D: Option+Left to collapse**
 
@@ -250,7 +304,6 @@ tell application "System Events" to tell process "NoCrumbs"
     set theOutline to outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 1
     set focused of theOutline to true
     delay 0.1
-    -- Send Option+Left arrow
     key code 123 using {option down}
     delay 0.5
     set rowCount to count of rows of theOutline
@@ -258,102 +311,38 @@ tell application "System Events" to tell process "NoCrumbs"
 end tell'
 ```
 
-Record this as `rowsAfterCollapse`. If `rowsAfterCollapse < rowsAfterExpand`, collapse worked.
+Record as `rowsAfterCollapse`. If `rowsAfterCollapse < rowsAfterExpand`, collapse worked.
 
-- ✅ `UI collapse: Option+Left removed N child rows (before: X, after: Y)`
-- ❌ `UI collapse: row count unchanged after Option+Left (still N)`
-
-**Combined verdict for check 10:**
-- ✅ `UI: session selectable, Option+Right expands (+N rows), Option+Left collapses (-N rows)`
+**Combined verdict:**
+- ✅ `UI: session selectable, expand (+N rows), collapse (-N rows)`
 - ❌ `UI: [specific sub-step that failed]`
+- ❌ `UI: accessibility permission denied — grant access in System Settings`
 
-**If AppleScript fails with accessibility error:**
-- ❌ `UI: accessibility permission denied — grant Accessibility access to your terminal in System Settings → Privacy & Security → Accessibility`
+### 13. Window title consistency — 3 scenarios
 
-### 11. Window title consistency — 3 scenarios
+**Requires:** At least one session with 2+ events. If not, skip with ⚠️.
 
-**This check verifies that `.navigationTitle` and `.navigationSubtitle` are identical across SessionSummaryView and DiffDetailView.**
-
-macOS joins `.navigationTitle` + `.navigationSubtitle` into the `AXTitle` attribute as `"{title} – {subtitle}"`.
-
-**Requires:** At least one session with 2+ events in the database. If not enough data, skip with ⚠️.
+macOS joins `.navigationTitle` + `.navigationSubtitle` into `AXTitle` as `"{title} – {subtitle}"`.
 
 **Step A: Select session row → read AXTitle**
+**Step B: Expand, select first child event → read AXTitle**
+**Step C: Select different child event → read AXTitle**
+**Step D: Collapse back**
 
-```bash
-osascript -e '
-tell application "System Events" to tell process "NoCrumbs"
-    set theOutline to outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 1
-    -- Find first session row (skip time period + project headers)
-    select row 3 of theOutline
-    delay 0.5
-    return title of window 1
-end tell'
-```
-
-Record as `titleSession`. This is the SessionSummaryView title.
-
-**Step B: Expand session, select first child event → read AXTitle**
-
-```bash
-osascript -e '
-tell application "System Events" to tell process "NoCrumbs"
-    set theOutline to outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 1
-    select row 3 of theOutline
-    delay 0.3
-    key code 124 using {option down}
-    delay 0.5
-    select row 4 of theOutline
-    delay 0.5
-    return title of window 1
-end tell'
-```
-
-Record as `titleEvent1`. This is DiffDetailView for the first event.
-
-**Step C: Select a different child event → read AXTitle**
-
-```bash
-osascript -e '
-tell application "System Events" to tell process "NoCrumbs"
-    set theOutline to outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 1
-    select row 5 of theOutline
-    delay 0.5
-    return title of window 1
-end tell'
-```
-
-Record as `titleEvent2`. This is DiffDetailView for a different event.
-
-**Step D: Collapse back (cleanup)**
-
-```bash
-osascript -e '
-tell application "System Events" to tell process "NoCrumbs"
-    set theOutline to outline 1 of scroll area 1 of group 1 of splitter group 1 of group 1 of window 1
-    select row 3 of theOutline
-    delay 0.3
-    key code 123 using {option down}
-    delay 0.3
-end tell'
-```
+(Use same AppleScript patterns as check 12, reading `title of window 1` after each selection.)
 
 **Validation:**
+1. All three titles identical
+2. Contains " – " separator
+3. Non-empty project name and subtitle
 
-1. All three titles must be **identical**: `titleSession == titleEvent1 == titleEvent2`
-2. Title must contain " – " (the macOS separator between title and subtitle)
-3. The part before " – " must be a non-empty project name (not "NoCrumbs" the app name)
-4. The part after " – " must be non-empty (the session's first prompt)
-
-- ✅ `Window title: consistent across 3 scenarios — "{projectName} – {firstPrompt truncated to 40 chars}..."`
-- ❌ `Window title: MISMATCH — session="{titleSession}", event1="{titleEvent1}", event2="{titleEvent2}"`
-- ❌ `Window title: missing separator " – " — got "{title}"`
-- ❌ `Window title: empty project name or subtitle`
+- ✅ `Window title: consistent across 3 scenarios`
+- ❌ `Window title: MISMATCH` — show each value
 - ⚠️ `Window title: skipped — need session with 2+ events`
 
-### 12. Window title format validation
+### 14. Window title format validation
 
-**This check runs after check 11 and validates the title content against the database.**
+Validates title content against the database.
 
 ```bash
 sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite "
@@ -365,20 +354,12 @@ sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite "
 "
 ```
 
-This returns the most recent session's **oldest** prompt (the session's first prompt).
+Compare against AXTitle from check 13.
 
-- Extract `projectName` = last path component of `projectPath`
-- Extract `firstPrompt` = the prompt text (newlines replaced with spaces)
+- ✅ `Window title content: matches DB`
+- ❌ `Window title content: mismatch` — show expected vs actual
 
-Compare against the AXTitle from check 11:
-- AXTitle should start with `projectName`
-- AXTitle after " – " should start with the first ~50 chars of `firstPrompt`
-
-- ✅ `Window title content: matches DB — project="{projectName}", subtitle starts with "{first 40 chars}..."`
-- ❌ `Window title content: project name mismatch — expected "{dbProject}", got "{axProject}"`
-- ❌ `Window title content: subtitle mismatch — expected "{dbPrompt first 40}...", got "{axSubtitle first 40}..."`
-
-### 13. Cleanup
+### 15. Cleanup
 
 ```bash
 sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite "DELETE FROM sessions WHERE id = 'verify-test'; DELETE FROM promptEvents WHERE sessionID = 'verify-test';"
@@ -391,22 +372,26 @@ sqlite3 ~/Library/Application\ Support/NoCrumbs/nocrumbs.sqlite "DELETE FROM ses
 ```
 ✅ Build (app): succeeded
 ✅ Build (CLI): succeeded
-✅ CLI: nocrumbs 0.3.0
-✅ Hooks: UserPromptSubmit + PostToolUse (Write|Edit)
+✅ Tests: 131 passed, 12 skipped, 0 failures
+✅ CLI: nocrumbs 0.4.7
+✅ Hooks: UserPromptSubmit + PostToolUse configured
 ✅ App: running (PID 12345), window open
 ✅ Socket: nocrumbs.sock present
 ✅ Database: 3 sessions, 16 events, 0 templates (schema v6)
 ✅ Live capture: test prompt stored and verified
+✅ Remote: transport defaults to Unix socket, install-remote available, TCP port not set
 ✅ Git hooks: prepare-commit-msg installed
-✅ UI: session selectable, Option+Right expands (+3 rows), Option+Left collapses (-3 rows)
-✅ Window title: consistent across 3 scenarios — "nocrumbs – lets make One Dark Pro the defa..."
-✅ Window title content: matches DB — project="nocrumbs", subtitle starts with "lets make One Dark Pro..."
+✅ UI: session selectable, expand (+3 rows), collapse (-3 rows)
+✅ Window title: consistent across 3 scenarios
+✅ Window title content: matches DB
 🧹 Cleanup: test session removed
 
-12/12 passed
+14/14 passed
 ```
 
-Count only the checks that were selected for the pass/fail summary (not cleanup). Show the full block at the end, not incrementally. Checks 11-12 depend on check 10 completing first (they reuse the sidebar state).
+Count only checks that were selected for the pass/fail summary (not cleanup). Show the full block at the end, not incrementally.
+
+Checks 13-14 depend on check 12 completing first (they reuse the sidebar state).
 
 ## Important Notes
 

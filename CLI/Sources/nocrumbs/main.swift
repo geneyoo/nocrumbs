@@ -12,6 +12,7 @@ guard args.count >= 2 else {
     print("  nocrumbs capture-change      (legacy) Pipe from PostToolUse hook")
     print("  nocrumbs annotate-commit     Annotate commit message (git hook)")
     print("  nocrumbs install             Install Claude Code hooks")
+    print("  nocrumbs install --remote    Install hooks for remote dev server")
     print("  nocrumbs install-git-hooks   Install prepare-commit-msg git hook")
     print("  nocrumbs describe            Pipe per-file change descriptions to app")
     print("  nocrumbs rename-session      Rename a session (pipe JSON with session_id + name)")
@@ -35,7 +36,13 @@ do {
     case "annotate-commit":
         try AnnotateCommitCommand.run()
     case "install":
-        try InstallCommand.run()
+        if args.contains("--remote") {
+            try InstallRemoteCommand.run()
+        } else {
+            try InstallCommand.run()
+        }
+    case "install-remote":
+        try InstallRemoteCommand.run()
     case "install-git-hooks":
         try InstallGitHooksCommand.run()
     case "describe":

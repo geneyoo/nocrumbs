@@ -6,7 +6,11 @@ import Sparkle
 private let logger = Logger(subsystem: "com.geneyoo.nocrumbs", category: "App")
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
-    private let socketServer = SocketServer()
+    let socketServer = SocketServer()
+
+    static var shared: AppDelegate? {
+        NSApplication.shared.delegate as? AppDelegate
+    }
     lazy var updaterController = SPUStandardUpdaterController(startingUpdater: false, updaterDelegate: nil, userDriverDelegate: nil)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
