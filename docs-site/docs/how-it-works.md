@@ -13,6 +13,8 @@ sidebar_position: 2
 
 ## The Solution
 
+![NoCrumbs session summary — prompt timeline and file changes](/img/screenshot-summary.png)
+
 NoCrumbs bridges this gap by capturing the relationship between prompts and file changes, entirely on your local machine.
 
 ### Architecture

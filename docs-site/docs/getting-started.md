@@ -6,8 +6,6 @@ sidebar_position: 1
 
 Install NoCrumbs and start tracking AI-generated changes in under a minute.
 
-![NoCrumbs — side-by-side diff viewer](/img/screenshot-diff.png)
-
 ## 1. Install
 
 ```bash
