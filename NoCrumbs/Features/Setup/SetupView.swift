@@ -25,9 +25,9 @@ struct SetupView: View {
 
             SetupStep(
                 number: 1,
-                title: "Install CLI",
+                title: "Install",
                 done: health.cliInstalled,
-                code: "cd \(projectRoot) && swift build -c release --package-path CLI/ && cp .build/release/nocrumbs /usr/local/bin/"
+                code: "brew install --cask geneyoo/tap/nocrumbs"
             )
 
             SetupStep(
@@ -49,13 +49,6 @@ struct SetupView: View {
         }
         .padding(30)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-    }
-
-    private var projectRoot: String {
-        // Best-effort: use the bundle path to infer project root
-        Bundle.main.bundlePath
-            .components(separatedBy: "/build/")
-            .first ?? "~/nocrumbs"
     }
 }
 
@@ -91,7 +84,6 @@ private struct SetupStep: View {
                         Text(code)
                             .font(.system(.caption, design: .monospaced))
                             .foregroundStyle(.primary)
-                            .lineLimit(2)
                             .textSelection(.enabled)
 
                         Spacer(minLength: 8)
@@ -104,13 +96,15 @@ private struct SetupStep: View {
                                 copied = false
                             }
                         } label: {
-                            Text(copied ? "Copied!" : "Copy")
+                            Image(systemName: copied ? "checkmark" : "doc.on.doc")
                                 .font(.caption2)
+                                .foregroundStyle(copied ? .green : .secondary)
                         }
-                        .buttonStyle(.bordered)
-                        .controlSize(.mini)
+                        .buttonStyle(.borderless)
+                        .help("Copy to clipboard")
                     }
-                    .padding(8)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 8)
                     .background(.quaternary.opacity(0.5), in: RoundedRectangle(cornerRadius: 6))
                 }
             }
