@@ -46,6 +46,12 @@ struct SetupView: View {
             )
 
             Spacer()
+
+            Link(destination: URL(string: "https://nocrumbs.ai/docs/getting-started")!) {
+                Text("Full setup guide")
+                    .font(.caption)
+            }
+            .padding(.bottom, 4)
         }
         .padding(30)
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
