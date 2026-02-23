@@ -3,7 +3,7 @@
 /** @type {import('@docusaurus/types').Config} */
 const config = {
   title: 'NoCrumbs',
-  tagline: 'AI writes the code. You keep the receipts.',
+  tagline: 'Catch every crumb your agent leaves behind.',
   favicon: 'img/favicon.ico',
 
   url: 'https://nocrumbs.ai',

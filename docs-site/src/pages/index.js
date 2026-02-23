@@ -8,7 +8,7 @@ const features = [
   {
     title: 'Prompt → Commit',
     description:
-      'Every file write, every edit, every commit — linked back to the prompt that caused it. git blame finally tells you why.',
+      'Every file write, every edit, every commit — linked back to the prompt that caused it.',
   },
   {
     title: 'Built for CLI Agents',
