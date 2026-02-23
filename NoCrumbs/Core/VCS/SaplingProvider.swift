@@ -73,6 +73,7 @@ struct SaplingProvider: VCSProvider {
                 process.executableURL = URL(fileURLWithPath: Self.resolvedPath)
                 process.arguments = args
                 process.currentDirectoryURL = URL(fileURLWithPath: directory)
+                process.environment = ShellEnvironment.variables
 
                 let stdoutPipe = Pipe()
                 let stderrPipe = Pipe()

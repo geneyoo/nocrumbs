@@ -73,6 +73,7 @@ struct MercurialProvider: VCSProvider {
                 process.executableURL = URL(fileURLWithPath: Self.resolvedPath)
                 process.arguments = args
                 process.currentDirectoryURL = URL(fileURLWithPath: directory)
+                process.environment = ShellEnvironment.variables
 
                 let stdoutPipe = Pipe()
                 let stderrPipe = Pipe()
@@ -99,7 +100,7 @@ struct MercurialProvider: VCSProvider {
                     let stderr =
                         String(data: stderrData, encoding: .utf8)?
                         .trimmingCharacters(in: .whitespacesAndNewlines) ?? ""
-                    logger.error("hg \(args.joined(separator: " ")) → exit \(process.terminationStatus): \(stderr)")
+                    logger.error("hg \(args.joined(separator: " "), privacy: .public) → exit \(process.terminationStatus): \(stderr, privacy: .public)")
                     continuation.resume(throwing: VCSError.commandFailed("hg", process.terminationStatus, stderr))
                 }
             }

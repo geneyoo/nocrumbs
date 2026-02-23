@@ -692,7 +692,7 @@ actor SocketServer {
         do {
             return try await makeProvider(for: vcs).currentHead(at: path)
         } catch {
-            logger.error("[NC:Socket] Failed to capture HEAD for \(vcs.rawValue) at \(path): \(error.localizedDescription)")
+            logger.error("[NC:Socket] Failed to capture HEAD for \(vcs.rawValue, privacy: .public) at \(path, privacy: .public): \(error.localizedDescription, privacy: .public)")
             return nil
         }
     }

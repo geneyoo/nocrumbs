@@ -81,6 +81,7 @@
 		M5A00001BB534E69B484BF01 /* SessionMarkdownFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = M5F00001947253F7B233B101 /* SessionMarkdownFormatter.swift */; };
 		M5A00002BB534E69B484BF02 /* DeepLinkRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = M5F00002947253F7B233B102 /* DeepLinkRouter.swift */; };
 		S1A00001BB534E69B484BF01 /* SecretRedactor.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1F00001947253F7B233B101 /* SecretRedactor.swift */; };
+		SE1A0001BB534E69B484BF01 /* ShellEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = SE1F0001947253F7B233B101 /* ShellEnvironment.swift */; };
 		S1A00002BB534E69B484BF02 /* SecretRedactorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1F00002947253F7B233B102 /* SecretRedactorTests.swift */; };
 /* End PBXBuildFile section */
 
@@ -171,6 +172,7 @@
 		M5F00001947253F7B233B101 /* SessionMarkdownFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionMarkdownFormatter.swift; sourceTree = "<group>"; };
 		M5F00002947253F7B233B102 /* DeepLinkRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkRouter.swift; sourceTree = "<group>"; };
 		S1F00001947253F7B233B101 /* SecretRedactor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretRedactor.swift; sourceTree = "<group>"; };
+		SE1F0001947253F7B233B101 /* ShellEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellEnvironment.swift; sourceTree = "<group>"; };
 		S1F00002947253F7B233B102 /* SecretRedactorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretRedactorTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -230,6 +232,7 @@
 				M5F00001947253F7B233B101 /* SessionMarkdownFormatter.swift */,
 				M5F00002947253F7B233B102 /* DeepLinkRouter.swift */,
 				S1F00001947253F7B233B101 /* SecretRedactor.swift */,
+				SE1F0001947253F7B233B101 /* ShellEnvironment.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -614,6 +617,7 @@
 				M5A00001BB534E69B484BF01 /* SessionMarkdownFormatter.swift in Sources */,
 				M5A00002BB534E69B484BF02 /* DeepLinkRouter.swift in Sources */,
 				S1A00001BB534E69B484BF01 /* SecretRedactor.swift in Sources */,
+				SE1A0001BB534E69B484BF01 /* ShellEnvironment.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
