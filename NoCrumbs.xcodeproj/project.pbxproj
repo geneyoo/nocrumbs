@@ -76,6 +76,8 @@
 		R1A00002BB534E69B484BF02 /* RemoteURLParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = R1F00002947253F7B233B102 /* RemoteURLParserTests.swift */; };
 		M5A00001BB534E69B484BF01 /* SessionMarkdownFormatter.swift in Sources */ = {isa = PBXBuildFile; fileRef = M5F00001947253F7B233B101 /* SessionMarkdownFormatter.swift */; };
 		M5A00002BB534E69B484BF02 /* DeepLinkRouter.swift in Sources */ = {isa = PBXBuildFile; fileRef = M5F00002947253F7B233B102 /* DeepLinkRouter.swift */; };
+		S1A00001BB534E69B484BF01 /* SecretRedactor.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1F00001947253F7B233B101 /* SecretRedactor.swift */; };
+		S1A00002BB534E69B484BF02 /* SecretRedactorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = S1F00002947253F7B233B102 /* SecretRedactorTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -160,6 +162,8 @@
 		R1F00002947253F7B233B102 /* RemoteURLParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RemoteURLParserTests.swift; sourceTree = "<group>"; };
 		M5F00001947253F7B233B101 /* SessionMarkdownFormatter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionMarkdownFormatter.swift; sourceTree = "<group>"; };
 		M5F00002947253F7B233B102 /* DeepLinkRouter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeepLinkRouter.swift; sourceTree = "<group>"; };
+		S1F00001947253F7B233B101 /* SecretRedactor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretRedactor.swift; sourceTree = "<group>"; };
+		S1F00002947253F7B233B102 /* SecretRedactorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SecretRedactorTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -217,6 +221,7 @@
 				EA11BB22CC33DD44EE55FF01 /* HookHealthChecker.swift */,
 				M5F00001947253F7B233B101 /* SessionMarkdownFormatter.swift */,
 				M5F00002947253F7B233B102 /* DeepLinkRouter.swift */,
+				S1F00001947253F7B233B101 /* SecretRedactor.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -412,6 +417,7 @@
 				BB4455667788990011223344 /* VCSDetectorTests.swift */,
 				BB5566778899001122334455 /* DatabaseTests.swift */,
 				T3F00002TEMPLATE00TEST02 /* TemplateTests.swift */,
+				S1F00002947253F7B233B102 /* SecretRedactorTests.swift */,
 			);
 			name = Tests;
 			path = NoCrumbsTests;
@@ -573,6 +579,7 @@
 				T2A00002BB534E69B484BF02 /* TemplateRenderer.swift in Sources */,
 				M5A00001BB534E69B484BF01 /* SessionMarkdownFormatter.swift in Sources */,
 				M5A00002BB534E69B484BF02 /* DeepLinkRouter.swift in Sources */,
+				S1A00001BB534E69B484BF01 /* SecretRedactor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -588,6 +595,7 @@
 				AA5566778899001122334455 /* DatabaseTests.swift in Sources */,
 				T3F00001TEMPLATE00TEST01 /* TemplateTests.swift in Sources */,
 				R1A00002BB534E69B484BF02 /* RemoteURLParserTests.swift in Sources */,
+				S1A00002BB534E69B484BF02 /* SecretRedactorTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

@@ -57,7 +57,8 @@ enum AnnotateCommitCommand {
         let promptData: [(text: String, fileCount: Int)] = prompts.compactMap { p in
             guard let text = p["text"] as? String else { return nil }
             let fc = p["file_count"] as? Int ?? 0
-            return (text: text, fileCount: fc)
+            let sanitized = redactSecrets(text)
+            return (text: sanitized, fileCount: fc)
         }
 
         let deepLink =
@@ -227,6 +228,36 @@ enum AnnotateCommitCommand {
         "go ahead", "do it", "proceed", "lets commit", "lets push",
         "commit and push", "lets just commit", "lets just commit and push",
     ]
+
+    // MARK: - Secret Redaction
+
+    private static let secretPatterns: [(NSRegularExpression, String)] = {
+        let defs: [(String, String)] = [
+            (#"sk-[a-zA-Z0-9_-]{20,}"#, "[REDACTED]"),
+            (#"AKIA[0-9A-Z]{16}"#, "[REDACTED]"),
+            (#"ghp_[a-zA-Z0-9]{36}"#, "[REDACTED]"),
+            (#"gho_[a-zA-Z0-9]{36}"#, "[REDACTED]"),
+            (#"glpat-[a-zA-Z0-9_-]{20,}"#, "[REDACTED]"),
+            (#"xoxb-[a-zA-Z0-9-]+"#, "[REDACTED]"),
+            (#"xoxp-[a-zA-Z0-9-]+"#, "[REDACTED]"),
+            (#"eyJ[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}\.[a-zA-Z0-9_-]{10,}"#, "[REDACTED]"),
+            (#"(?i)(?:password|passwd|secret|token|api_key|apikey)\s*[=:]\s*[a-zA-Z0-9+/]{40,}={0,2}"#, "[REDACTED]"),
+            (#"(?i)(?:password|passwd|secret|token|api_key|apikey)\s*[=:]\s*\S+"#, "[REDACTED]"),
+        ]
+        return defs.compactMap { pattern, replacement in
+            guard let regex = try? NSRegularExpression(pattern: pattern) else { return nil }
+            return (regex, replacement)
+        }
+    }()
+
+    private static func redactSecrets(_ text: String) -> String {
+        var result = text
+        for (regex, replacement) in secretPatterns {
+            let range = NSRange(result.startIndex..., in: result)
+            result = regex.stringByReplacingMatches(in: result, range: range, withTemplate: replacement)
+        }
+        return result
+    }
 
     private static func isNoisePrompt(_ prompt: (text: String, fileCount: Int)) -> Bool {
         let text = prompt.text.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()

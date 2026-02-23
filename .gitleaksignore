@@ -1,0 +1,6 @@
+# SecretRedactorTests.swift — dummy secrets used as test fixtures
+NoCrumbsTests/SecretRedactorTests.swift:slack-bot-token:76
+NoCrumbsTests/SecretRedactorTests.swift:jwt:92
+NoCrumbsTests/SecretRedactorTests.swift:gitlab-pat:67
+NoCrumbsTests/SecretRedactorTests.swift:generic-api-key:67
+NoCrumbsTests/SecretRedactorTests.swift:generic-api-key:131
