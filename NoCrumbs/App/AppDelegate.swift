@@ -37,17 +37,19 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             andEventID: AEEventID(kAEGetURL)
         )
 
-        // Database
-        do {
-            try Database.shared.open()
-            logger.info("[NC:App] Database opened")
-            let retentionDays = UserDefaults.standard.integer(forKey: "retentionDays")
-            if retentionDays > 0 {
-                try Database.shared.evictOlderThan(days: retentionDays)
+        // Database (skip when using in-memory mock data — NoCrumbsApp handles it)
+        if !DebugConfiguration.isMockDataEnabled {
+            do {
+                try Database.shared.open()
+                logger.info("[NC:App] Database opened")
+                let retentionDays = UserDefaults.standard.integer(forKey: "retentionDays")
+                if retentionDays > 0 {
+                    try Database.shared.evictOlderThan(days: retentionDays)
+                }
+                Task { await Database.shared.backfillBaseCommitHashes() }
+            } catch {
+                logger.error("[NC:App] Database failed: \(error.localizedDescription)")
             }
-            Task { await Database.shared.backfillBaseCommitHashes() }
-        } catch {
-            logger.error("[NC:App] Database failed: \(error.localizedDescription)")
         }
 
         // Socket server with retry

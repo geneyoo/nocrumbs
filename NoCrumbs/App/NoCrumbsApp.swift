@@ -4,7 +4,19 @@ import Sparkle
 @main
 struct NoCrumbsApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate  // swiftlint:disable:this weak_delegate
-    @State private var database = Database.shared
+    @State private var database: Database = {
+        if DebugConfiguration.isMockDataEnabled {
+            let db = Database(path: ":memory:")
+            do {
+                try db.open()
+                try MockDataGenerator.populate(db)
+            } catch {
+                assertionFailure("Mock data failed: \(error)")
+            }
+            return db
+        }
+        return Database.shared
+    }()
     @State private var themeManager = ThemeManager.shared
     @State private var appScale = AppScale.shared
     @State private var healthChecker = HookHealthChecker.shared
@@ -34,6 +46,20 @@ struct NoCrumbsApp: App {
                 Button("Actual Size") { appScale.resetZoom() }
                     .keyboardShortcut("0", modifiers: .command)
             }
+            #if DEBUG
+            CommandMenu("Debug") {
+                if DebugConfiguration.isMockDataEnabled {
+                    Button("Regenerate Mock Data") {
+                        do {
+                            try database.deleteAllData()
+                            try MockDataGenerator.populate(database)
+                        } catch {
+                            assertionFailure("Regenerate failed: \(error)")
+                        }
+                    }
+                }
+            }
+            #endif
         }
 
         Settings {

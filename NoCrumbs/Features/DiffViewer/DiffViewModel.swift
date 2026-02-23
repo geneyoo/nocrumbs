@@ -31,6 +31,12 @@ final class DiffViewModel {
     func load(event: PromptEvent, fileChanges: [FileChange]) {
         loadTask?.cancel()
 
+        // Debug mock data: no real repos exist — synthesize FileDiffs from metadata
+        if DebugConfiguration.isMockDataEnabled {
+            loadMockDiffs(event: event, fileChanges: fileChanges)
+            return
+        }
+
         guard let vcs = event.vcs else {
             fileDiffs = []
             linePairs = []
@@ -101,6 +107,33 @@ final class DiffViewModel {
                 eventTimestamp: eventTimestamp
             )
         }
+    }
+
+    private func loadMockDiffs(event: PromptEvent, fileChanges: [FileChange]) {
+        guard !fileChanges.isEmpty else {
+            fileDiffs = []
+            linePairs = []
+            isLoading = false
+            return
+        }
+        let projectPath = event.projectPath
+        let diffs = fileChanges.compactMap { change -> FileDiff? in
+            let relativePath: String
+            if change.filePath.hasPrefix(projectPath + "/") {
+                relativePath = String(change.filePath.dropFirst(projectPath.count + 1))
+            } else {
+                relativePath = (change.filePath as NSString).lastPathComponent
+            }
+            let status: FileDiff.FileStatus = change.toolName == "Write" ? .added : .modified
+            let placeholder = status == .added
+                ? "// New file created by \(change.toolName)"
+                : "// Modified by \(change.toolName)"
+            let line = DiffLine(id: UUID(), type: .addition, text: placeholder, oldLineNumber: nil, newLineNumber: 1)
+            let hunk = DiffHunk(id: UUID(), oldStart: 0, oldCount: 0, newStart: 1, newCount: 1, lines: [line])
+            return FileDiff(id: UUID(), oldPath: status == .modified ? relativePath : nil, newPath: relativePath, hunks: [hunk], status: status)
+        }
+        error = nil
+        applyDiffs(diffs)
     }
 
     private func performLoad(

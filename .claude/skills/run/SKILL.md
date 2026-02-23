@@ -21,6 +21,7 @@ Build and run the NoCrumbs macOS menu bar app.
 - `clean` → clean build
 - `release` → Release configuration
 - `signed` → build with code signing
+- `debug` → launch with `-debugMockData` flag (in-memory mock data, no real DB)
 - No args → incremental Debug build, no signing
 
 ### 2. Build
@@ -52,6 +53,9 @@ pkill -x NoCrumbs 2>/dev/null || true
 
 # Launch fresh build
 open build/Build/Products/Debug/NoCrumbs.app
+
+# Launch with mock data (if args contain "debug")
+open build/Build/Products/Debug/NoCrumbs.app --args -debugMockData
 ```
 
 ### 4. Error Handling
@@ -70,4 +74,6 @@ open build/Build/Products/Debug/NoCrumbs.app
 /run clean          # Clean debug build, launch
 /run signed         # Incremental signed build, launch
 /run clean signed   # Clean signed build, launch
+/run debug          # Build + launch with mock data
+/run clean debug    # Clean build + launch with mock data
 ```
