@@ -81,7 +81,7 @@ NoCrumbs/
 │   │   ├── SocketClient.swift  # Connect + write JSON to Unix socket (app-side, also has makeUnixAddr helper)
 │   │   └── SocketServer.swift  # POSIX socket actor: accept loop, parse JSON, dispatch to Database
 │   │                           #   Handles: "event", "prompt", "change", "file-descriptions",
-│   │                           #            "query-prompts", "template"
+│   │                           #            "session-rename", "query-prompts", "template"
 │   ├── Models/
 │   │   ├── CommitTemplate.swift   # name (PK), body, isActive, createdAt
 │   │   ├── DiffStat.swift         # Per-file, per-prompt, and aggregated diff statistics
@@ -91,17 +91,19 @@ NoCrumbs/
 │   │   ├── PromptEvent.swift      # id, sessionID, projectPath, promptText?, timestamp, vcs?, baseCommitHash?
 │   │   ├── Session.swift          # id, projectPath, startedAt, lastActivityAt, customName?
 │   │   ├── TemplateRenderer.swift # Renders {{placeholder}} templates with TemplateContext data
-│   │   └── VCSType.swift          # enum: .git, .mercurial
+│   │   └── VCSType.swift          # enum: .git, .mercurial, .sapling
 │   ├── Utilities/
 │   │   ├── DeepLinkRouter.swift    # @Observable @MainActor: handles nocrumbs:// URLs, pending navigation
 │   │   ├── HookHealthChecker.swift # @Observable: checks CLI installed, hooks configured, socket active
+│   │   ├── SecretRedactor.swift     # Regex-based secret scrubbing (API keys, tokens, JWTs, credentials)
 │   │   └── SessionMarkdownFormatter.swift # Formats session data as markdown for clipboard export
 │   └── VCS/
 │       ├── DiffParser.swift       # Parses unified git/hg diff output → [FileDiff]
 │       ├── GitProvider.swift      # VCSProvider impl — shells out to /usr/bin/git via Process
 │       ├── MercurialProvider.swift # VCSProvider impl — shells out to hg via /usr/bin/env
+│       ├── SaplingProvider.swift  # VCSProvider impl — shells out to sl via /usr/bin/env
 │       ├── RemoteURLParser.swift  # Parses git remote URLs (SSH/HTTPS) → web commit URLs
-│       ├── VCSDetector.swift      # Static: walk up directory tree checking for .git/.hg
+│       ├── VCSDetector.swift      # Static: walk up directory tree checking for .git/.hg/.sl
 │       └── VCSProvider.swift      # Protocol + makeProvider(for:) factory
 │
 ├── Features/
@@ -174,9 +176,11 @@ CLI/
 
 scripts/
 ├── generate_icon.swift         # Generates macOS app icon sizes with Apple squircle mask
-├── pre-commit-secrets-check.sh # Git pre-commit hook: blocks private key / credential leaks
 └── release.sh                  # Release pipeline: build → sign → notarize → staple → Sparkle appcast
                                 #   Reads secrets from scripts/.env.local (gitignored)
+
+.githooks/
+└── pre-commit                  # Gitleaks pre-commit hook: scans staged changes for secrets
 
 docs-site/                      # Docusaurus v3 site (https://nocrumbs.ai)
 ├── docusaurus.config.js        # Site config, dark mode default, GitHub/Dracula syntax themes
@@ -186,7 +190,9 @@ docs-site/                      # Docusaurus v3 site (https://nocrumbs.ai)
 └── static/                     # CNAME, logo, hero SVG
 
 .github/workflows/
-└── deploy-docs.yml             # Auto-deploy docs-site to GitHub Pages on push to main (path-filtered)
+├── ci.yml                      # Build + test on PRs and pushes to main (macOS runner)
+├── deploy-docs.yml             # Auto-deploy docs-site to GitHub Pages on push to main (path-filtered)
+└── secret-scan.yml             # Gitleaks scan on PRs
 ```
 
 ## Database Schema
@@ -385,6 +391,7 @@ Socket path: ~/Library/Application Support/NoCrumbs/nocrumbs.sock
 - `"prompt"` → (legacy) captures `git rev-parse HEAD` as baseCommitHash, upserts session + inserts PromptEvent
 - `"change"` → (legacy) finds most recent event for session, attaches FileChange (or creates orphan event)
 - `"file-descriptions"` → updates `description` column on fileChanges matching session + path (fire-and-forget)
+- `"session-rename"` → updates session customName (fire-and-forget)
 - `"query-prompts"` → returns recent prompts + file counts + annotation/content toggle flags + active template body (request/response)
 - `"template"` → CRUD for commit annotation templates: add, list, set, remove, preview (request/response)
 
@@ -430,7 +437,7 @@ Socket path: ~/Library/Application Support/NoCrumbs/nocrumbs.sock
 
 ## CLI Hook Integration
 
-The `nocrumbs` CLI (v0.3.0) is invoked by Claude Code hooks.
+The `nocrumbs` CLI (v0.4.0) is invoked by Claude Code hooks.
 
 **`nocrumbs event`** (preferred, v3+) — unified hook event handler:
 - Reads stdin JSON from any Claude Code hook
@@ -545,8 +552,14 @@ func makeProvider(for vcs: VCSType) -> any VCSProvider
   - `diffFromBase` → `hg diff --git -r <baseHash> <files>`
   - `headBefore` → `hg log -r "date('<iso>')" -l 1 -T {node}`
   - All commands produce `--git` format diffs for DiffParser compatibility
+- `SaplingProvider` — shells out to `sl` via `/usr/bin/env` with async wrapper
+  - `currentHead` → `sl log -r . -T {node}`
+  - `currentBranch` → `sl bookmark --active`
+  - `diffFromBase` → `sl diff --git -r <baseHash> <files>`
+  - `headBefore` → `sl log -r "date('<iso>')" -l 1 -T {node}`
+  - `untrackedFiles` → `sl status -un`
 
-**Detection:** `VCSDetector.detect(at:)` walks up from a path checking for `.git` or `.hg` directories.
+**Detection:** `VCSDetector.detect(at:)` walks up from a path checking for `.git`, `.sl`, or `.hg` directories.
 `VCSDetector.repoRoot(at:for:)` returns the root directory of the detected VCS repo.
 
 **Remote URL Parsing:** `RemoteURLParser.commitURL(remoteURL:hash:)` converts git SSH/HTTPS remote URLs to web commit URLs. Used for clickable commit SHA links in the prompt timeline.
@@ -720,7 +733,7 @@ JSON-based color themes loaded from `Resources/Themes/` at runtime.
 
 ## Test Infrastructure
 
-67 tests across 8 files, all in `NoCrumbsTests/` (hosted test target).
+99 tests across 10 files, all in `NoCrumbsTests/` (hosted test target).
 
 ```bash
 xcodebuild test -project NoCrumbs.xcodeproj -scheme NoCrumbs -sdk macosx -derivedDataPath build \
@@ -733,10 +746,12 @@ xcodebuild test -project NoCrumbs.xcodeproj -scheme NoCrumbs -sdk macosx -derive
 | `DiffParserTests` | 10 | Pure unit | Parser edge cases: empty, add, delete, modify, multi-file, multi-hunk, line numbers, binary, no-newline-at-EOF |
 | `DiffViewModelTests` | 7 | Unit (mock) | All load() paths: no VCS, no files, nil base hash, invalid commit, valid diff, git failure, untracked files |
 | `GitProviderTests` | 8 | Integration | Real temp git repos: currentHead, isValidCommit (valid/invalid/after-reset), diffFromBase, headBefore, untrackedFiles |
-| `MercurialProviderTests` | — | Unit | Mercurial provider command construction and output parsing |
+| `MercurialProviderTests` | 6 | Unit | Mercurial provider command construction and output parsing |
 | `RemoteURLParserTests` | 12 | Pure unit | SSH/HTTPS URL parsing, edge cases, whitespace handling |
-| `TemplateTests` | 8+ | Pure unit | TemplateRenderer and DB template CRUD, active switching |
-| `VCSDetectorTests` | 5 | Filesystem | Temp dirs with .git/.hg markers: detect git/hg/none, nested repos, repoRoot |
+| `SaplingProviderTests` | 6 | Unit | Sapling provider command construction and output parsing |
+| `SecretRedactorTests` | 20 | Pure unit | API key, token, JWT, credential redaction patterns |
+| `TemplateTests` | 14 | Pure unit | TemplateRenderer and DB template CRUD, active switching |
+| `VCSDetectorTests` | 7 | Filesystem | Temp dirs with .git/.hg/.sl markers: detect git/hg/sapling/none, nested repos, repoRoot |
 
 **Key test utilities:**
 - `MockVCSProvider` — configurable stub conforming to `VCSProvider` protocol
@@ -753,13 +768,16 @@ xcodebuild test -project NoCrumbs.xcodeproj -scheme NoCrumbs -sdk macosx -derive
 
 ## Settings
 
-Three sections in the Settings form:
+Four sections in the Settings form:
 
 **Hook Status:**
 - CLI installed, Hooks configured, Socket active — green/red status indicators
 - Read-only, refreshes on appear via `HookHealthChecker`
 
 **General:**
+- **Hide empty events** (`hideEmptyEvents`): Hide prompt events with no file changes from sidebar
+- **Confirm before delete** (`confirmBeforeDelete`): Show confirmation dialog before deleting sessions
+- **Retention** (`retentionDays`): Auto-cleanup sessions older than N days (default 7)
 - **Annotation toggle** (`annotationEnabled`): Controls whether `nocrumbs annotate-commit` appends prompt context to commit messages
 - **Content sub-toggles** (visible when annotation enabled):
   - **Include all details** — computed toggle: ON when all 4 sub-toggles are ON, sets all 4 at once
