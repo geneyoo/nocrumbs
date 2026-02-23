@@ -179,9 +179,14 @@ fi
 echo "✓ CLI embedded: ${CLI_IN_BUNDLE}"
 "$CLI_IN_BUNDLE" --version
 
+# Step 4b: Sign embedded CLI binary with Developer ID + hardened runtime
+SIGN_ID="Developer ID Application: Gene Yoo (${TEAM_ID})"
+echo "→ Signing embedded CLI binary..."
+codesign --force --sign "$SIGN_ID" --timestamp --options runtime "$CLI_IN_BUNDLE"
+echo "✓ CLI binary signed"
+
 # Step 5: Re-sign Sparkle embedded binaries with Developer ID + timestamp
 echo "→ Re-signing Sparkle framework binaries..."
-SIGN_ID="Developer ID Application: Gene Yoo (${TEAM_ID})"
 find "$APP_PATH/Contents/Frameworks/Sparkle.framework" -type f -perm +111 | while read -r binary; do
     codesign --force --sign "$SIGN_ID" --timestamp --options runtime "$binary" 2>/dev/null || true
 done
