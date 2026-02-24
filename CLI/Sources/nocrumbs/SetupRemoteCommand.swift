@@ -276,8 +276,9 @@ enum SetupRemoteCommand {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
         process.arguments = [host, command]
-        process.standardOutput = FileHandle.nullDevice
-        process.standardError = FileHandle.nullDevice
+        // Inherit terminal for interactive auth (2FA, password prompts)
+        process.standardInput = FileHandle.standardInput
+        process.standardError = FileHandle.standardError
         try process.run()
         process.waitUntilExit()
         guard process.terminationStatus == 0 else {
@@ -292,7 +293,9 @@ enum SetupRemoteCommand {
         process.arguments = [host, command]
         let pipe = Pipe()
         process.standardOutput = pipe
-        process.standardError = FileHandle.nullDevice
+        // Inherit terminal for interactive auth (2FA, password prompts)
+        process.standardInput = FileHandle.standardInput
+        process.standardError = FileHandle.standardError
         try process.run()
         process.waitUntilExit()
         guard process.terminationStatus == 0 else {
@@ -306,8 +309,9 @@ enum SetupRemoteCommand {
         let process = Process()
         process.executableURL = URL(fileURLWithPath: "/usr/bin/scp")
         process.arguments = [localPath, "\(host):\(remotePath)"]
-        process.standardOutput = FileHandle.nullDevice
-        process.standardError = FileHandle.nullDevice
+        // Inherit terminal for interactive auth (2FA, password prompts)
+        process.standardInput = FileHandle.standardInput
+        process.standardError = FileHandle.standardError
         try process.run()
         process.waitUntilExit()
         guard process.terminationStatus == 0 else {
