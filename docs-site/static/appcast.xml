@@ -3,12 +3,27 @@
     <channel>
         <title>NoCrumbs</title>
         <item>
+            <title>0.5.3</title>
+            <pubDate>Tue, 24 Feb 2026 14:32:24 -0500</pubDate>
+            <sparkle:version>202602241430</sparkle:version>
+            <sparkle:shortVersionString>0.5.3</sparkle:shortVersionString>
+            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
+            <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.5.3/NoCrumbs-0.5.3.zip" length="4623094" type="application/octet-stream" sparkle:edSignature="7BMgZEUn23ITuSnRlcMnMGFjT6N4iHB4AjGSsN8r7AVMqPAPVqVDygCNEP21UdTjE7bt9RYD91X7gIFCGj7TAg=="/>
+            <sparkle:deltas>
+                <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.5.3/NoCrumbs202602241430-202602240105.delta" sparkle:deltaFrom="202602240105" length="150166" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="xrywYGtZI7VonSj8FVLLD8goZeZQE1UsrytlWPwZ8N9q07iUPKg6XuGVrBKhmiFtIxwAEwRuBObrqDw8hBzRCg=="/>
+                <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.5.3/NoCrumbs202602241430-202602240055.delta" sparkle:deltaFrom="202602240055" length="170234" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="ERJnrjX+6QKBPLnUmIOjrUijekGOWRAFkmMz20zO67uCjt3z9EAPvx2posXNc+WRuEToM5FyE+zvEp/lohb1BA=="/>
+                <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.5.3/NoCrumbs202602241430-202602240012.delta" sparkle:deltaFrom="202602240012" length="171534" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="8s0teTCvPXqE16unNc2j26RwvUHkOchfsj0GwlbbpXh4Hj/b8v8yOtemV47RyUfvV06/0+/4yulpZ3795KVLDw=="/>
+                <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.5.3/NoCrumbs202602241430-202602231438.delta" sparkle:deltaFrom="202602231438" length="198922" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="6Lbe6SZkMj2qcjTKvKbx/oNOE9/QBFOWvKAfl+ajahfjvjctA7xZA5MKVMxaEOSaKoTw+nHTyytO7ArBqGzWCQ=="/>
+                <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.5.3/NoCrumbs202602241430-202602231004.delta" sparkle:deltaFrom="202602231004" length="342330" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="hmlaCCo/dJibxEhuUn6fT/og04424R2KROIgjQmFM/nSMKehD4zid7eQpSUbI1iaY1f1XjapI7Dnplyqut6MBw=="/>
+            </sparkle:deltas>
+        </item>
+        <item>
             <title>0.5.2</title>
             <pubDate>Tue, 24 Feb 2026 01:06:58 -0500</pubDate>
             <sparkle:version>202602240105</sparkle:version>
             <sparkle:shortVersionString>0.5.2</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.5.2/NoCrumbs-0.5.2.zip" length="4617179" type="application/octet-stream" sparkle:edSignature="au6Ji6sUY/1oe48DKqylLT+sTJTbJwsu65JzuClB59X8IBDpf8f7YrBXO97EmILBgafAGJqqs/oMplSUxuWAAg=="/>
+            <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.5.3/NoCrumbs-0.5.2.zip" length="4617179" type="application/octet-stream" sparkle:edSignature="au6Ji6sUY/1oe48DKqylLT+sTJTbJwsu65JzuClB59X8IBDpf8f7YrBXO97EmILBgafAGJqqs/oMplSUxuWAAg=="/>
             <sparkle:deltas>
                 <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.5.2/NoCrumbs202602240105-202602240055.delta" sparkle:deltaFrom="202602240055" length="31074" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="LEHgRdyJRPl2/E+Ep5s9QFuRRnxEc4sgajsZsRMeq4IJKSSo1cXsK9RjUQy/UuFH9+xXBzxc3w/IUdNMsA+VAA=="/>
                 <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.5.2/NoCrumbs202602240105-202602240012.delta" sparkle:deltaFrom="202602240012" length="33754" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="C/ItrlKFSp3zllZJXVe22QcxhZ9kkqSQWRa/SjZ81/IQhxUBAAaST4OYxlq7oIicJ7QeimIkfvsF9RqzOrBtDg=="/>
@@ -23,28 +38,13 @@
             <sparkle:version>202602240055</sparkle:version>
             <sparkle:shortVersionString>0.5.1</sparkle:shortVersionString>
             <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.5.2/NoCrumbs-0.5.1.zip" length="4615781" type="application/octet-stream" sparkle:edSignature="9ZXP4KqQwcEDw7Bo/mz0eRVpjBUfHydmijz0+OhuGtGYnSrZJb80gBZergKe0X/5bPcj33CBz6MdGGH8PwJlBg=="/>
+            <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.5.3/NoCrumbs-0.5.1.zip" length="4615781" type="application/octet-stream" sparkle:edSignature="9ZXP4KqQwcEDw7Bo/mz0eRVpjBUfHydmijz0+OhuGtGYnSrZJb80gBZergKe0X/5bPcj33CBz6MdGGH8PwJlBg=="/>
             <sparkle:deltas>
                 <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.5.1/NoCrumbs202602240055-202602240012.delta" sparkle:deltaFrom="202602240012" length="23542" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="lBKlOynzCzhP7kgOgxoxa5mrMnvbw0I0NTig/xdAkl7fxCSDk0vNNPUp/M01DH7cvtQEKFXIK20qNjkvZ76yCg=="/>
                 <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.5.1/NoCrumbs202602240055-202602231438.delta" sparkle:deltaFrom="202602231438" length="59838" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="HB0plAWXPg7nhVd8J91adgAh4CNFEHupFLeZE8fMLFWffd19JrKprwkLnDj+l8EItRieqFgjKpJwqtkCuOtGAw=="/>
                 <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.5.1/NoCrumbs202602240055-202602231004.delta" sparkle:deltaFrom="202602231004" length="325678" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="AlASL8Y3g++/9twrgz2ipQnvPkBAtt/05MhBrROon6IZrXFaiWUkzuPrdw8lCxP+WAjoqKYaQ3fVhA35857MCw=="/>
                 <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.5.1/NoCrumbs202602240055-202602230131.delta" sparkle:deltaFrom="202602230131" length="359138" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="hEFQ6jTzYlFqRjTARI36P2B0RkCSn0+dkx1CnvOdPiI6sFBl0Pn22dvyIqEXPbvmnKGEtAGfepsu8nRnuIRKAw=="/>
                 <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.5.1/NoCrumbs202602240055-202602230119.delta" sparkle:deltaFrom="202602230119" length="366066" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="zqUUh0k3e/q3VeWaqB6176H0nOjRIB84tt1M3huR3sxCogLiX9swaESaw6NFvjPpN1dzDFHcZrd1umEHfRs1AQ=="/>
-            </sparkle:deltas>
-        </item>
-        <item>
-            <title>0.5.0</title>
-            <pubDate>Tue, 24 Feb 2026 00:14:24 -0500</pubDate>
-            <sparkle:version>202602240012</sparkle:version>
-            <sparkle:shortVersionString>0.5.0</sparkle:shortVersionString>
-            <sparkle:minimumSystemVersion>14.0</sparkle:minimumSystemVersion>
-            <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.5.2/NoCrumbs-0.5.0.zip" length="4615688" type="application/octet-stream" sparkle:edSignature="ZYLSmkZip59+ZQCnQtPyS28VvzsjgPycluV071sO2jdyhujMoJ3x3yeM+XHlay5G0EKeOw4mhtDTLSGKisvyAA=="/>
-            <sparkle:deltas>
-                <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.5.0/NoCrumbs202602240012-202602231438.delta" sparkle:deltaFrom="202602231438" length="59574" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="OT9zA/RJRTc1xmYm4S6A03NVhfZ6LBtxATQ1x5/L3J+x3X+3BugSUgoMASN1XawP0tuhM1QTL2d6ZgnTJCjBAA=="/>
-                <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.5.0/NoCrumbs202602240012-202602231004.delta" sparkle:deltaFrom="202602231004" length="326554" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="uWb+BWshQP6Uzz8B/LKKHV5FYbqyoE2snBDSHMnMv3j6NEZpepdy+1/mOsd2QZRBcLrePyvSV8OJCDdZ4f5nAg=="/>
-                <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.5.0/NoCrumbs202602240012-202602230131.delta" sparkle:deltaFrom="202602230131" length="358938" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="e+xWWcMXTH30S2jNoUqm3bznTQxP3HY7Vi+zBz+YUO1x+pK6ckRUOZPXJ5TGIp6j/qDDZBn3S0tg8Gaz6KqzBA=="/>
-                <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.5.0/NoCrumbs202602240012-202602230119.delta" sparkle:deltaFrom="202602230119" length="365850" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="cNm+ErTFsdFH8WlsAc/OWMvJ/VXx9szoiPefe39hQoB1rvBPO7VweprMODbylMGXzruxzMF1DU5rrNSATa5ZDw=="/>
-                <enclosure url="https://github.com/geneyoo/nocrumbs/releases/download/v0.5.0/NoCrumbs202602240012-202602230112.delta" sparkle:deltaFrom="202602230112" length="376270" type="application/octet-stream" sparkle:deltaFromSparkleExecutableSize="860528" sparkle:deltaFromSparkleLocales="de,he,ar,el,ja,fa,uk" sparkle:edSignature="XCeU2aJ4ZLV4QP5/bvSJTDp4wCXofkg7E0HYkeQDp+9P4SKnQoyEXe8YK2hE/njxLqSoUn28NzTYWM8WR1iUDg=="/>
             </sparkle:deltas>
         </item>
     </channel>
