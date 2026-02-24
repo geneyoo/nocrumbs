@@ -17,6 +17,7 @@ guard args.count >= 2 else {
     print("  nocrumbs describe            Pipe per-file change descriptions to app")
     print("  nocrumbs rename-session      Rename a session (pipe JSON with session_id + name)")
     print("  nocrumbs template            Manage commit annotation templates")
+    print("  nocrumbs setup-remote <host> Set up NoCrumbs on a remote dev server")
     print("  nocrumbs --version           Show version")
     exit(0)
 }
@@ -51,6 +52,8 @@ do {
         try RenameSessionCommand.run()
     case "template":
         try TemplateCommand.run()
+    case "setup-remote":
+        try SetupRemoteCommand.run()
     default:
         fputs("Unknown command: \(command)\n", stderr)
         exit(1)

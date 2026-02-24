@@ -6,7 +6,7 @@ const sidebars = {
     {
       type: 'category',
       label: 'Guides',
-      items: ['guides/cli-usage', 'guides/app-usage'],
+      items: ['guides/cli-usage', 'guides/app-usage', 'guides/remote-setup'],
     },
     'contributing',
     'faq',
