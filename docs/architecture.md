@@ -11,8 +11,8 @@ nocrumbs event                nocrumbs capture-prompt / capture-change
     ↓ stdin JSON parsing         ↓ stdin JSON parsing
     ↓ session_id links prompts to file changes
     └──────────┬───────────────┘
-               ↓ JSON via Unix domain socket
-    NoCrumbs.app SocketServer (POSIX, actor)
+               ↓ JSON via Unix domain socket or TCP (remote)
+    NoCrumbs.app SocketServer (POSIX, actor — Unix + TCP listeners)
                ↓
     Database.shared (raw SQLite3 C API, WAL mode)
                ↓ @Observable properties (in-memory cache)
@@ -56,6 +56,15 @@ Template management:
         → socket request/response to app
         → app stores templates in commitTemplates table
         → Settings UI shows templates, click to activate, right-click to delete
+
+Remote dev server:
+    nocrumbs setup-remote <host> (run from Mac)
+        → scp CLI binary to remote ~/.local/bin/nocrumbs
+        → ssh: set NOCRUMBS_HOST=localhost in remote shell profile
+        → ssh: nocrumbs install --remote (configures Claude Code hooks)
+        → local: add RemoteForward 19876 to ~/.ssh/config
+        → local: defaults write remoteTCPPort 19876 (enable TCP listener)
+        → Remote CLI → localhost:19876 → SSH RemoteForward → Mac TCP listener → SocketServer
 ```
 
 ## Directory Structure
@@ -74,24 +83,31 @@ NoCrumbs/
 │
 ├── Core/
 │   ├── Database/
-│   │   └── Database.swift      # @Observable @MainActor singleton, raw SQLite3, WAL, migrations v1-v8
+│   │   └── Database.swift      # @Observable @MainActor singleton, raw SQLite3, WAL, migrations v1-v9
 │   │                           #   In-memory caches: sessions, recentEvents, fileChangesCache,
 │   │                           #   recentHookEvents, commitTemplates
 │   ├── IPC/
 │   │   ├── SocketClient.swift  # Connect + write JSON to Unix socket (app-side, also has makeUnixAddr helper)
-│   │   └── SocketServer.swift  # POSIX socket actor: accept loop, parse JSON, dispatch to Database
-│   │                           #   Handles: "event", "prompt", "change", "file-descriptions",
-│   │                           #            "session-rename", "query-prompts", "template"
+│   │   ├── SocketServer.swift  # POSIX socket actor: Unix + TCP accept loops, parse JSON, dispatch to Database
+│   │   │                       #   Handles: "event", "prompt", "change", "file-descriptions",
+│   │   │                       #            "session-rename", "query-prompts", "template"
+│   │   │                       #   TCP listener: localhost-only, enabled via remoteTCPPort UserDefaults
+│   │   └── TransportEndpoint.swift # Shared endpoint enum: .unix(path) / .tcp(host, port) with env-based resolution
 │   ├── Models/
 │   │   ├── CommitTemplate.swift   # name (PK), body, isActive, createdAt
 │   │   ├── DiffStat.swift         # Per-file, per-prompt, and aggregated diff statistics
 │   │   ├── FileChange.swift       # id, eventID, filePath, toolName, timestamp, description?
 │   │   ├── FileDiff.swift         # FileDiff, DiffHunk, DiffLine — diff parsing output models
 │   │   ├── HookEvent.swift        # id, sessionID, hookEventName, projectPath, timestamp, payload (JSON)
-│   │   ├── PromptEvent.swift      # id, sessionID, projectPath, promptText?, timestamp, vcs?, baseCommitHash?
+│   │   ├── PromptEvent.swift      # id, sessionID, projectPath, promptText?, timestamp, vcs?, baseCommitHash?, sequenceID?
 │   │   ├── Session.swift          # id, projectPath, startedAt, lastActivityAt, customName?
 │   │   ├── TemplateRenderer.swift # Renders {{placeholder}} templates with TemplateContext data
 │   │   └── VCSType.swift          # enum: .git, .mercurial, .sapling
+│   ├── Debug/
+│   │   ├── DebugConfiguration.swift  # Launch arg check: -debugMockData flag
+│   │   └── MockDataGenerator.swift   # @MainActor: populates Database with realistic mock data for UI development
+│   ├── Extensions/
+│   │   └── String+TaskNotification.swift # .isTaskNotification, .displayPromptText — strip XML noise from sidebar
 │   ├── Utilities/
 │   │   ├── DeepLinkRouter.swift    # @Observable @MainActor: handles nocrumbs:// URLs, pending navigation
 │   │   ├── HookHealthChecker.swift # @Observable: checks CLI installed (Homebrew + bundle + PATH), hooks configured, socket active
@@ -154,20 +170,26 @@ NoCrumbs/
 │       └── ThemeManager.swift  # @Observable singleton — loads bundled JSON themes, persists selection
 │
 NoCrumbsTests/                      # Test target (hosted by app)
-├── DatabaseTests.swift            # DB CRUD, migrations, cascade delete
-├── DiffParserTests.swift          # 10 tests — pure unit, parses diff strings
-├── DiffViewModelTests.swift       # 7 tests — MockVCSProvider injection
+├── DatabaseTests.swift            # DB CRUD, migrations, cascade delete, sequenceID
+├── DiffParserTests.swift          # 14 tests — pure unit, parses diff strings
+├── DiffViewModelTests.swift       # 11 tests — MockVCSProvider injection
 ├── GitProviderTests.swift         # 8 tests — real temp git repos via GitTestRepo helper
-├── MercurialProviderTests.swift   # hg provider unit tests with mock process
-├── RemoteURLParserTests.swift     # SSH/HTTPS remote URL → commit URL parsing
-└── VCSDetectorTests.swift         # 5 tests — filesystem with temp VCS markers
+├── MercurialProviderTests.swift   # 6 tests — hg provider command construction + output parsing
+├── RemoteURLParserTests.swift     # 12 tests — SSH/HTTPS remote URL → commit URL parsing
+├── SaplingProviderTests.swift     # 6 tests — sl provider command construction + output parsing
+├── SecretRedactorTests.swift      # 20 tests — API key, token, JWT, credential redaction
+├── SequenceBoundaryTests.swift    # 5 tests — prompt sequence grouping logic
+├── SocketTransportTests.swift     # 9 tests — TCP + Unix socket transport, endpoint resolution
+├── TemplateTests.swift            # 14 tests — TemplateRenderer + DB template CRUD
+├── TransportEndpointTests.swift   # 12 tests — endpoint resolution from env vars
+└── VCSDetectorTests.swift         # 10 tests — filesystem with temp VCS markers
 
 VERSION                            # Single source of truth for app + CLI version (e.g. "0.4.2")
 
 CLI/
 ├── Package.swift               # Swift 5.9, macOS 14+, zero dependencies
 └── Sources/nocrumbs/
-    ├── main.swift              # Subcommand dispatch: event, capture-*, annotate-commit, install*, describe, template, rename
+    ├── main.swift              # Subcommand dispatch: event, capture-*, annotate-commit, install*, describe, template, rename, setup-remote
     ├── Version.swift           # Auto-generated from VERSION file — `let version = "x.y.z"`
     ├── CaptureEventCommand.swift  # Unified hook event → JSON to socket (v3+)
     ├── CapturePromptCommand.swift # (legacy) Parse UserPromptSubmit stdin → JSON to socket
@@ -178,8 +200,10 @@ CLI/
     ├── RenameSessionCommand.swift # nocrumbs rename-session <session_id> <name>
     ├── TemplateCommand.swift      # nocrumbs template add/list/set/remove/preview
     ├── InstallCommand.swift       # Write hook config to ~/.claude/settings.json + install git hooks
+    ├── InstallRemoteCommand.swift # Write hook config for remote servers (Linux socket paths)
+    ├── SetupRemoteCommand.swift   # One-command remote setup: scp binary, env vars, hooks, SSH tunnel, TCP listener
     ├── Models.swift               # Minimal Codable structs (duplicated — CLI can't link app target)
-    └── SocketClient.swift         # Connect + write/read to Unix socket (CLI-side, includes sendAndReceive)
+    └── SocketClient.swift         # Connect + write/read to Unix socket or TCP (CLI-side, includes sendAndReceive)
 
 scripts/
 ├── generate_icon.swift         # Generates macOS app icon sizes with Apple squircle mask
@@ -193,7 +217,7 @@ scripts/
 
 docs-site/                      # Docusaurus v3 site (https://nocrumbs.ai)
 ├── docusaurus.config.js        # Site config, dark mode default, GitHub/Dracula syntax themes
-├── docs/                       # Markdown content: getting-started, how-it-works, CLI usage, FAQ
+├── docs/                       # Markdown content: getting-started, how-it-works, CLI usage, remote setup, FAQ
 ├── src/pages/index.js          # Landing page
 ├── src/css/custom.css          # Brand styles
 └── static/                     # CNAME, logo, hero SVG
@@ -208,7 +232,7 @@ docs-site/                      # Docusaurus v3 site (https://nocrumbs.ai)
 
 **Storage:** `~/Library/Application Support/NoCrumbs/nocrumbs.sqlite`
 **Engine:** Raw SQLite3 C API (no ORM) — WAL journal mode, foreign keys ON
-**Schema version:** 8 (tracked via `PRAGMA user_version`)
+**Schema version:** 9 (tracked via `PRAGMA user_version`)
 
 ```sql
 CREATE TABLE sessions (
@@ -227,6 +251,7 @@ CREATE TABLE promptEvents (
     timestamp REAL NOT NULL,
     vcs TEXT,                     -- "git" or "mercurial", NULL if not in repo
     baseCommitHash TEXT,          -- git HEAD at prompt time (diff baseline) [v2]
+    sequenceID TEXT,              -- groups prompts into change sequences [v9]
     FOREIGN KEY(sessionID) REFERENCES sessions(id) ON DELETE CASCADE
 );
 
@@ -266,6 +291,7 @@ CREATE INDEX idx_fileChanges_filePath ON fileChanges(filePath);
 CREATE INDEX idx_hookEvents_sessionID ON hookEvents(sessionID);
 CREATE INDEX idx_hookEvents_timestamp ON hookEvents(timestamp);
 CREATE INDEX idx_hookEvents_hookEventName ON hookEvents(hookEventName);
+CREATE INDEX idx_promptEvents_sequenceID ON promptEvents(sequenceID);
 ```
 
 **Design decision:** `fileChanges` is a separate table (not a JSON array) so a single prompt that touches 100+ files scales with indexed queries. Enables "show all prompts that touched file X" lookups.
@@ -313,6 +339,7 @@ final class Database {
 - **v6**: `commitTemplates` table for customizable commit annotation templates
 - **v7**: `ALTER TABLE fileChanges ADD COLUMN description TEXT` (AI-generated change descriptions)
 - **v8**: `ALTER TABLE sessions ADD COLUMN customName TEXT` (user-defined session names)
+- **v9**: `ALTER TABLE promptEvents ADD COLUMN sequenceID TEXT` + index (prompt sequence grouping)
 
 ### Backfill
 
@@ -387,14 +414,18 @@ try database.updateFileDescription("what changed", sessionID: id, filePath: path
 try database.updateSessionName(sessionID: id, name: "my session")  // [v8]
 ```
 
-## IPC: Unix Domain Socket
+## IPC: Unix Domain Socket + TCP
 
 ```
-Socket path: ~/Library/Application Support/NoCrumbs/nocrumbs.sock
+Unix socket: ~/Library/Application Support/NoCrumbs/nocrumbs.sock
+TCP listener: 127.0.0.1:19876 (when remoteTCPPort > 0 in UserDefaults)
 ```
 
 **Server** (`SocketServer`): Swift actor, POSIX `socket()/bind()/listen()/accept()`.
-- Accepts connections in a detached Task loop
+- Unix socket accept loop in detached Task
+- Optional TCP listener on localhost for remote connections via SSH/ET tunnel
+  - Enabled via `remoteTCPPort` UserDefaults key (set by Settings or `nocrumbs setup-remote`)
+  - Binds to `127.0.0.1` only — remote access requires SSH `RemoteForward` tunnel
 - Reads full message, parses JSON, dispatches by `"type"` field
 - `"event"` → unified hook event handler; stores HookEvent, bridges to legacy prompt/change tables (fire-and-forget)
 - `"prompt"` → (legacy) captures VCS HEAD as baseCommitHash via `captureHead()`, upserts session + inserts PromptEvent
@@ -406,10 +437,15 @@ Socket path: ~/Library/Application Support/NoCrumbs/nocrumbs.sock
 - `"query-prompts"` → returns recent prompts + file counts + annotation/content toggle flags + active template body (request/response)
 - `"template"` → CRUD for commit annotation templates: add, list, set, remove, preview (request/response)
 
-**Client** (`SocketClient`):
-- App-side: `send(_ data: Data)` — fire-and-forget
-- CLI-side: `send(_ data: Data)` + `sendAndReceive(_ data: Data)` — the latter used for query-prompts + template
-- Both use POSIX `socket()/connect()/write()/close()`
+**Client** (`SocketClient` — CLI-side):
+- `send(_ data: Data)` — fire-and-forget
+- `sendAndReceive(_ data: Data)` — request/response for query-prompts + template
+- Endpoint resolution via `resolveEndpoint()`: `NOCRUMBS_SOCK` → Unix, `NOCRUMBS_HOST` → TCP, else platform default
+- Supports both Unix domain socket and TCP connections (POSIX)
+
+**TransportEndpoint** (app-side shared type):
+- Same resolution logic as CLI `SocketClient.Endpoint` for consistency
+- Used by app-side code and tests
 
 **Protocol:**
 ```json
@@ -460,6 +496,20 @@ The `nocrumbs` CLI (v0.4.0) is invoked by Claude Code hooks.
 - `nocrumbs capture-change` — `PostToolUse` hook (matcher: Write|Edit)
 
 **`nocrumbs install`** writes hook config to `~/.claude/settings.json`, merging with existing settings.
+
+**`nocrumbs install --remote`** (or `install-remote`) — same hook config but for remote servers:
+- Creates Linux socket directory (`/tmp/nocrumbs-$USER/`) with restricted permissions
+- Prints connection options: SSH socket forwarding, TCP tunnel, or direct TCP
+
+**`nocrumbs setup-remote <host>`** — one-command remote setup from Mac:
+1. `scp` CLI binary to `<host>:~/.local/bin/nocrumbs`
+2. Detect remote shell, append `NOCRUMBS_HOST=localhost` + PATH
+3. `ssh <host> 'nocrumbs install --remote'`
+4. Add `RemoteForward 19876 localhost:19876` to local `~/.ssh/config`
+5. `defaults write remoteTCPPort -int 19876` (enable TCP listener)
+6. Verify tunnel via `nc -zw2 localhost 19876`
+- All steps idempotent, safe to re-run
+- Partial failure: reports what succeeded and what to fix manually
 
 **`nocrumbs install-git-hooks`** writes `prepare-commit-msg` hook to `.git/hooks/`.
 
@@ -758,7 +808,7 @@ JSON-based color themes loaded from `Resources/Themes/` at runtime.
 
 ## Test Infrastructure
 
-110 tests across 10 files, all in `NoCrumbsTests/` (hosted test target).
+140 tests across 13 files, all in `NoCrumbsTests/` (hosted test target).
 
 ```bash
 xcodebuild test -project NoCrumbs.xcodeproj -scheme NoCrumbs -sdk macosx -derivedDataPath build \
@@ -767,7 +817,7 @@ xcodebuild test -project NoCrumbs.xcodeproj -scheme NoCrumbs -sdk macosx -derive
 
 | Suite | Tests | Type | Coverage |
 |-------|-------|------|----------|
-| `DatabaseTests` | — | Unit | CRUD operations, migrations, cascade delete |
+| `DatabaseTests` | 13 | Unit | CRUD operations, migrations, cascade delete, sequenceID |
 | `DiffParserTests` | 14 | Pure unit | Parser edge cases: empty, add, delete, modify, multi-file, multi-hunk, line numbers, binary, no-newline-at-EOF, Mercurial format (git mode, new file, HG headers, no-prefix paths) |
 | `DiffViewModelTests` | 11 | Unit (mock) | All load() paths: no VCS, no files, nil base hash (live capture success/fail), invalid commit, valid diff, git failure, untracked files, mercurial provider, VCS error message |
 | `GitProviderTests` | 8 | Integration | Real temp git repos: currentHead, isValidCommit (valid/invalid/after-reset), diffFromBase, headBefore, untrackedFiles |
@@ -776,7 +826,10 @@ xcodebuild test -project NoCrumbs.xcodeproj -scheme NoCrumbs -sdk macosx -derive
 | `SaplingProviderTests` | 6 | Unit | Sapling provider command construction and output parsing |
 | `SecretRedactorTests` | 20 | Pure unit | API key, token, JWT, credential redaction patterns |
 | `TemplateTests` | 14 | Pure unit | TemplateRenderer and DB template CRUD, active switching |
-| `VCSDetectorTests` | 7 | Filesystem | Temp dirs with .git/.hg/.sl markers: detect git/hg/sapling/none, nested repos, repoRoot |
+| `SequenceBoundaryTests` | 5 | Unit | Prompt sequence grouping: new sequence after changes, continuation without |
+| `SocketTransportTests` | 9 | Integration | TCP + Unix socket transport, connect/send/receive |
+| `TransportEndpointTests` | 12 | Pure unit | Endpoint resolution from env vars, platform defaults |
+| `VCSDetectorTests` | 10 | Filesystem | Temp dirs with .git/.hg/.sl markers: detect git/hg/sapling/none, nested repos, repoRoot |
 
 **Key test utilities:**
 - `MockVCSProvider` — configurable stub conforming to `VCSProvider` protocol
@@ -793,7 +846,7 @@ xcodebuild test -project NoCrumbs.xcodeproj -scheme NoCrumbs -sdk macosx -derive
 
 ## Settings
 
-Four sections in the Settings form:
+Five sections in the Settings form:
 
 **Hook Status:**
 - CLI installed, Hooks configured, Socket active — green/red status indicators
@@ -813,6 +866,11 @@ Four sections in the Settings form:
 - **Commit Templates**: Lists custom templates when annotation is enabled. Click to activate, right-click to delete. Shows hint to use `nocrumbs template add` when empty.
 - All stored in `UserDefaults` via `@AppStorage`, defaults registered in `AppDelegate.applicationDidFinishLaunching` (all default to `true`)
 - Read by `SocketServer.handleQueryPrompts` and included in response to CLI
+
+**Remote:**
+- **TCP port** (`remoteTCPPort`): Port for remote connections via SSH tunnel (0 = disabled, default 19876)
+- When set, `SocketServer` starts a TCP listener on `127.0.0.1:<port>` alongside the Unix socket
+- Used with `nocrumbs setup-remote` for one-command remote dev server setup
 
 **Diff Theme:**
 - `Picker` listing all 18 available themes with inline color swatches
@@ -853,7 +911,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             "annotationEnabled": true, "deepLinkInAnnotation": true,
             "showPromptList": true, "showFileCountPerPrompt": true, "showSessionID": true,
         ])
-        try Database.shared.open()     // SQLite + migrations (v1→v6) + cache load
+        try Database.shared.open()     // SQLite + migrations (v1→v9) + cache load
         Task { await Database.shared.backfillBaseCommitHashes() }  // Async backfill for legacy events
         try await socketServer.start() // POSIX socket bind + listen (with 1s retry)
         try SMAppService.mainApp.register() // Launch at login
@@ -934,7 +992,7 @@ brew install --cask geneyoo/tap/nocrumbs
 **Docusaurus v3** at `https://nocrumbs.ai`, auto-deployed via GitHub Actions on push to `main` (path-filtered to `docs-site/**`).
 
 - Dark mode default, GitHub/Dracula syntax themes
-- Content: Getting Started, How It Works, Installation, CLI Usage, App Usage, FAQ, Contributing
+- Content: Getting Started, How It Works, Installation, CLI Usage, App Usage, Remote Setup, FAQ, Contributing
 - Static: CNAME, logo, hero SVG
 - Deploy: `.github/workflows/deploy-docs.yml` → GitHub Pages (OIDC, no token secrets)
 
