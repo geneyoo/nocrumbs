@@ -271,26 +271,40 @@ enum SetupRemoteCommand {
 
     // MARK: - Shell Helpers
 
+    /// Runs a command via the user's shell, inheriting the full TTY.
+    /// This is required for SSH/SCP which need a pseudo-terminal for
+    /// interactive auth (banners, 2FA prompts, password input).
     @discardableResult
-    private static func sshRun(_ host: String, _ command: String) throws -> Int32 {
+    private static func ttyRun(_ command: String) throws -> Int32 {
+        let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
-        process.arguments = [host, command]
-        // Inherit terminal for interactive auth (2FA, password prompts)
+        process.executableURL = URL(fileURLWithPath: shell)
+        process.arguments = ["-i", "-c", command]
+        // Inherit full terminal — stdin, stdout, stderr
         process.standardInput = FileHandle.standardInput
+        process.standardOutput = FileHandle.standardOutput
         process.standardError = FileHandle.standardError
         try process.run()
         process.waitUntilExit()
-        guard process.terminationStatus == 0 else {
-            throw SetupError.sshFailed(command, process.terminationStatus)
-        }
         return process.terminationStatus
     }
 
+    @discardableResult
+    private static func sshRun(_ host: String, _ command: String) throws -> Int32 {
+        let escaped = command.replacingOccurrences(of: "'", with: "'\\''")
+        let status = try ttyRun("ssh \(host) '\(escaped)'")
+        guard status == 0 else {
+            throw SetupError.sshFailed(command, status)
+        }
+        return status
+    }
+
     private static func sshOutput(_ host: String, _ command: String) throws -> String {
+        let escaped = command.replacingOccurrences(of: "'", with: "'\\''")
+        let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
-        process.arguments = [host, command]
+        process.executableURL = URL(fileURLWithPath: shell)
+        process.arguments = ["-i", "-c", "ssh \(host) '\(escaped)'"]
         let pipe = Pipe()
         process.standardOutput = pipe
         // Inherit terminal for interactive auth (2FA, password prompts)
@@ -306,16 +320,9 @@ enum SetupRemoteCommand {
     }
 
     private static func scpFile(localPath: String, host: String, remotePath: String) throws {
-        let process = Process()
-        process.executableURL = URL(fileURLWithPath: "/usr/bin/scp")
-        process.arguments = [localPath, "\(host):\(remotePath)"]
-        // Inherit terminal for interactive auth (2FA, password prompts)
-        process.standardInput = FileHandle.standardInput
-        process.standardError = FileHandle.standardError
-        try process.run()
-        process.waitUntilExit()
-        guard process.terminationStatus == 0 else {
-            throw SetupError.scpFailed(process.terminationStatus)
+        let status = try ttyRun("scp \(localPath) \(host):\(remotePath)")
+        guard status == 0 else {
+            throw SetupError.scpFailed(status)
         }
     }
 
