@@ -20,9 +20,7 @@ final class HookHealthChecker {
         cliInstalled = findCLI()
         hooksConfigured = checkHooksConfigured()
 
-        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
-        let sockPath = appSupport?.appendingPathComponent("NoCrumbs/nocrumbs.sock").path ?? ""
-        socketActive = FileManager.default.fileExists(atPath: sockPath)
+        socketActive = probeSocket()
     }
 
     private func findCLI() -> Bool {
@@ -50,6 +48,36 @@ final class HookHealthChecker {
         } catch {
             return false
         }
+    }
+
+    /// Probes the Unix domain socket with a real POSIX connect.
+    /// File existence alone can't detect ECONNREFUSED (dead listener).
+    private func probeSocket() -> Bool {
+        let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
+        let sockPath = appSupport?.appendingPathComponent("NoCrumbs/nocrumbs.sock").path ?? ""
+
+        guard FileManager.default.fileExists(atPath: sockPath) else { return false }
+
+        let fd = socket(AF_UNIX, SOCK_STREAM, 0)
+        guard fd >= 0 else { return false }
+        defer { close(fd) }
+
+        var addr = sockaddr_un()
+        addr.sun_family = sa_family_t(AF_UNIX)
+        let pathBytes = sockPath.utf8CString
+        guard pathBytes.count <= MemoryLayout.size(ofValue: addr.sun_path) else { return false }
+        withUnsafeMutablePointer(to: &addr.sun_path) { ptr in
+            ptr.withMemoryRebound(to: CChar.self, capacity: pathBytes.count) { dest in
+                for i in 0..<pathBytes.count { dest[i] = pathBytes[i] }
+            }
+        }
+
+        let result = withUnsafePointer(to: &addr) { ptr in
+            ptr.withMemoryRebound(to: sockaddr.self, capacity: 1) { sockPtr in
+                connect(fd, sockPtr, socklen_t(MemoryLayout<sockaddr_un>.size))
+            }
+        }
+        return result == 0
     }
 
     private func checkHooksConfigured() -> Bool {

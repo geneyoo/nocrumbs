@@ -116,6 +116,11 @@ actor SocketServer {
         }
     }
 
+    /// True when the server is actively listening and the file descriptor is valid.
+    var isHealthy: Bool {
+        listening && serverFD >= 0
+    }
+
     func stop() {
         listening = false
         if serverFD >= 0 {
@@ -138,8 +143,11 @@ actor SocketServer {
             }
 
             guard clientFD >= 0 else {
-                if listening { logger.warning("[NC:Socket] Accept failed: \(errno)") }
-                break
+                if listening {
+                    logger.warning("[NC:Socket] Accept failed (errno \(errno)), continuing")
+                    continue
+                }
+                break  // Intentional shutdown via stop()
             }
 
             let data = readAll(fd: clientFD)

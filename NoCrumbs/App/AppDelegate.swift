@@ -7,6 +7,7 @@ private let logger = Logger(subsystem: "com.geneyoo.nocrumbs", category: "App")
 
 final class AppDelegate: NSObject, NSApplicationDelegate {
     let socketServer = SocketServer()
+    private var watchdogTask: Task<Void, Never>?
 
     static var shared: AppDelegate? {
         NSApplication.shared.delegate as? AppDelegate
@@ -69,6 +70,11 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 }
             }
         }
+
+        // Watchdog: auto-restart socket server if it dies
+        // Legitimate hard timeout: socket server has no built-in health signal,
+        // 30s is a reasonable polling interval for a background daemon.
+        startSocketWatchdog()
 
         // Launch at login
         do {
@@ -136,11 +142,32 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        watchdogTask?.cancel()
         Task {
             await socketServer.stop()
         }
         Database.shared.close()
         logger.info("[NC:App] Shutdown complete")
+    }
+
+    private func startSocketWatchdog() {
+        watchdogTask = Task.detached { [weak self] in
+            while !Task.isCancelled {
+                try? await Task.sleep(nanoseconds: 30_000_000_000)
+                guard !Task.isCancelled, let self else { return }
+                let healthy = await self.socketServer.isHealthy
+                if !healthy {
+                    logger.warning("[NC:App] Socket watchdog: server unhealthy, restarting")
+                    await self.socketServer.stop()
+                    do {
+                        try await self.socketServer.start()
+                        logger.info("[NC:App] Socket watchdog: server restarted")
+                    } catch {
+                        logger.error("[NC:App] Socket watchdog: restart failed: \(error.localizedDescription)")
+                    }
+                }
+            }
+        }
     }
 
     private func showMainWindow() {
