@@ -12,7 +12,10 @@ private struct SidebarItem: Identifiable {
     let projectName: String?
     let sequencePosition: SequencePosition
 
-    enum Kind { case timePeriodHeader, projectHeader, session, event }
+    let olderCount: Int
+    let sessionID: String?
+
+    enum Kind { case timePeriodHeader, projectHeader, session, event, showOlder, daySeparator }
 
     enum SequencePosition {
         case solo
@@ -25,20 +28,28 @@ private struct SidebarItem: Identifiable {
     }
 
     static func timePeriodHeader(_ period: TimePeriod) -> SidebarItem {
-        SidebarItem(id: UUID(), kind: .timePeriodHeader, session: nil, event: nil, projectName: period.label, sequencePosition: .solo)
+        SidebarItem(id: UUID(), kind: .timePeriodHeader, session: nil, event: nil, projectName: period.label, sequencePosition: .solo, olderCount: 0, sessionID: nil)
     }
 
     static func projectHeader(_ name: String) -> SidebarItem {
-        SidebarItem(id: UUID(), kind: .projectHeader, session: nil, event: nil, projectName: name, sequencePosition: .solo)
+        SidebarItem(id: UUID(), kind: .projectHeader, session: nil, event: nil, projectName: name, sequencePosition: .solo, olderCount: 0, sessionID: nil)
     }
 
     static func session(_ s: Session) -> SidebarItem {
         let uuid = UUID(uuidString: s.id) ?? UUID()
-        return SidebarItem(id: uuid, kind: .session, session: s, event: nil, projectName: nil, sequencePosition: .solo)
+        return SidebarItem(id: uuid, kind: .session, session: s, event: nil, projectName: nil, sequencePosition: .solo, olderCount: 0, sessionID: nil)
     }
 
     static func event(_ e: PromptEvent, position: SequencePosition = .solo) -> SidebarItem {
-        SidebarItem(id: e.id, kind: .event, session: nil, event: e, projectName: nil, sequencePosition: position)
+        SidebarItem(id: e.id, kind: .event, session: nil, event: e, projectName: nil, sequencePosition: position, olderCount: 0, sessionID: nil)
+    }
+
+    static func showOlder(count: Int, sessionID: String) -> SidebarItem {
+        SidebarItem(id: UUID(), kind: .showOlder, session: nil, event: nil, projectName: nil, sequencePosition: .solo, olderCount: count, sessionID: sessionID)
+    }
+
+    static func daySeparator(_ label: String) -> SidebarItem {
+        SidebarItem(id: UUID(), kind: .daySeparator, session: nil, event: nil, projectName: label, sequencePosition: .solo, olderCount: 0, sessionID: nil)
     }
 }
 
@@ -51,6 +62,7 @@ private final class SidebarState {
     @ObservationIgnored
     @AppStorage("confirmBeforeDelete") var confirmBeforeDelete = true
     var collapsedProjects: Set<String> = []
+    var showAllPrompts: Set<String> = []
     var keyMonitor: Any?
     var renamingSessionID: String?
     var renameText = ""
@@ -144,6 +156,14 @@ struct ContentView: View {
         return groups
     }
 
+    private func daySeparatorLabel(for date: Date, calendar: Calendar) -> String {
+        if calendar.isDateInToday(date) { return "Today" }
+        if calendar.isDateInYesterday(date) { return "Yesterday" }
+        let formatter = DateFormatter()
+        formatter.dateFormat = "MMM d"
+        return formatter.string(from: date)
+    }
+
     private var flatItems: [SidebarItem] {
         // Bucket sessions by time period
         let byPeriod = Dictionary(grouping: database.sessions) {
@@ -190,7 +210,40 @@ struct ContentView: View {
                     items.append(.session(session))
                     if state.expandedSessions.contains(session.id) {
                         let groups = sequenceGroups(from: events)
-                        for group in groups {
+                        let cal = Calendar.current
+                        let todayStart = cal.startOfDay(for: Date())
+
+                        // Split into recent (today) and older groups
+                        var recentGroups: [[PromptEvent]] = []
+                        var olderGroups: [[PromptEvent]] = []
+                        for group in groups.reversed() {
+                            let groupLatest = group.map(\.timestamp).max() ?? .distantPast
+                            if groupLatest >= todayStart {
+                                recentGroups.append(group)
+                            } else {
+                                olderGroups.append(group)
+                            }
+                        }
+
+                        // If all prompts are older than today, show the most recent group
+                        if recentGroups.isEmpty, let first = olderGroups.first {
+                            recentGroups.append(first)
+                            olderGroups.removeFirst()
+                        }
+
+                        let showAll = state.showAllPrompts.contains(session.id)
+                        let groupsToShow = showAll ? recentGroups + olderGroups : recentGroups
+
+                        var lastGroupDay: Date?
+                        for group in groupsToShow {
+                            // Day separator between groups from different days
+                            let groupDay = cal.startOfDay(for: group.map(\.timestamp).max() ?? .distantPast)
+                            if let prev = lastGroupDay, prev != groupDay {
+                                let label = daySeparatorLabel(for: groupDay, calendar: cal)
+                                items.append(.daySeparator(label))
+                            }
+                            lastGroupDay = groupDay
+
                             for (idx, event) in group.enumerated() {
                                 let pos: SidebarItem.SequencePosition
                                 if group.count == 1 { pos = .solo }
@@ -199,6 +252,12 @@ struct ContentView: View {
                                 else { pos = .middle }
                                 items.append(.event(event, position: pos))
                             }
+                        }
+
+                        // Insert "Show older" button if there are collapsed groups
+                        if !showAll && !olderGroups.isEmpty {
+                            let olderCount = olderGroups.reduce(0) { $0 + $1.count }
+                            items.append(.showOlder(count: olderCount, sessionID: session.id))
                         }
                     }
                 }
@@ -381,6 +440,31 @@ struct ContentView: View {
                     .padding(.leading, 20)
                     .tag(item.id)
             }
+        case .daySeparator:
+            Text(item.projectName ?? "")
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(.quaternary)
+                .padding(.leading, 20)
+                .frame(maxWidth: .infinity, maxHeight: 2, alignment: .leading)
+                .listRowInsets(EdgeInsets(top: 0, leading: 0, bottom: 0, trailing: 0))
+                .listRowSeparator(.hidden)
+                .tag(item.id)
+        case .showOlder:
+            if let sessionID = item.sessionID {
+                Button {
+                    withAnimation(.smooth(duration: 0.25)) {
+                        _ = state.showAllPrompts.insert(sessionID)
+                    }
+                } label: {
+                    Text("Show \(item.olderCount) older prompt\(item.olderCount == 1 ? "" : "s")")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+                .padding(.leading, 20)
+                .padding(.vertical, 4)
+                .tag(item.id)
+            }
         }
     }
 
@@ -429,7 +513,7 @@ struct ContentView: View {
     private func sessionRow(_ session: Session) -> some View {
         let events = filteredEvents(for: session.id)
         let eventCount = events.count
-        let firstPrompt = events.last?.promptText  // oldest (chronological first)
+        let firstPrompt = events.last?.promptText  // oldest — stable session identity
         let displayTitle = session.customName ?? firstPrompt?.displayPromptText ?? "(no prompt)"
         let expanded = state.expandedSessions.contains(session.id)
         let sState = database.sessionState(for: session.id)

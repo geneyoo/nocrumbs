@@ -272,7 +272,143 @@ enum MockDataGenerator {
             ("SessionEnd", date(base: threeDaysAgo, hour: 20, minute: 25)),
         ])
 
-        logger.info("🎭 Mock data populated: 7 sessions, \(database.recentEvents.count) events, \(database.fileChangesCache.values.flatMap { $0 }.count) file changes")
+        // ======================================================================
+        // LONG-LIVED SESSION — nocrumbs: spans 3 days, 16+ prompts
+        // Tests "Show older prompts" collapse behavior
+        // ======================================================================
+        let s8ID = "session-\(shortID())"
+        let s8Start = date(base: threeDaysAgo, hour: 9, minute: 0)
+        try database.upsertSession(Session(
+            id: s8ID, projectPath: noCrumbs,
+            startedAt: s8Start, lastActivityAt: date(base: today, hour: 11, minute: 15)
+        ))
+
+        // --- 3 days ago: initial scaffold (3-prompt sequence) ---
+        let seq8a = UUID().uuidString
+        let e8a1 = makeEvent(session: s8ID, project: noCrumbs, seq: seq8a,
+                             prompt: "Scaffold the timeline feature — a LazyVStack showing prompt events grouped by session",
+                             at: date(base: threeDaysAgo, hour: 9, minute: 0), vcs: .git)
+        let e8a2 = makeEvent(session: s8ID, project: noCrumbs, seq: seq8a,
+                             prompt: "Add a TimelineRow view with prompt text, timestamp, and file change count badge",
+                             at: date(base: threeDaysAgo, hour: 9, minute: 20), vcs: .git)
+        let e8a3 = makeEvent(session: s8ID, project: noCrumbs, seq: seq8a,
+                             prompt: "Wire up the timeline to Database.recentEvents with reactive observation",
+                             at: date(base: threeDaysAgo, hour: 9, minute: 35), vcs: .git)
+        for e in [e8a1, e8a2, e8a3] { try database.insertPromptEvent(e) }
+        try addFiles(database, eventID: e8a1.id, project: noCrumbs, files: [
+            ("NoCrumbs/Features/Timeline/TimelineView.swift", "Write"),
+        ])
+        try addFiles(database, eventID: e8a2.id, project: noCrumbs, files: [
+            ("NoCrumbs/Features/Timeline/TimelineRow.swift", "Write"),
+        ])
+        try addFiles(database, eventID: e8a3.id, project: noCrumbs, files: [
+            ("NoCrumbs/Features/Timeline/TimelineView.swift", "Edit"),
+        ])
+
+        // --- 3 days ago: styling pass (2-prompt sequence) ---
+        let seq8b = UUID().uuidString
+        let e8b1 = makeEvent(session: s8ID, project: noCrumbs, seq: seq8b,
+                             prompt: "Style the timeline rows — use SF Symbols for file types and a subtle separator between sessions",
+                             at: date(base: threeDaysAgo, hour: 14, minute: 0), vcs: .git)
+        let e8b2 = makeEvent(session: s8ID, project: noCrumbs, seq: seq8b,
+                             prompt: "Add hover state highlighting and selection ring to timeline rows",
+                             at: date(base: threeDaysAgo, hour: 14, minute: 25), vcs: .git)
+        for e in [e8b1, e8b2] { try database.insertPromptEvent(e) }
+        try addFiles(database, eventID: e8b1.id, project: noCrumbs, files: [
+            ("NoCrumbs/Features/Timeline/TimelineRow.swift", "Edit"),
+            ("NoCrumbs/UI/StyleGuide/TimelineTokens.swift", "Write"),
+        ])
+        try addFiles(database, eventID: e8b2.id, project: noCrumbs, files: [
+            ("NoCrumbs/Features/Timeline/TimelineRow.swift", "Edit"),
+        ])
+
+        // --- Yesterday: filtering & search (4-prompt sequence) ---
+        let seq8c = UUID().uuidString
+        let e8c1 = makeEvent(session: s8ID, project: noCrumbs, seq: seq8c,
+                             prompt: "Add a search bar that filters timeline events by prompt text and file paths",
+                             at: date(base: yesterday, hour: 10, minute: 0), vcs: .git)
+        let e8c2 = makeEvent(session: s8ID, project: noCrumbs, seq: seq8c,
+                             prompt: "Debounce the search input with our Debouncer utility — 300ms delay",
+                             at: date(base: yesterday, hour: 10, minute: 15), vcs: .git)
+        let e8c3 = makeEvent(session: s8ID, project: noCrumbs, seq: seq8c,
+                             prompt: "Add filter chips for file type — swift, yaml, json, markdown",
+                             at: date(base: yesterday, hour: 10, minute: 30), vcs: .git)
+        let e8c4 = makeEvent(session: s8ID, project: noCrumbs, seq: seq8c,
+                             prompt: "Show 'No results' empty state when search has no matches",
+                             at: date(base: yesterday, hour: 10, minute: 45), vcs: .git)
+        for e in [e8c1, e8c2, e8c3, e8c4] { try database.insertPromptEvent(e) }
+        try addFiles(database, eventID: e8c1.id, project: noCrumbs, files: [
+            ("NoCrumbs/Features/Timeline/TimelineSearchBar.swift", "Write"),
+            ("NoCrumbs/Features/Timeline/TimelineView.swift", "Edit"),
+        ])
+        try addFiles(database, eventID: e8c3.id, project: noCrumbs, files: [
+            ("NoCrumbs/UI/Components/FilterChip.swift", "Write"),
+            ("NoCrumbs/Features/Timeline/TimelineView.swift", "Edit"),
+        ])
+        try addFiles(database, eventID: e8c4.id, project: noCrumbs, files: [
+            ("NoCrumbs/Features/Timeline/TimelineView.swift", "Edit"),
+        ])
+
+        // --- Yesterday: solo bug fix ---
+        let seq8d = UUID().uuidString
+        let e8d1 = makeEvent(session: s8ID, project: noCrumbs, seq: seq8d,
+                             prompt: "Fix crash when scrolling fast — the LazyVStack is dequeuing cells with stale event IDs",
+                             at: date(base: yesterday, hour: 15, minute: 30), vcs: .git)
+        try database.insertPromptEvent(e8d1)
+        try addFiles(database, eventID: e8d1.id, project: noCrumbs, files: [
+            ("NoCrumbs/Features/Timeline/TimelineView.swift", "Edit"),
+        ])
+
+        // --- Yesterday: keyboard nav (2-prompt sequence) ---
+        let seq8e = UUID().uuidString
+        let e8e1 = makeEvent(session: s8ID, project: noCrumbs, seq: seq8e,
+                             prompt: "Add keyboard navigation — arrow keys to move selection, Enter to expand, Escape to collapse",
+                             at: date(base: yesterday, hour: 17, minute: 0), vcs: .git)
+        let e8e2 = makeEvent(session: s8ID, project: noCrumbs, seq: seq8e,
+                             prompt: "Make Cmd+F focus the search bar, Escape clears and unfocuses",
+                             at: date(base: yesterday, hour: 17, minute: 20), vcs: .git)
+        for e in [e8e1, e8e2] { try database.insertPromptEvent(e) }
+        try addFiles(database, eventID: e8e1.id, project: noCrumbs, files: [
+            ("NoCrumbs/Features/Timeline/TimelineView.swift", "Edit"),
+        ])
+        try addFiles(database, eventID: e8e2.id, project: noCrumbs, files: [
+            ("NoCrumbs/Features/Timeline/TimelineSearchBar.swift", "Edit"),
+            ("NoCrumbs/Features/Timeline/TimelineView.swift", "Edit"),
+        ])
+
+        // --- Today: polish (3-prompt sequence) ---
+        let seq8f = UUID().uuidString
+        let e8f1 = makeEvent(session: s8ID, project: noCrumbs, seq: seq8f,
+                             prompt: "Add smooth scroll-to-top animation when new events arrive while scrolled down",
+                             at: date(base: today, hour: 10, minute: 30), vcs: .git)
+        let e8f2 = makeEvent(session: s8ID, project: noCrumbs, seq: seq8f,
+                             prompt: "Show a subtle toast 'New activity' instead of auto-scrolling when user is reading old events",
+                             at: date(base: today, hour: 10, minute: 50), vcs: .git)
+        let e8f3 = makeEvent(session: s8ID, project: noCrumbs, seq: seq8f,
+                             prompt: "commit and push",
+                             at: date(base: today, hour: 11, minute: 5), vcs: .git)
+        for e in [e8f1, e8f2, e8f3] { try database.insertPromptEvent(e) }
+        try addFiles(database, eventID: e8f1.id, project: noCrumbs, files: [
+            ("NoCrumbs/Features/Timeline/TimelineView.swift", "Edit"),
+        ])
+        try addFiles(database, eventID: e8f2.id, project: noCrumbs, files: [
+            ("NoCrumbs/Features/Timeline/TimelineView.swift", "Edit"),
+            ("NoCrumbs/UI/Components/ToastView.swift", "Write"),
+        ])
+
+        // --- Today: solo follow-up ---
+        let seq8g = UUID().uuidString
+        let e8g1 = makeEvent(session: s8ID, project: noCrumbs, seq: seq8g,
+                             prompt: "Should we add pagination to the timeline or is LazyVStack enough for 10k+ events?",
+                             at: date(base: today, hour: 11, minute: 15), vcs: .git)
+        try database.insertPromptEvent(e8g1)
+
+        try addHooks(database, sessionID: s8ID, project: noCrumbs, events: [
+            ("TaskStart", date(base: threeDaysAgo, hour: 9, minute: 0)),
+            ("PostToolUse", date(base: today, hour: 11, minute: 15)),
+        ])
+
+        logger.info("🎭 Mock data populated: 8 sessions, \(database.recentEvents.count) events, \(database.fileChangesCache.values.flatMap { $0 }.count) file changes")
     }
 
     // MARK: - Helpers
