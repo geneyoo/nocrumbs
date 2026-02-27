@@ -23,12 +23,13 @@ enum InstallRemoteCommand {
             settings = existing
         }
 
+        let binPath = home.appendingPathComponent(".local/bin/nocrumbs").path
         let hookEntry: [[String: Any]] = [
             [
                 "hooks": [
                     [
                         "type": "command",
-                        "command": "nocrumbs event",
+                        "command": "\(binPath) event",
                     ]
                 ]
             ]
