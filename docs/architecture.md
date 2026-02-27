@@ -74,6 +74,7 @@ NoCrumbs/
 ├── App/
 │   ├── AppDelegate.swift       # NSApplicationDelegate — owns SocketServer + Database lifecycle
 │   │                           #   Sparkle updater, launch at login, activation policy
+│   │                           #   30s watchdog auto-restarts dead socket server
 │   ├── ContentView.swift       # NavigationSplitView — time-grouped sidebar with session/event tree
 │   │                           #   SidebarItem (.timePeriodHeader, .projectHeader, .session, .event)
 │   │                           #   NSEvent key monitor for Option+Arrow
@@ -92,6 +93,8 @@ NoCrumbs/
 │   │   │                       #   Handles: "event", "prompt", "change", "file-descriptions",
 │   │   │                       #            "session-rename", "query-prompts", "template"
 │   │   │                       #   TCP listener: localhost-only, enabled via remoteTCPPort UserDefaults
+│   │   │                       #   Resilient accept loop: continue on transient errors, break only on stop()
+│   │   │                       #   isHealthy: computed property (listening && serverFD >= 0)
 │   │   └── TransportEndpoint.swift # Shared endpoint enum: .unix(path) / .tcp(host, port) with env-based resolution
 │   ├── Models/
 │   │   ├── CommitTemplate.swift   # name (PK), body, isActive, createdAt
@@ -110,7 +113,8 @@ NoCrumbs/
 │   │   └── String+TaskNotification.swift # .isTaskNotification, .displayPromptText — strip XML noise from sidebar
 │   ├── Utilities/
 │   │   ├── DeepLinkRouter.swift    # @Observable @MainActor: handles nocrumbs:// URLs, pending navigation
-│   │   ├── HookHealthChecker.swift # @Observable: checks CLI installed (Homebrew + bundle + PATH), hooks configured, socket active
+│   │   ├── HookHealthChecker.swift # @Observable: checks CLI installed (Homebrew + bundle + PATH), hooks configured,
+│   │   │                          #   socket active (real POSIX connect probe, not just file existence)
 │   │   ├── SecretRedactor.swift     # Regex-based secret scrubbing (API keys, tokens, JWTs, credentials)
 │   │   ├── SessionMarkdownFormatter.swift # Formats session data as markdown for clipboard export
 │   │   └── ShellEnvironment.swift  # Captures user's login shell env at launch for VCS subprocesses
@@ -422,7 +426,8 @@ TCP listener: 127.0.0.1:19876 (when remoteTCPPort > 0 in UserDefaults)
 ```
 
 **Server** (`SocketServer`): Swift actor, POSIX `socket()/bind()/listen()/accept()`.
-- Unix socket accept loop in detached Task
+- Unix socket accept loop in detached Task — resilient: `continue` on transient `accept()` errors, only `break` on intentional `stop()`
+- `isHealthy` computed property: `listening && serverFD >= 0` — used by AppDelegate watchdog
 - Optional TCP listener on localhost for remote connections via SSH/ET tunnel
   - Enabled via `remoteTCPPort` UserDefaults key (set by Settings or `nocrumbs setup-remote`)
   - Binds to `127.0.0.1` only — remote access requires SSH `RemoteForward` tunnel
@@ -850,6 +855,7 @@ Five sections in the Settings form:
 
 **Hook Status:**
 - CLI installed, Hooks configured, Socket active — green/red status indicators
+- Socket check uses real POSIX `connect()` probe (detects ECONNREFUSED on dead listener, not just file existence)
 - Read-only, refreshes on appear via `HookHealthChecker`
 
 **General:**
@@ -903,6 +909,7 @@ Accessible via native Settings scene (`Cmd+,`) or menu bar "Settings..."
 ```swift
 final class AppDelegate: NSObject, NSApplicationDelegate {
     private let socketServer = SocketServer()
+    private var watchdogTask: Task<Void, Never>?
     lazy var updaterController = SPUStandardUpdaterController(...)
 
     func applicationDidFinishLaunching(_:) {
@@ -914,6 +921,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         try Database.shared.open()     // SQLite + migrations (v1→v9) + cache load
         Task { await Database.shared.backfillBaseCommitHashes() }  // Async backfill for legacy events
         try await socketServer.start() // POSIX socket bind + listen (with 1s retry)
+        startSocketWatchdog()          // 30s health check, auto-restart if dead
         try SMAppService.mainApp.register() // Launch at login
         NSApp.setActivationPolicy(.accessory) // Menu bar only until window opens
     }
@@ -924,9 +932,14 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_:) {
+        watchdogTask?.cancel()
         await socketServer.stop()     // Close socket, unlink file
         Database.shared.close()       // Close SQLite
     }
+
+    // Watchdog: 30s repeating check — if socketServer.isHealthy is false,
+    // stop() + start() to recover from transient failures (fd exhaustion, etc.)
+    // Legitimate hard timeout: socket server has no built-in health signal.
 }
 ```
 

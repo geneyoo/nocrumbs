@@ -1,8 +1,7 @@
+## What's New
+- Collapse old prompts in long-lived sessions — only today's prompts show by default, with a "Show older" button to reveal the rest
+- Show newest prompt sequences first when expanding a session, so recent work is always at the top
+- Add day separators (Yesterday, Feb 22, etc.) between prompt groups from different days
+
 ## Fixes
-
-- Fix socket server dying permanently after a single transient error (e.g., file descriptor exhaustion) — the accept loop now recovers automatically
-- Fix Settings showing the socket as "active" when it was actually dead — the health check now probes the socket with a real connection instead of just checking the file exists
-
-## Improvements
-
-- Add a 30-second watchdog that automatically restarts the socket server if it goes down, eliminating the need to manually relaunch the app
+- Fix remote dev server hooks not firing — CLI hook command now uses the full binary path instead of relying on shell PATH
