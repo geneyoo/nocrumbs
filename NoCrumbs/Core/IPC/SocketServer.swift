@@ -137,9 +137,11 @@ actor SocketServer {
         logger.info("[NC:Socket] Stopped")
     }
 
-    private func acceptLoop(fd: Int32, path: String) async {
+    /// Runs off the actor — blocking accept() and readAll() never hold the actor's executor.
+    /// Only hops to `self` (the actor) for handleMessage, which needs actor-isolated state.
+    private nonisolated func acceptLoop(fd: Int32, path: String) async {
         var consecutiveFailures = 0
-        while listening {
+        while await listening {
             var clientAddr = sockaddr_un()
             var clientLen = socklen_t(MemoryLayout<sockaddr_un>.size)
             let clientFD = withUnsafeMutablePointer(to: &clientAddr) { ptr in
@@ -149,7 +151,7 @@ actor SocketServer {
             }
 
             guard clientFD >= 0 else {
-                if listening {
+                if await listening {
                     consecutiveFailures += 1
                     let backoffMs = min(1000, 50 * consecutiveFailures)
                     logger.warning("[NC:Socket] Accept failed (errno \(errno)), backoff \(backoffMs)ms")
@@ -171,7 +173,7 @@ actor SocketServer {
             // Handle each client in its own Task so one bad message can't kill the accept loop
             Task { [weak self] in
                 guard let self else { close(clientFD); return }
-                let data = await self.readAll(fd: clientFD)
+                let data = self.readAll(fd: clientFD)
                 if !data.isEmpty {
                     await self.handleMessage(data, clientFD: clientFD)
                 } else {
@@ -181,7 +183,7 @@ actor SocketServer {
         }
     }
 
-    private func readAll(fd: Int32) -> Data {
+    private nonisolated func readAll(fd: Int32) -> Data {
         var data = Data()
         var buffer = [UInt8](repeating: 0, count: 65536)
         while true {
