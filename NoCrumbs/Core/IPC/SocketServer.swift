@@ -213,6 +213,7 @@ actor SocketServer {
     // MARK: - Generic Event Handler
 
     private func handleEvent(_ json: [String: Any], db: Database) async {
+        logger.error("[NC:Socket] DIAG event step 1: entered")
         guard let sessionID = json["session_id"] as? String,
             let hookEventName = json["hook_event_name"] as? String,
             let rawCwd = json["cwd"] as? String
@@ -221,7 +222,9 @@ actor SocketServer {
             return
         }
 
+        logger.error("[NC:Socket] DIAG event step 2: \(hookEventName, privacy: .public) cwd=\(rawCwd, privacy: .public)")
         let cwd = VCSDetector.normalizePath(rawCwd)
+        logger.error("[NC:Socket] DIAG event step 3: normalized=\(cwd, privacy: .public)")
         let now = Date()
 
         // Build payload JSON from remaining interesting fields
@@ -252,16 +255,19 @@ actor SocketServer {
 
         let session = Session(id: sessionID, projectPath: cwd, startedAt: now, lastActivityAt: now)
 
+        logger.error("[NC:Socket] DIAG event step 4: upserting session + hookEvent")
         await MainActor.run {
             do {
                 try db.upsertSession(session)
                 try db.insertHookEvent(hookEvent)
+                logger.error("[NC:Socket] DIAG event step 5: DB writes done")
             } catch {
-                logger.error("[NC:Socket] DB error (event): \(error.localizedDescription)")
+                logger.error("[NC:Socket] DB error (event): \(error.localizedDescription, privacy: .public)")
             }
         }
 
         // Bridge to legacy tables for backward compat
+        logger.error("[NC:Socket] DIAG event step 6: bridging \(hookEventName, privacy: .public)")
         switch hookEventName {
         case "UserPromptSubmit":
             await bridgePromptEvent(json, sessionID: sessionID, cwd: cwd, now: now, db: db)
@@ -630,6 +636,7 @@ actor SocketServer {
     }
 
     private func handlePrompt(_ json: [String: Any], db: Database) async {
+        logger.error("[NC:Socket] DIAG step 1: handlePrompt entered")
         guard let sessionID = json["session_id"] as? String,
             let prompt = json["prompt"] as? String,
             let rawCwd = json["cwd"] as? String
@@ -638,11 +645,14 @@ actor SocketServer {
             return
         }
 
+        logger.error("[NC:Socket] DIAG step 2: cwd=\(rawCwd, privacy: .public)")
         let cwd = VCSDetector.normalizePath(rawCwd)
+        logger.error("[NC:Socket] DIAG step 3: normalized=\(cwd, privacy: .public)")
         let now = Date()
 
         // Backfill orphan: if a placeholder event exists for this session with nil promptText,
         // update it instead of creating a duplicate
+        logger.error("[NC:Socket] DIAG step 4: checking orphan backfill")
         let backfilled: Bool = await MainActor.run {
             if let orphan = db.recentEvents.first(where: { $0.sessionID == sessionID && $0.promptText == nil }) {
                 do {
@@ -656,6 +666,7 @@ actor SocketServer {
             return false
         }
 
+        logger.error("[NC:Socket] DIAG step 5: backfilled=\(backfilled, privacy: .public)")
         if backfilled {
             await MainActor.run {
                 try? db.upsertSession(Session(id: sessionID, projectPath: cwd, startedAt: now, lastActivityAt: now))
@@ -663,16 +674,21 @@ actor SocketServer {
             return
         }
 
+        logger.error("[NC:Socket] DIAG step 6: detecting VCS")
         let vcsType = VCSDetector.detect(at: cwd)
+        logger.error("[NC:Socket] DIAG step 7: vcs=\(vcsType?.rawValue ?? "nil", privacy: .public)")
 
         // Capture HEAD hash as diff baseline — if this fails, we still proceed (hash is optional)
         var baseHash: String?
         if let vcsType {
+            logger.error("[NC:Socket] DIAG step 8: capturing HEAD")
             baseHash = await captureHead(vcs: vcsType, at: cwd)
+            logger.error("[NC:Socket] DIAG step 9: HEAD=\(baseHash ?? "nil", privacy: .public)")
         }
 
         let session = Session(id: sessionID, projectPath: cwd, startedAt: now, lastActivityAt: now)
 
+        logger.error("[NC:Socket] DIAG step 10: upserting session")
         await MainActor.run {
             do {
                 try db.upsertSession(session)
