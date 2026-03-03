@@ -15,6 +15,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     lazy var updaterController = SPUStandardUpdaterController(startingUpdater: false, updaterDelegate: nil, userDriverDelegate: nil)
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Ignore SIGPIPE globally — a CLI client disconnecting mid-response must not kill the process.
+        signal(SIGPIPE, SIG_IGN)
+
         UserDefaults.standard.register(defaults: [
             "annotationEnabled": true,
             "deepLinkInAnnotation": true,

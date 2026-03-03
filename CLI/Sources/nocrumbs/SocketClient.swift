@@ -104,11 +104,7 @@ enum SocketClient {
         let fd = try connectSocket(to: ep)
         defer { close(fd) }
 
-        let written = data.withUnsafeBytes { buf in
-            // swiftlint:disable:next force_unwrapping
-            write(fd, buf.baseAddress!, buf.count)
-        }
-        guard written == data.count else { throw CLIError.socketFailed("write incomplete") }
+        try writeAll(data, to: fd)
     }
 
     static func sendAndReceive(_ data: Data, to endpoint: Endpoint? = nil) throws -> Data {
@@ -117,11 +113,7 @@ enum SocketClient {
         defer { close(fd) }
 
         // Write request
-        let written = data.withUnsafeBytes { buf in
-            // swiftlint:disable:next force_unwrapping
-            write(fd, buf.baseAddress!, buf.count)
-        }
-        guard written == data.count else { throw CLIError.socketFailed("write incomplete") }
+        try writeAll(data, to: fd)
 
         // Signal write end done
         shutdown(fd, SHUT_WR)
@@ -135,6 +127,19 @@ enum SocketClient {
             response.append(contentsOf: buffer[..<n])
         }
         return response
+    }
+
+    /// Writes all bytes, retrying on partial writes.
+    private static func writeAll(_ data: Data, to fd: Int32) throws {
+        var offset = 0
+        while offset < data.count {
+            let written = data[offset...].withUnsafeBytes { buf in
+                // swiftlint:disable:next force_unwrapping
+                write(fd, buf.baseAddress!, buf.count)
+            }
+            guard written > 0 else { throw CLIError.socketFailed("write failed at offset \(offset)") }
+            offset += written
+        }
     }
 }
 

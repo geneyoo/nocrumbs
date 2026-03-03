@@ -31,6 +31,9 @@ actor SocketServer {
             throw SocketError.createFailed(errno)
         }
 
+        var noSigPipe: Int32 = 1
+        setsockopt(serverFD, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe, socklen_t(MemoryLayout<Int32>.size))
+
         var addr = makeUnixAddr(path: socketPath)
 
         let bindResult = withUnsafePointer(to: &addr) { ptr in
@@ -43,7 +46,7 @@ actor SocketServer {
             throw SocketError.bindFailed(errno)
         }
 
-        guard listen(serverFD, 5) == 0 else {
+        guard listen(serverFD, 128) == 0 else {
             close(serverFD)
             throw SocketError.listenFailed(errno)
         }
@@ -78,6 +81,8 @@ actor SocketServer {
 
         var reuseAddr: Int32 = 1
         setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, &reuseAddr, socklen_t(MemoryLayout<Int32>.size))
+        var noSigPipe: Int32 = 1
+        setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe, socklen_t(MemoryLayout<Int32>.size))
 
         var addr = sockaddr_in()
         addr.sin_family = sa_family_t(AF_INET)
@@ -94,7 +99,7 @@ actor SocketServer {
             throw SocketError.bindFailed(errno)
         }
 
-        guard listen(fd, 5) == 0 else {
+        guard listen(fd, 128) == 0 else {
             close(fd)
             throw SocketError.listenFailed(errno)
         }
@@ -133,6 +138,7 @@ actor SocketServer {
     }
 
     private func acceptLoop(fd: Int32, path: String) async {
+        var consecutiveFailures = 0
         while listening {
             var clientAddr = sockaddr_un()
             var clientLen = socklen_t(MemoryLayout<sockaddr_un>.size)
@@ -144,11 +150,23 @@ actor SocketServer {
 
             guard clientFD >= 0 else {
                 if listening {
-                    logger.warning("[NC:Socket] Accept failed (errno \(errno)), continuing")
+                    consecutiveFailures += 1
+                    let backoffMs = min(1000, 50 * consecutiveFailures)
+                    logger.warning("[NC:Socket] Accept failed (errno \(errno)), backoff \(backoffMs)ms")
+                    // Legitimate hard timeout: exponential backoff prevents CPU spin when fd limit hit
+                    try? await Task.sleep(nanoseconds: UInt64(backoffMs) * 1_000_000)
                     continue
                 }
                 break  // Intentional shutdown via stop()
             }
+
+            consecutiveFailures = 0
+
+            // Per-client socket options
+            var noSigPipe: Int32 = 1
+            setsockopt(clientFD, SOL_SOCKET, SO_NOSIGPIPE, &noSigPipe, socklen_t(MemoryLayout<Int32>.size))
+            var timeout = timeval(tv_sec: 5, tv_usec: 0)
+            setsockopt(clientFD, SOL_SOCKET, SO_RCVTIMEO, &timeout, socklen_t(MemoryLayout<timeval>.size))
 
             // Handle each client in its own Task so one bad message can't kill the accept loop
             Task { [weak self] in
