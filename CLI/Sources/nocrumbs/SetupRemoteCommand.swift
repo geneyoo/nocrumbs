@@ -276,6 +276,9 @@ enum SetupRemoteCommand {
     /// interactive auth (banners, 2FA prompts, password input).
     @discardableResult
     private static func ttyRun(_ command: String) throws -> Int32 {
+        // Flush stdout before handing terminal to subprocess
+        // so the user sees our status message before the 2FA prompt
+        fflush(stdout)
         let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
         let process = Process()
         process.executableURL = URL(fileURLWithPath: shell)
@@ -292,7 +295,7 @@ enum SetupRemoteCommand {
     @discardableResult
     private static func sshRun(_ host: String, _ command: String) throws -> Int32 {
         let escaped = command.replacingOccurrences(of: "'", with: "'\\''")
-        let status = try ttyRun("ssh \(host) '\(escaped)'")
+        let status = try ttyRun("ssh -t \(host) '\(escaped)'")
         guard status == 0 else {
             throw SetupError.sshFailed(command, status)
         }
@@ -304,7 +307,8 @@ enum SetupRemoteCommand {
         let shell = ProcessInfo.processInfo.environment["SHELL"] ?? "/bin/zsh"
         let process = Process()
         process.executableURL = URL(fileURLWithPath: shell)
-        process.arguments = ["-i", "-c", "ssh \(host) '\(escaped)'"]
+        fflush(stdout)
+        process.arguments = ["-i", "-c", "ssh -t \(host) '\(escaped)'"]
         let pipe = Pipe()
         process.standardOutput = pipe
         // Inherit terminal for interactive auth (2FA, password prompts)

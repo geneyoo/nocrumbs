@@ -142,6 +142,7 @@ NoCrumbs/
 │   │   └── SessionSummaryViewModel.swift  # Aggregates session data, resolves commit SHAs via git log
 │   ├── Settings/
 │   │   └── SettingsView.swift  # Hook status, annotation toggle + content sub-toggles + template list, diff theme picker
+│   │                           #   Database debug panel (NavigationLink push): record counts, activity dates, schema, size, path
 │   └── Setup/
 │       └── SetupView.swift     # First-run guide: brew install cask, configure hooks, start session + docs link
 │
@@ -321,6 +322,11 @@ final class Database {
     var activeTemplate: CommitTemplate? {                    // Computed from cache
         commitTemplates.first(where: \.isActive)
     }
+
+    // Debug info (used by Settings → Database panel)
+    var path: String { dbPath }
+    var fileSize: Int64 { FileManager attributes }
+    var schemaVersion: Int32 { userVersion() }
 
     // Raw SQLite3 via OpaquePointer
     // WAL journal mode, foreign keys enabled
@@ -851,7 +857,7 @@ xcodebuild test -project NoCrumbs.xcodeproj -scheme NoCrumbs -sdk macosx -derive
 
 ## Settings
 
-Five sections in the Settings form:
+Six sections in the Settings form:
 
 **Hook Status:**
 - CLI installed, Hooks configured, Socket active — green/red status indicators
@@ -877,6 +883,12 @@ Five sections in the Settings form:
 - **TCP port** (`remoteTCPPort`): Port for remote connections via SSH tunnel (0 = disabled, default 19876)
 - When set, `SocketServer` starts a TCP listener on `127.0.0.1:<port>` alongside the Unix socket
 - Used with `nocrumbs setup-remote` for one-command remote dev server setup
+
+**Database** (push view via NavigationLink):
+- Record counts: sessions, prompt events, file changes, hook events, templates (from in-memory cache, zero queries)
+- Activity: oldest session date, newest activity (relative)
+- Storage: schema version, DB file size (`ByteCountFormatter`), DB path with Copy + Reveal in Finder buttons
+- Exposed via `Database.path`, `.fileSize`, `.schemaVersion` computed properties
 
 **Diff Theme:**
 - `Picker` listing all 18 available themes with inline color swatches
