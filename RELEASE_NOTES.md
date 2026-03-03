@@ -1,2 +1,3 @@
-## What's New
-- Add Database debug panel in Settings — view record counts, activity dates, schema version, DB size, and path with Copy and Reveal in Finder buttons
+## Fixes
+- Fix socket server silently dying after receiving a message on some environments (EdenFS, corporate laptops)
+- Harden path normalization against empty symlink resolution results
