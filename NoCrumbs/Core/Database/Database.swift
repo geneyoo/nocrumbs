@@ -25,6 +25,16 @@ final class Database {  // swiftlint:disable:this type_body_length
     private var db: OpaquePointer?
     private let dbPath: String
 
+    // MARK: - Debug Info
+
+    var path: String { dbPath }
+
+    var fileSize: Int64 {
+        (try? FileManager.default.attributesOfItem(atPath: dbPath)[.size] as? Int64) ?? 0
+    }
+
+    var schemaVersion: Int32 { db != nil ? userVersion() : 0 }
+
     private init() {
         // swiftlint:disable:next force_unwrapping
         let appSupport = FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first!

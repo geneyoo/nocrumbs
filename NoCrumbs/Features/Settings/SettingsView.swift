@@ -35,6 +35,7 @@ struct SettingsView: View {
     }
 
     var body: some View {
+        NavigationStack {
         Form {
             Section("Hook Status") {
                 LabeledContent("CLI installed") {
@@ -175,6 +176,12 @@ struct SettingsView: View {
                 }
             }
 
+            Section {
+                NavigationLink("Database") {
+                    DatabaseDebugView(database: database)
+                }
+            }
+
             Section("Diff Theme") {
                 Picker("Theme", selection: selectedThemeName) {
                     ForEach(themeManager.availableThemes, id: \.name) { theme in
@@ -188,6 +195,7 @@ struct SettingsView: View {
             }
         }
         .formStyle(.grouped)
+        }
         .frame(width: 450)
         .fixedSize()
     }
@@ -210,6 +218,69 @@ private struct ThemeSwatch: View {
                 .frame(width: 8, height: 8)
         }
     }
+}
+
+private struct DatabaseDebugView: View {
+    var database: Database
+
+    var body: some View {
+        Form {
+            Section("Records") {
+                LabeledContent("Sessions") { Text("\(database.sessions.count)") }
+                LabeledContent("Prompt events") { Text("\(database.recentEvents.count)") }
+                LabeledContent("File changes") {
+                    Text("\(database.fileChangesCache.values.reduce(0) { $0 + $1.count })")
+                }
+                LabeledContent("Hook events") { Text("\(database.recentHookEvents.count)") }
+                LabeledContent("Templates") { Text("\(database.commitTemplates.count)") }
+            }
+
+            Section("Activity") {
+                if let oldest = database.sessions.last?.startedAt {
+                    LabeledContent("Oldest session") { Text(oldest, style: .date) }
+                }
+                if let newest = database.sessions.first?.lastActivityAt {
+                    LabeledContent("Newest activity") { Text(newest, style: .relative) }
+                }
+            }
+
+            Section("Storage") {
+                LabeledContent("Schema version") { Text("v\(database.schemaVersion)") }
+                LabeledContent("DB size") { Text(formattedFileSize(database.fileSize)) }
+                LabeledContent("DB path") {
+                    HStack(spacing: 4) {
+                        Text(database.path)
+                            .font(.caption.monospaced())
+                            .lineLimit(1)
+                            .truncationMode(.middle)
+                            .textSelection(.enabled)
+                            .frame(maxWidth: 200, alignment: .trailing)
+                        Button {
+                            NSPasteboard.general.clearContents()
+                            NSPasteboard.general.setString(database.path, forType: .string)
+                        } label: {
+                            Image(systemName: "doc.on.doc")
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Copy path")
+                        Button {
+                            NSWorkspace.shared.selectFile(database.path, inFileViewerRootedAtPath: "")
+                        } label: {
+                            Image(systemName: "folder")
+                        }
+                        .buttonStyle(.borderless)
+                        .help("Reveal in Finder")
+                    }
+                }
+            }
+        }
+        .formStyle(.grouped)
+        .navigationTitle("Database")
+    }
+}
+
+private func formattedFileSize(_ bytes: Int64) -> String {
+    ByteCountFormatter.string(fromByteCount: bytes, countStyle: .file)
 }
 
 private extension NSColor {
