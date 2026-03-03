@@ -30,11 +30,13 @@ enum VCSDetector {
     }
 
     /// Normalize path: resolve symlinks, remove trailing slashes.
+    /// Falls back to original path if symlink resolution returns empty (e.g., EdenFS unmounted).
     static func normalizePath(_ path: String) -> String {
         let resolved = (path as NSString).resolvingSymlinksInPath
-        if resolved.hasSuffix("/"), resolved.count > 1 {
-            return String(resolved.dropLast())
+        let result = resolved.isEmpty ? path : resolved
+        if result.hasSuffix("/"), result.count > 1 {
+            return String(result.dropLast())
         }
-        return resolved
+        return result
     }
 }
