@@ -184,6 +184,7 @@ NoCrumbsTests/                      # Test target (hosted by app)
 ├── SaplingProviderTests.swift     # 6 tests — sl provider command construction + output parsing
 ├── SecretRedactorTests.swift      # 20 tests — API key, token, JWT, credential redaction
 ├── SequenceBoundaryTests.swift    # 5 tests — prompt sequence grouping logic
+├── SocketPipelineTests.swift      # 4 tests — E2E socket → actor → DB pipeline (catches v0.5.6 deadlock class)
 ├── SocketTransportTests.swift     # 9 tests — TCP + Unix socket transport, endpoint resolution
 ├── TemplateTests.swift            # 14 tests — TemplateRenderer + DB template CRUD
 ├── TransportEndpointTests.swift   # 12 tests — endpoint resolution from env vars
@@ -432,6 +433,7 @@ TCP listener: 127.0.0.1:19876 (when remoteTCPPort > 0 in UserDefaults)
 ```
 
 **Server** (`SocketServer`): Swift actor, POSIX `socket()/bind()/listen()/accept()`.
+- Testable: `init(path:database:)` accepts optional `Database` injection (nil falls through to `Database.shared`)
 - Unix socket accept loop in detached Task — resilient: `continue` on transient `accept()` errors, only `break` on intentional `stop()`
 - `isHealthy` computed property: `listening && serverFD >= 0` — used by AppDelegate watchdog
 - Optional TCP listener on localhost for remote connections via SSH/ET tunnel
@@ -838,6 +840,7 @@ xcodebuild test -project NoCrumbs.xcodeproj -scheme NoCrumbs -sdk macosx -derive
 | `SecretRedactorTests` | 20 | Pure unit | API key, token, JWT, credential redaction patterns |
 | `TemplateTests` | 14 | Pure unit | TemplateRenderer and DB template CRUD, active switching |
 | `SequenceBoundaryTests` | 5 | Unit | Prompt sequence grouping: new sequence after changes, continuation without |
+| `SocketPipelineTests` | 4 | E2E | Socket → actor → DB pipeline: single prompt, event hook, concurrent clients, file change attachment |
 | `SocketTransportTests` | 9 | Integration | TCP + Unix socket transport, connect/send/receive |
 | `TransportEndpointTests` | 12 | Pure unit | Endpoint resolution from env vars, platform defaults |
 | `VCSDetectorTests` | 10 | Filesystem | Temp dirs with .git/.hg/.sl markers: detect git/hg/sapling/none, nested repos, repoRoot |

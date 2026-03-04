@@ -5,6 +5,7 @@ private let logger = Logger(subsystem: "com.geneyoo.nocrumbs", category: "Socket
 
 actor SocketServer {
     private let socketPath: String
+    private let database: Database?  // nil = use Database.shared (production default)
     private var serverFD: Int32 = -1
     private var tcpServerFD: Int32 = -1
     private var listening = false
@@ -15,8 +16,9 @@ actor SocketServer {
         return appSupport.appendingPathComponent("NoCrumbs/nocrumbs.sock").path
     }
 
-    init(path: String = SocketServer.defaultSocketPath) {
+    init(path: String = SocketServer.defaultSocketPath, database: Database? = nil) {
         self.socketPath = path
+        self.database = database
     }
 
     func start() throws {
@@ -205,7 +207,7 @@ actor SocketServer {
 
         logger.info("[NC:Socket] Received: \(type)")
 
-        let db = await MainActor.run { Database.shared }
+        let db = await MainActor.run { self.database ?? Database.shared }
 
         switch type {
         case "event":

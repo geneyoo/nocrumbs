@@ -87,6 +87,7 @@
 		TE1A0001A2B3C4D5E6F70001 /* TransportEndpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = TE1F0001A2B3C4D5E6F70001 /* TransportEndpoint.swift */; };
 		TE1A0002A2B3C4D5E6F70002 /* TransportEndpointTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = TE1F0002A2B3C4D5E6F70002 /* TransportEndpointTests.swift */; };
 		ST1A0001A2B3C4D5E6F70001 /* SocketTransportTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ST1F0001A2B3C4D5E6F70001 /* SocketTransportTests.swift */; };
+		SP1A0001A2B3C4D5E6F70001 /* SocketPipelineTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = SP1F0001A2B3C4D5E6F70001 /* SocketPipelineTests.swift */; };
 		EX1A0001BB534E69B484BF01 /* String+TaskNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = EX1F0001947253F7B233B101 /* String+TaskNotification.swift */; };
 		DC1A0001BB534E69B484BF01 /* DebugConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC1F0001947253F7B233B101 /* DebugConfiguration.swift */; };
 		MG1A0001BB534E69B484BF01 /* MockDataGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = MG1F0001947253F7B233B101 /* MockDataGenerator.swift */; };
@@ -185,6 +186,7 @@
 		TE1F0001A2B3C4D5E6F70001 /* TransportEndpoint.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransportEndpoint.swift; sourceTree = "<group>"; };
 		TE1F0002A2B3C4D5E6F70002 /* TransportEndpointTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TransportEndpointTests.swift; sourceTree = "<group>"; };
 		ST1F0001A2B3C4D5E6F70001 /* SocketTransportTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocketTransportTests.swift; sourceTree = "<group>"; };
+		SP1F0001A2B3C4D5E6F70001 /* SocketPipelineTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SocketPipelineTests.swift; sourceTree = "<group>"; };
 		EX1F0001947253F7B233B101 /* String+TaskNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+TaskNotification.swift"; sourceTree = "<group>"; };
 		DC1F0001947253F7B233B101 /* DebugConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugConfiguration.swift; sourceTree = "<group>"; };
 		MG1F0001947253F7B233B101 /* MockDataGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockDataGenerator.swift; sourceTree = "<group>"; };
@@ -469,6 +471,7 @@
 				T3F00002TEMPLATE00TEST02 /* TemplateTests.swift */,
 				S1F00002947253F7B233B102 /* SecretRedactorTests.swift */,
 				ST1F0001A2B3C4D5E6F70001 /* SocketTransportTests.swift */,
+				SP1F0001A2B3C4D5E6F70001 /* SocketPipelineTests.swift */,
 				TE1F0002A2B3C4D5E6F70002 /* TransportEndpointTests.swift */,
 			);
 			name = Tests;
@@ -679,6 +682,7 @@
 				S1A00002BB534E69B484BF02 /* SecretRedactorTests.swift in Sources */,
 				TE1A0002A2B3C4D5E6F70002 /* TransportEndpointTests.swift in Sources */,
 				ST1A0001A2B3C4D5E6F70001 /* SocketTransportTests.swift in Sources */,
+				SP1A0001A2B3C4D5E6F70001 /* SocketPipelineTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
