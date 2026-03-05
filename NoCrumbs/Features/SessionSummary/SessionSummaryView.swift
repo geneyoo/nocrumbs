@@ -221,30 +221,77 @@ struct SessionSummaryView: View {
     @ViewBuilder
     private var promptTimelineSection: some View {
         GroupBox {
+            ScrollView {
             LazyVStack(alignment: .leading, spacing: LayoutGuide.spacingNone) {
                 let grouped = sequenceGroups(from: events)
+                let liveSequenceID = events.first?.sequenceID
                 ForEach(Array(grouped.enumerated()), id: \.offset) { groupIndex, group in
-                    ForEach(Array(group.enumerated()), id: \.element.id) { eventIndex, event in
-                        HStack(spacing: LayoutGuide.spacingNone) {
-                            // Sequence indicator for multi-prompt sequences
-                            if group.count > 1 {
-                                VStack(spacing: LayoutGuide.spacingNone) {
-                                    Rectangle()
-                                        .fill(eventIndex == 0 ? Color.clear : Color.gray.opacity(0.2))
-                                        .frame(width: 2)
-                                    Circle()
-                                        .fill(Color.secondary)
-                                        .frame(width: 5, height: 5)
-                                    Rectangle()
-                                        .fill(eventIndex == group.count - 1 ? Color.clear : Color.gray.opacity(0.2))
-                                        .frame(width: 2)
+                    let seqID = group.first?.sequenceID
+                    let hasFileChanges = group.contains { !(database.fileChangesCache[$0.id] ?? []).isEmpty }
+                    let isLive = seqID != nil && seqID == liveSequenceID
+                    let isExpanded = seqID.map { viewModel.expandedTimelineSequences.contains($0) } ?? true
+
+                    // Collapsible sequence header for sequences with 2+ events
+                    if group.count > 1 {
+                        Button {
+                            withAnimation(.smooth(duration: 0.2)) {
+                                if let seqID {
+                                    if viewModel.expandedTimelineSequences.contains(seqID) {
+                                        viewModel.expandedTimelineSequences.remove(seqID)
+                                    } else {
+                                        viewModel.expandedTimelineSequences.insert(seqID)
+                                    }
                                 }
-                                .frame(width: 12)
                             }
-                            promptRow(event)
+                        } label: {
+                            HStack(spacing: LayoutGuide.spacingS) {
+                                Image(systemName: "chevron.right")
+                                    .font(.system(size: 8, weight: .bold))
+                                    .foregroundStyle(.quaternary)
+                                    .rotationEffect(.degrees(isExpanded || isLive ? 90 : 0))
+                                    .frame(width: 12)
+                                Text(group.last?.promptText?.displayPromptText ?? "(sequence)")
+                                    .font(.caption.weight(.medium))
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                                Text("\(group.count) prompts")
+                                    .font(.caption2)
+                                    .foregroundStyle(.tertiary)
+                                if hasFileChanges {
+                                    Circle()
+                                        .fill(AppColors.addition)
+                                        .frame(width: 5, height: 5)
+                                }
+                                Spacer()
+                            }
                         }
-                        if eventIndex < group.count - 1 {
-                            Divider().padding(.leading, group.count > 1 ? 12 + LayoutGuide.paddingM : LayoutGuide.paddingM)
+                        .buttonStyle(.plain)
+                        .padding(.vertical, LayoutGuide.paddingS)
+                    }
+
+                    if isExpanded || isLive || group.count == 1 {
+                        ForEach(Array(group.enumerated()), id: \.element.id) { eventIndex, event in
+                            HStack(spacing: LayoutGuide.spacingNone) {
+                                // Sequence indicator for multi-prompt sequences
+                                if group.count > 1 {
+                                    VStack(spacing: LayoutGuide.spacingNone) {
+                                        Rectangle()
+                                            .fill(eventIndex == 0 ? Color.clear : Color.gray.opacity(0.2))
+                                            .frame(width: 2)
+                                        Circle()
+                                            .fill(!(database.fileChangesCache[event.id] ?? []).isEmpty ? AppColors.addition : Color.secondary)
+                                            .frame(width: 5, height: 5)
+                                        Rectangle()
+                                            .fill(eventIndex == group.count - 1 ? Color.clear : Color.gray.opacity(0.2))
+                                            .frame(width: 2)
+                                    }
+                                    .frame(width: 12)
+                                }
+                                promptRow(event)
+                            }
+                            if eventIndex < group.count - 1 {
+                                Divider().padding(.leading, group.count > 1 ? 12 + LayoutGuide.paddingM : LayoutGuide.paddingM)
+                            }
                         }
                     }
                     if groupIndex < grouped.count - 1 {
@@ -252,6 +299,8 @@ struct SessionSummaryView: View {
                     }
                 }
             }
+            }
+            .frame(maxHeight: 400)
         } label: {
             Text("Prompt Timeline")
                 .font(.headline)
@@ -281,6 +330,8 @@ struct SessionSummaryView: View {
     private func promptRow(_ event: PromptEvent) -> some View {
         let stat = viewModel.promptDiffStats[event.id]
         let fileChanges = database.fileChangesCache[event.id] ?? []
+        let hasChanges = !fileChanges.isEmpty
+        let isEmpty = event.isEmptyPrompt
         let hasError = viewModel.errors[event.id] != nil
 
         HStack(spacing: LayoutGuide.spacingS) {
@@ -294,7 +345,9 @@ struct SessionSummaryView: View {
             VStack(alignment: .leading, spacing: LayoutGuide.spacingXS) {
                 Text(event.promptText?.displayPromptText ?? "(no prompt)")
                     .lineLimit(2)
-                    .font(.callout)
+                    .font(hasChanges ? .callout.weight(.medium) : .callout)
+                    .foregroundStyle(isEmpty ? .tertiary : (hasChanges ? .primary : .secondary))
+                    .italic(isEmpty)
 
                 HStack(spacing: LayoutGuide.spacingL) {
                     if let hash = event.baseCommitHash {

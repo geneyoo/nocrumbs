@@ -15,7 +15,10 @@ private struct SidebarItem: Identifiable {
     let olderCount: Int
     let sessionID: String?
 
-    enum Kind { case timePeriodHeader, projectHeader, session, event, showOlder, daySeparator }
+    enum Kind { case timePeriodHeader, projectHeader, session, event, showOlder, daySeparator, collapsed }
+
+    let collapsedCount: Int
+    let groupKey: String?
 
     enum SequencePosition {
         case solo
@@ -28,28 +31,32 @@ private struct SidebarItem: Identifiable {
     }
 
     static func timePeriodHeader(_ period: TimePeriod) -> SidebarItem {
-        SidebarItem(id: UUID(), kind: .timePeriodHeader, session: nil, event: nil, projectName: period.label, sequencePosition: .solo, olderCount: 0, sessionID: nil)
+        SidebarItem(id: UUID(), kind: .timePeriodHeader, session: nil, event: nil, projectName: period.label, sequencePosition: .solo, olderCount: 0, sessionID: nil, collapsedCount: 0, groupKey: nil)
     }
 
     static func projectHeader(_ name: String) -> SidebarItem {
-        SidebarItem(id: UUID(), kind: .projectHeader, session: nil, event: nil, projectName: name, sequencePosition: .solo, olderCount: 0, sessionID: nil)
+        SidebarItem(id: UUID(), kind: .projectHeader, session: nil, event: nil, projectName: name, sequencePosition: .solo, olderCount: 0, sessionID: nil, collapsedCount: 0, groupKey: nil)
     }
 
     static func session(_ s: Session) -> SidebarItem {
         let uuid = UUID(uuidString: s.id) ?? UUID()
-        return SidebarItem(id: uuid, kind: .session, session: s, event: nil, projectName: nil, sequencePosition: .solo, olderCount: 0, sessionID: nil)
+        return SidebarItem(id: uuid, kind: .session, session: s, event: nil, projectName: nil, sequencePosition: .solo, olderCount: 0, sessionID: nil, collapsedCount: 0, groupKey: nil)
     }
 
     static func event(_ e: PromptEvent, position: SequencePosition = .solo) -> SidebarItem {
-        SidebarItem(id: e.id, kind: .event, session: nil, event: e, projectName: nil, sequencePosition: position, olderCount: 0, sessionID: nil)
+        SidebarItem(id: e.id, kind: .event, session: nil, event: e, projectName: nil, sequencePosition: position, olderCount: 0, sessionID: nil, collapsedCount: 0, groupKey: nil)
     }
 
     static func showOlder(count: Int, sessionID: String) -> SidebarItem {
-        SidebarItem(id: UUID(), kind: .showOlder, session: nil, event: nil, projectName: nil, sequencePosition: .solo, olderCount: count, sessionID: sessionID)
+        SidebarItem(id: UUID(), kind: .showOlder, session: nil, event: nil, projectName: nil, sequencePosition: .solo, olderCount: count, sessionID: sessionID, collapsedCount: 0, groupKey: nil)
     }
 
     static func daySeparator(_ label: String) -> SidebarItem {
-        SidebarItem(id: UUID(), kind: .daySeparator, session: nil, event: nil, projectName: label, sequencePosition: .solo, olderCount: 0, sessionID: nil)
+        SidebarItem(id: UUID(), kind: .daySeparator, session: nil, event: nil, projectName: label, sequencePosition: .solo, olderCount: 0, sessionID: nil, collapsedCount: 0, groupKey: nil)
+    }
+
+    static func collapsed(count: Int, groupKey: String) -> SidebarItem {
+        SidebarItem(id: UUID(), kind: .collapsed, session: nil, event: nil, projectName: nil, sequencePosition: .solo, olderCount: 0, sessionID: nil, collapsedCount: count, groupKey: groupKey)
     }
 }
 
@@ -63,6 +70,7 @@ private final class SidebarState {
     @AppStorage("confirmBeforeDelete") var confirmBeforeDelete = true
     var collapsedProjects: Set<String> = []
     var showAllPrompts: Set<String> = []
+    var expandedCollapseGroups: Set<String> = []
     var keyMonitor: Any?
     var renamingSessionID: String?
     var renameText = ""
@@ -137,33 +145,6 @@ struct ContentView: View {
         return allEvents.first?.id == event.id
     }
 
-    /// Groups events by sequenceID, preserving order. Events with nil sequenceID are solo groups.
-    private func sequenceGroups(from events: [PromptEvent]) -> [[PromptEvent]] {
-        var groups: [[PromptEvent]] = []
-        var currentSeqID: String?
-        var currentGroup: [PromptEvent] = []
-
-        for event in events.reversed() {  // chronological order (oldest first)
-            if let seqID = event.sequenceID, seqID == currentSeqID {
-                currentGroup.append(event)
-            } else {
-                if !currentGroup.isEmpty { groups.append(currentGroup) }
-                currentGroup = [event]
-                currentSeqID = event.sequenceID
-            }
-        }
-        if !currentGroup.isEmpty { groups.append(currentGroup) }
-        return groups
-    }
-
-    private func daySeparatorLabel(for date: Date, calendar: Calendar) -> String {
-        if calendar.isDateInToday(date) { return "Today" }
-        if calendar.isDateInYesterday(date) { return "Yesterday" }
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d"
-        return formatter.string(from: date)
-    }
-
     private var flatItems: [SidebarItem] {
         // Bucket sessions by time period
         let byPeriod = Dictionary(grouping: database.sessions) {
@@ -209,54 +190,49 @@ struct ContentView: View {
                     guard !events.isEmpty else { continue }
                     items.append(.session(session))
                     if state.expandedSessions.contains(session.id) {
-                        let groups = sequenceGroups(from: events)
                         let cal = Calendar.current
                         let todayStart = cal.startOfDay(for: Date())
 
-                        // Split into recent (today) and older groups
-                        var recentGroups: [[PromptEvent]] = []
-                        var olderGroups: [[PromptEvent]] = []
-                        for group in groups.reversed() {
-                            let groupLatest = group.map(\.timestamp).max() ?? .distantPast
-                            if groupLatest >= todayStart {
-                                recentGroups.append(group)
-                            } else {
-                                olderGroups.append(group)
-                            }
-                        }
-
-                        // If all prompts are older than today, show the most recent group
-                        if recentGroups.isEmpty, let first = olderGroups.first {
-                            recentGroups.append(first)
-                            olderGroups.removeFirst()
-                        }
+                        // Split into recent (today) and older events
+                        let recentEvents = events.filter { $0.timestamp >= todayStart }
+                        let olderEvents = events.filter { $0.timestamp < todayStart }
 
                         let showAll = state.showAllPrompts.contains(session.id)
-                        let groupsToShow = showAll ? recentGroups + olderGroups : recentGroups
+                        let visibleEvents: [PromptEvent]
+                        if recentEvents.isEmpty {
+                            // All old — show the latest event at minimum
+                            visibleEvents = showAll ? events : Array(events.prefix(1))
+                        } else {
+                            visibleEvents = showAll ? events : recentEvents
+                        }
 
-                        var lastGroupDay: Date?
-                        for group in groupsToShow {
-                            // Day separator between groups from different days
-                            let groupDay = cal.startOfDay(for: group.map(\.timestamp).max() ?? .distantPast)
-                            if let prev = lastGroupDay, prev != groupDay {
-                                let label = daySeparatorLabel(for: groupDay, calendar: cal)
-                                items.append(.daySeparator(label))
-                            }
-                            lastGroupDay = groupDay
+                        // Collapse no-change prompts between change prompts
+                        let displayItems = SidebarFilter.collapseNoChangePrompts(
+                            visibleEvents,
+                            fileChangesCache: database.fileChangesCache,
+                            sessionID: session.id
+                        )
 
-                            for (idx, event) in group.enumerated() {
-                                let pos: SidebarItem.SequencePosition
-                                if group.count == 1 { pos = .solo }
-                                else if idx == 0 { pos = .first }
-                                else if idx == group.count - 1 { pos = .last }
-                                else { pos = .middle }
-                                items.append(.event(event, position: pos))
+                        for displayItem in displayItems {
+                            switch displayItem {
+                            case .event(let event):
+                                items.append(.event(event))
+                            case .collapsed(let hiddenEvents, let key):
+                                if state.expandedCollapseGroups.contains(key) {
+                                    // Show a "collapse" pill before the expanded events
+                                    items.append(.collapsed(count: hiddenEvents.count, groupKey: key))
+                                    for event in hiddenEvents {
+                                        items.append(.event(event))
+                                    }
+                                } else {
+                                    items.append(.collapsed(count: hiddenEvents.count, groupKey: key))
+                                }
                             }
                         }
 
-                        // Insert "Show older" button if there are collapsed groups
-                        if !showAll && !olderGroups.isEmpty {
-                            let olderCount = olderGroups.reduce(0) { $0 + $1.count }
+                        // "Show older" button
+                        if !showAll && !olderEvents.isEmpty && !recentEvents.isEmpty {
+                            let olderCount = olderEvents.count
                             items.append(.showOlder(count: olderCount, sessionID: session.id))
                         }
                     }
@@ -465,6 +441,32 @@ struct ContentView: View {
                 .padding(.vertical, 4)
                 .tag(item.id)
             }
+        case .collapsed:
+            if let key = item.groupKey {
+                let isExpanded = state.expandedCollapseGroups.contains(key)
+                Button {
+                    withAnimation(.smooth(duration: 0.25)) {
+                        if isExpanded {
+                            state.expandedCollapseGroups.remove(key)
+                        } else {
+                            state.expandedCollapseGroups.insert(key)
+                        }
+                    }
+                } label: {
+                    HStack(spacing: 4) {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 7, weight: .bold))
+                            .rotationEffect(.degrees(isExpanded ? 90 : 0))
+                        Text("\(item.collapsedCount) prompt\(item.collapsedCount == 1 ? "" : "s") without changes")
+                    }
+                    .font(.caption2)
+                    .foregroundStyle(.quaternary)
+                }
+                .buttonStyle(.plain)
+                .padding(.leading, 20)
+                .padding(.vertical, 1)
+                .tag(item.id)
+            }
         }
     }
 
@@ -574,39 +576,25 @@ struct ContentView: View {
     @ViewBuilder
     private func eventRow(_ event: PromptEvent, position: SidebarItem.SequencePosition) -> some View {
         let fileCount = database.fileChangesCache[event.id]?.count ?? 0
+        let hasChanges = fileCount > 0
+        let isEmpty = event.isEmptyPrompt
         let showState = isLatestEvent(event)
         let sState = showState ? database.sessionState(for: event.sessionID) : .idle
-        HStack(spacing: LayoutGuide.spacingNone) {
-            // Sequence indicator (only for multi-prompt sequences)
-            if case .solo = position {} else {
-                VStack(spacing: LayoutGuide.spacingNone) {
-                    Rectangle()
-                        .fill(position.isFirst ? Color.clear : Color.gray.opacity(0.2))
-                        .frame(width: 2)
-                    Circle()
-                        .fill(Color.secondary)
-                        .frame(width: 5, height: 5)
-                    Rectangle()
-                        .fill(position.isLast ? Color.clear : Color.gray.opacity(0.2))
-                        .frame(width: 2)
+        VStack(alignment: .leading, spacing: 2) {
+            Text(event.promptText?.displayPromptText ?? "(no prompt)")
+                .lineLimit(hasChanges ? 2 : 1)
+                .font(hasChanges ? .callout.weight(.medium) : .caption)
+                .foregroundStyle(isEmpty ? .quaternary : (hasChanges ? .primary : .tertiary))
+                .italic(isEmpty)
+            HStack(spacing: 6) {
+                SessionStateIndicator(state: sState)
+                Text(event.timestamp, style: .time)
+                if fileCount > 0 {
+                    Label("\(fileCount)", systemImage: "doc")
                 }
-                .frame(width: 12)
             }
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(event.promptText?.displayPromptText ?? "(no prompt)")
-                    .lineLimit(2)
-                    .font(.callout)
-                HStack(spacing: 6) {
-                    SessionStateIndicator(state: sState)
-                    Text(event.timestamp, style: .time)
-                    if fileCount > 0 {
-                        Label("\(fileCount)", systemImage: "doc")
-                    }
-                }
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-            }
+            .font(.caption2)
+            .foregroundStyle(hasChanges ? .secondary : .quaternary)
         }
         .contextMenu {
             Button("Delete Prompt", role: .destructive) {

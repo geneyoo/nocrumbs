@@ -9,6 +9,7 @@ final class SessionSummaryViewModel {
     private(set) var loadingProgress: (completed: Int, total: Int) = (0, 0)
     private(set) var errors: [UUID: String] = [:]
     private(set) var remoteURL: String?
+    var expandedTimelineSequences: Set<String> = []
 
     private var currentSessionID: String?
     private var loadTask: Task<Void, Never>?
@@ -199,6 +200,7 @@ final class SessionSummaryViewModel {
         errors = [:]
         remoteURL = nil
         isLoading = false
+        expandedTimelineSequences = []
     }
 
     // MARK: - Private

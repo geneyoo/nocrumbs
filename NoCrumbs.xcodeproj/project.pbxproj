@@ -91,6 +91,9 @@
 		EX1A0001BB534E69B484BF01 /* String+TaskNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = EX1F0001947253F7B233B101 /* String+TaskNotification.swift */; };
 		DC1A0001BB534E69B484BF01 /* DebugConfiguration.swift in Sources */ = {isa = PBXBuildFile; fileRef = DC1F0001947253F7B233B101 /* DebugConfiguration.swift */; };
 		MG1A0001BB534E69B484BF01 /* MockDataGenerator.swift in Sources */ = {isa = PBXBuildFile; fileRef = MG1F0001947253F7B233B101 /* MockDataGenerator.swift */; };
+		PD1A0001BB534E69B484BF01 /* PromptEvent+Display.swift in Sources */ = {isa = PBXBuildFile; fileRef = PD1F0001947253F7B233B101 /* PromptEvent+Display.swift */; };
+		SF1A0001BB534E69B484BF01 /* SidebarFilter.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF1F0001947253F7B233B101 /* SidebarFilter.swift */; };
+		SF1A0002BB534E69B484BF02 /* SidebarFilterTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = SF1F0002947253F7B233B102 /* SidebarFilterTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -190,6 +193,9 @@
 		EX1F0001947253F7B233B101 /* String+TaskNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "String+TaskNotification.swift"; sourceTree = "<group>"; };
 		DC1F0001947253F7B233B101 /* DebugConfiguration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DebugConfiguration.swift; sourceTree = "<group>"; };
 		MG1F0001947253F7B233B101 /* MockDataGenerator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MockDataGenerator.swift; sourceTree = "<group>"; };
+		PD1F0001947253F7B233B101 /* PromptEvent+Display.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "PromptEvent+Display.swift"; sourceTree = "<group>"; };
+		SF1F0001947253F7B233B101 /* SidebarFilter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarFilter.swift; sourceTree = "<group>"; };
+		SF1F0002947253F7B233B102 /* SidebarFilterTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SidebarFilterTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -257,6 +263,7 @@
 		EX1G0001947253F7B233B101 /* Extensions */ = {
 			isa = PBXGroup;
 			children = (
+				PD1F0001947253F7B233B101 /* PromptEvent+Display.swift */,
 				EX1F0001947253F7B233B101 /* String+TaskNotification.swift */,
 			);
 			path = Extensions;
@@ -271,7 +278,15 @@
 			path = Debug;
 			sourceTree = "<group>";
 		};
-		B2EAFE23A7C76371D648260F /* Core */ = {
+			SF1G0001947253F7B233B101 /* Sidebar */ = {
+			isa = PBXGroup;
+			children = (
+				SF1F0001947253F7B233B101 /* SidebarFilter.swift */,
+			);
+			path = Sidebar;
+			sourceTree = "<group>";
+		};
+	B2EAFE23A7C76371D648260F /* Core */ = {
 			isa = PBXGroup;
 			children = (
 				3A4FCF443AAE6D074C7D5DC0 /* Database */,
@@ -279,6 +294,7 @@
 				EX1G0001947253F7B233B101 /* Extensions */,
 				95E391327C4C135C6B6E40E2 /* IPC */,
 				CB242500DFFB780C2EEBD47A /* Models */,
+				SF1G0001947253F7B233B101 /* Sidebar */,
 				AA98B77E378D2004301C9CB7 /* Utilities */,
 				BFB3E336FDA7967BA26F21BC /* VCS */,
 			);
@@ -473,6 +489,7 @@
 				ST1F0001A2B3C4D5E6F70001 /* SocketTransportTests.swift */,
 				SP1F0001A2B3C4D5E6F70001 /* SocketPipelineTests.swift */,
 				TE1F0002A2B3C4D5E6F70002 /* TransportEndpointTests.swift */,
+				SF1F0002947253F7B233B102 /* SidebarFilterTests.swift */,
 			);
 			name = Tests;
 			path = NoCrumbsTests;
@@ -660,6 +677,8 @@
 				SE1A0001BB534E69B484BF01 /* ShellEnvironment.swift in Sources */,
 				TE1A0001A2B3C4D5E6F70001 /* TransportEndpoint.swift in Sources */,
 				EX1A0001BB534E69B484BF01 /* String+TaskNotification.swift in Sources */,
+				PD1A0001BB534E69B484BF01 /* PromptEvent+Display.swift in Sources */,
+				SF1A0001BB534E69B484BF01 /* SidebarFilter.swift in Sources */,
 				DC1A0001BB534E69B484BF01 /* DebugConfiguration.swift in Sources */,
 				MG1A0001BB534E69B484BF01 /* MockDataGenerator.swift in Sources */,
 			);
@@ -683,6 +702,7 @@
 				TE1A0002A2B3C4D5E6F70002 /* TransportEndpointTests.swift in Sources */,
 				ST1A0001A2B3C4D5E6F70001 /* SocketTransportTests.swift in Sources */,
 				SP1A0001A2B3C4D5E6F70001 /* SocketPipelineTests.swift in Sources */,
+				SF1A0002BB534E69B484BF02 /* SidebarFilterTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
