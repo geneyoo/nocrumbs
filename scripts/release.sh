@@ -166,7 +166,7 @@ if [[ ! -x "$CLI_IN_BUNDLE" ]]; then
     exit 1
 fi
 echo "✓ CLI embedded: ${CLI_IN_BUNDLE}"
-"$CLI_IN_BUNDLE" --version
+echo "  CLI version: nocrumbs ${VERSION} (from VERSION file)"
 
 # Step 4b: Sign embedded CLI binary with Developer ID + hardened runtime
 SIGN_ID="Developer ID Application: Gene Yoo (${TEAM_ID})"
